@@ -1,0 +1,4 @@
+**/bin/
+**/obj/
+src/Frontend/dist/
+src/Frontend/node_modules/
