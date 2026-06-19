@@ -19,7 +19,7 @@ public sealed class ValidacionConfiguracionService(
             {
                 Codigo = "NOMENCLADOR_REQUERIDO",
                 Mensaje = "Debe seleccionar un nomenclador.",
-                Campo = nameof(request.IdNomenclador)
+                Campo = "idNomenclador"
             });
         }
 
@@ -29,7 +29,7 @@ public sealed class ValidacionConfiguracionService(
             {
                 Codigo = "ESCALA_REQUERIDA",
                 Mensaje = "Debe seleccionar una escala salarial.",
-                Campo = nameof(request.IdEscalaSalarial)
+                Campo = "idEscalaSalarial"
             });
         }
 
@@ -39,7 +39,7 @@ public sealed class ValidacionConfiguracionService(
             {
                 Codigo = "ZONA_REQUERIDA",
                 Mensaje = "Debe seleccionar una zona.",
-                Campo = nameof(request.IdZona)
+                Campo = "idZona"
             });
         }
 
@@ -49,7 +49,7 @@ public sealed class ValidacionConfiguracionService(
             {
                 Codigo = "FECHA_INVALIDA",
                 Mensaje = "La fecha fin no puede ser menor a la fecha inicio.",
-                Campo = nameof(request.FechaFin)
+                Campo = "fechaFin"
             });
         }
 
@@ -105,7 +105,7 @@ public sealed class ValidacionConfiguracionService(
             {
                 Codigo = "VIGENCIA_SUPERPUESTA",
                 Mensaje = "Ya existe una configuración activa para el mismo nomenclador, escala y zona en ese rango de fechas.",
-                Campo = nameof(request.FechaInicio)
+                Campo = "fechaInicio"
             });
         }
 
