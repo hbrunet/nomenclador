@@ -21,26 +21,20 @@ public sealed class ConfiguracionNomencladorMapper
             .OrderBy(item => item.Orden)
             .Select(item => new ConceptoConfiguradoEntity
             {
-                Id = 0,
                 ConceptoId = item.IdConcepto,
                 Orden = item.Orden,
-                Activo = item.Activo
             })
             .ToList();
         entity.ValoresFijos = dto.ValoresFijos
             .Select(item => new ValorFijoConfiguradoEntity
             {
-                Id = 0,
                 ValorFijoId = item.IdValorFijo,
-                Importe = item.Importe
             })
             .ToList();
         entity.ValoresCategorias = dto.ValoresCategorias
             .Select(item => new ValorCategoriaConfiguradoEntity
             {
-                Id = 0,
-                CategoriaId = item.IdCategoria,
-                Importe = item.Importe
+                ValorCategoriaId = item.IdValorCategoria,
             })
             .ToList();
 
@@ -65,14 +59,11 @@ public sealed class ConfiguracionNomencladorMapper
                     var concepto = catalogs.Conceptos[item.ConceptoId];
                     return new ConceptoConfiguradoViewModel
                     {
-                        IdRelacion = item.Id,
                         IdConcepto = concepto.Id,
                         Codigo = concepto.Codigo,
                         Subcodigo = concepto.Subcodigo,
                         Descripcion = concepto.Descripcion,
-                        Clasificacion = concepto.Clasificacion,
                         Orden = item.Orden,
-                        Activo = item.Activo
                     };
                 })
                 .ToList(),
@@ -82,26 +73,21 @@ public sealed class ConfiguracionNomencladorMapper
                     var valorFijo = catalogs.ValoresFijos[item.ValorFijoId];
                     return new ValorFijoConfiguradoViewModel
                     {
-                        IdRelacion = item.Id,
                         IdValorFijo = valorFijo.Id,
                         Descripcion = valorFijo.Descripcion,
-                        Tipo = valorFijo.Tipo,
-                        Importe = item.Importe
+                        Tipo = valorFijo.Tipo?.Descripcion ?? string.Empty,
                     };
                 })
                 .ToList(),
             ValoresCategorias = entity.ValoresCategorias
-                .OrderBy(item => catalogs.Categorias[item.CategoriaId].Numero)
                 .Select(item =>
                 {
-                    var categoria = catalogs.Categorias[item.CategoriaId];
+                    var valorCategoria = catalogs.ValoresCategorias[item.ValorCategoriaId];
                     return new ValorCategoriaConfiguradoViewModel
                     {
-                        IdRelacion = item.Id,
-                        IdCategoria = categoria.Id,
-                        CategoriaDescripcion = categoria.Descripcion,
-                        NumeroCategoria = categoria.Numero,
-                        Importe = item.Importe
+                        IdValorCategoria = valorCategoria.Id,
+                        Descripcion = valorCategoria.Descripcion,
+                        Tipo = valorCategoria.Tipo?.Descripcion ?? string.Empty,
                     };
                 })
                 .ToList()

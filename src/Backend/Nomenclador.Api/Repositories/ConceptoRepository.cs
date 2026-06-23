@@ -1,23 +1,23 @@
-using Microsoft.EntityFrameworkCore;
-using Nomenclador.Api.Data;
+using NHibernate;
+using NHibernate.Linq;
 using Nomenclador.Api.DTOs;
+using Nomenclador.Api.Models;
 
 namespace Nomenclador.Api.Repositories;
 
-public sealed class ConceptoRepository(NomencladorDbContext dbContext)
+public sealed class ConceptoRepository(NHibernate.ISession session)
 {
     public async Task<IReadOnlyCollection<ConceptoCatalogDto>> GetAllAsync(string? query)
     {
-        var concepts = dbContext.Conceptos.AsQueryable();
+        var concepts = session.Query<ConceptoCatalogEntity>();
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var normalizedQuery = query.Trim().ToLowerInvariant();
+            var q = query.Trim().ToLowerInvariant();
             concepts = concepts.Where(item =>
-                item.Codigo.Contains(normalizedQuery) ||
-                item.DescripcionBreve.ToLower().Contains(normalizedQuery) ||
-                item.Descripcion.ToLower().Contains(normalizedQuery) ||
-                item.Clasificacion.ToLower().Contains(normalizedQuery));
+                item.Codigo.Contains(q) ||
+                item.DescripcionBreve.ToLower().Contains(q) ||
+                item.Descripcion.ToLower().Contains(q));
         }
 
         return await concepts
@@ -29,8 +29,8 @@ public sealed class ConceptoRepository(NomencladorDbContext dbContext)
                 Subcodigo = item.Subcodigo,
                 DescripcionBreve = item.DescripcionBreve,
                 Descripcion = item.Descripcion,
-                Clasificacion = item.Clasificacion
             })
             .ToListAsync();
     }
 }
+

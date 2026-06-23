@@ -33,7 +33,6 @@ function addConcepto() {
     {
       idConcepto: selectedConceptId.value,
       orden: conceptos.value.length + 1,
-      activo: true,
     },
   ]
 }
@@ -72,14 +71,12 @@ function removeConcepto(idConcepto: number) {
             <th>Orden</th>
             <th>Código</th>
             <th>Descripción</th>
-            <th>Clasificación</th>
-            <th>Activo</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="!conceptos.length">
-            <td colspan="6" class="muted">Agregue conceptos desde el catálogo.</td>
+            <td colspan="4" class="muted">Agregue conceptos desde el catálogo.</td>
           </tr>
           <tr v-for="item in conceptos" :key="item.idConcepto">
             <td>
@@ -87,10 +84,6 @@ function removeConcepto(idConcepto: number) {
             </td>
             <td>{{ selectedLookup.get(item.idConcepto)?.codigo ?? item.idConcepto }}</td>
             <td>{{ selectedLookup.get(item.idConcepto)?.descripcion ?? 'Concepto sin catálogo' }}</td>
-            <td>{{ selectedLookup.get(item.idConcepto)?.clasificacion ?? 'N/D' }}</td>
-            <td>
-              <input v-model="item.activo" type="checkbox" />
-            </td>
             <td>
               <button class="danger-button" type="button" @click="removeConcepto(item.idConcepto)">
                 Quitar

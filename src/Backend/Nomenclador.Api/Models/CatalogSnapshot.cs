@@ -13,4 +13,6 @@ public sealed class CatalogSnapshot
     public required IReadOnlyDictionary<int, ConceptoCatalogEntity> Conceptos { get; init; }
 
     public required IReadOnlyDictionary<int, ValorFijoCatalogEntity> ValoresFijos { get; init; }
+
+    public required IReadOnlyDictionary<int, ValorCategoriaCatalogEntity> ValoresCategorias { get; init; }
 }

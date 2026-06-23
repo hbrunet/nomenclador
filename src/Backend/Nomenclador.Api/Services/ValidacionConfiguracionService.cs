@@ -80,21 +80,12 @@ public sealed class ValidacionConfiguracionService(
             });
         }
 
-        if (request.ValoresCategorias.GroupBy(item => item.IdCategoria).Any(group => group.Count() > 1))
+        if (request.ValoresCategorias.GroupBy(item => item.IdValorCategoria).Any(group => group.Count() > 1))
         {
             warnings.Add(new ValidationMessageDto
             {
                 Codigo = "CATEGORIAS_DUPLICADAS",
                 Mensaje = "Hay categorías repetidas en la grilla de valores."
-            });
-        }
-
-        if (request.ValoresCategorias.Any(item => item.Importe <= 0))
-        {
-            warnings.Add(new ValidationMessageDto
-            {
-                Codigo = "CATEGORIA_IMPORTE_CERO",
-                Mensaje = "Existen categorías con importe menor o igual a cero."
             });
         }
 

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+using NHibernate;
 using Nomenclador.Api.Data;
 using Nomenclador.Api.Mappers;
 using Nomenclador.Api.Middleware;
@@ -23,8 +23,16 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddDbContext<NomencladorDbContext>(options =>
-    options.UseInMemoryDatabase("NomencladorDb"));
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("La cadena de conexión 'DefaultConnection' no está configurada.");
+
+// ISessionFactory como singleton (costoso de construir, se crea una sola vez)
+builder.Services.AddSingleton<ISessionFactory>(_ =>
+    NHibernateSessionFactory.Build(connectionString));
+
+// ISession como scoped (una sesión por request HTTP)
+builder.Services.AddScoped(provider =>
+    provider.GetRequiredService<ISessionFactory>().OpenSession());
 
 builder.Services.AddScoped<ConfiguracionNomencladorRepository>();
 builder.Services.AddScoped<ConceptoRepository>();
@@ -39,11 +47,5 @@ var app = builder.Build();
 app.UseMiddleware<ApiExceptionMiddleware>();
 app.UseCors("VueClient");
 app.MapControllers();
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<NomencladorDbContext>();
-    await NomencladorDbSeeder.SeedAsync(dbContext);
-}
 
 app.Run();

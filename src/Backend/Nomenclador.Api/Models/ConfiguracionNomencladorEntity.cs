@@ -1,57 +1,88 @@
 namespace Nomenclador.Api.Models;
 
-public sealed class ConfiguracionNomencladorEntity
+public class ConfiguracionNomencladorEntity
 {
-    public int Id { get; set; }
+    public virtual int Id { get; set; }
 
-    public int NomencladorId { get; set; }
+    public virtual int NomencladorId { get; set; }
 
-    public int EscalaSalarialId { get; set; }
+    public virtual int EscalaSalarialId { get; set; }
 
-    public int ZonaId { get; set; }
+    public virtual int ZonaId { get; set; }
 
-    public DateOnly FechaInicio { get; set; }
+    public virtual DateOnly FechaInicio { get; set; }
 
-    public DateOnly? FechaFin { get; set; }
+    public virtual DateOnly? FechaFin { get; set; }
 
-    public ICollection<ConceptoConfiguradoEntity> Conceptos { get; set; } = [];
+    public virtual IList<ConceptoConfiguradoEntity> Conceptos { get; set; } = [];
 
-    public ICollection<ValorFijoConfiguradoEntity> ValoresFijos { get; set; } = [];
+    public virtual IList<ValorFijoConfiguradoEntity> ValoresFijos { get; set; } = [];
 
-    public ICollection<ValorCategoriaConfiguradoEntity> ValoresCategorias { get; set; } = [];
+    public virtual IList<ValorCategoriaConfiguradoEntity> ValoresCategorias { get; set; } = [];
 }
 
-public sealed class ConceptoConfiguradoEntity
+public class ConceptoConfiguradoEntity
 {
-    public int Id { get; set; }
+    public virtual int ConfiguracionNomencladorId { get; set; }
 
-    public int ConfiguracionNomencladorId { get; set; }
+    public virtual int ConceptoId { get; set; }
 
-    public int ConceptoId { get; set; }
+    public virtual int Orden { get; set; }
 
-    public int Orden { get; set; }
+    override public bool Equals(object? obj)
+    {
+        if (obj is not ConceptoConfiguradoEntity other)
+            return false;
 
-    public bool Activo { get; set; }
+        return ConfiguracionNomencladorId == other.ConfiguracionNomencladorId
+            && ConceptoId == other.ConceptoId;
+    }
+
+    override public int GetHashCode()
+    {
+        return HashCode.Combine(ConfiguracionNomencladorId, ConceptoId);
+    }
 }
 
-public sealed class ValorFijoConfiguradoEntity
+public class ValorFijoConfiguradoEntity
 {
-    public int Id { get; set; }
 
-    public int ConfiguracionNomencladorId { get; set; }
+    public virtual int ConfiguracionNomencladorId { get; set; }
 
-    public int ValorFijoId { get; set; }
+    public virtual int ValorFijoId { get; set; }
 
-    public decimal Importe { get; set; }
+    override public bool Equals(object? obj)
+    {
+        if (obj is not ValorFijoConfiguradoEntity other)
+            return false;
+
+        return ConfiguracionNomencladorId == other.ConfiguracionNomencladorId
+            && ValorFijoId == other.ValorFijoId;
+    }
+    override public int GetHashCode()
+    {
+        return HashCode.Combine(ConfiguracionNomencladorId, ValorFijoId);
+    }
+
 }
 
-public sealed class ValorCategoriaConfiguradoEntity
+public class ValorCategoriaConfiguradoEntity
 {
-    public int Id { get; set; }
+    public virtual int ConfiguracionNomencladorId { get; set; }
 
-    public int ConfiguracionNomencladorId { get; set; }
+    public virtual int ValorCategoriaId { get; set; }
 
-    public int CategoriaId { get; set; }
+    override public bool Equals(object? obj)
+    {
+        if (obj is not ValorCategoriaConfiguradoEntity other)
+            return false;
 
-    public decimal Importe { get; set; }
+        return ConfiguracionNomencladorId == other.ConfiguracionNomencladorId
+            && ValorCategoriaId == other.ValorCategoriaId;
+    }
+
+    override public int GetHashCode()
+    {
+        return HashCode.Combine(ConfiguracionNomencladorId, ValorCategoriaId);
+    }
 }

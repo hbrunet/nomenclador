@@ -16,7 +16,6 @@ const {
   conceptosDisponibles,
   loadingConceptos,
   fetchCatalogs,
-  fetchCategorias,
   fetchConceptos,
   fetchDetail,
   initializeDraft,
@@ -83,7 +82,6 @@ watch(() => route.fullPath, loadScreen)
       @validate="validateCurrent"
       @clone="handleClone"
       @back="router.push('/configuraciones')"
-      @load-categorias="fetchCategorias"
     />
   </section>
 </template>
