@@ -32,8 +32,6 @@ public sealed class ConceptoCatalogDto
     public string DescripcionBreve { get; init; } = string.Empty;
 
     public string Descripcion { get; init; } = string.Empty;
-
-    public string Clasificacion { get; init; } = string.Empty;
 }
 
 public sealed class ConfiguracionNomencladorListItemDto
@@ -110,22 +108,16 @@ public sealed class ConceptoConfiguradoInputDto
     public int IdConcepto { get; init; }
 
     public int Orden { get; init; }
-
-    public bool Activo { get; init; } = true;
 }
 
 public sealed class ValorFijoConfiguradoInputDto
 {
     public int IdValorFijo { get; init; }
-
-    public decimal Importe { get; init; }
 }
 
 public sealed class ValorCategoriaConfiguradoInputDto
 {
-    public int IdCategoria { get; init; }
-
-    public decimal Importe { get; init; }
+    public int IdValorCategoria { get; init; }
 }
 
 public sealed class ClonarConfiguracionDto

@@ -2,40 +2,56 @@ namespace Nomenclador.Api.Models;
 
 public abstract class CatalogEntityBase
 {
-    public int Id { get; init; }
+    public virtual int Id { get; set; }
 
-    public string Descripcion { get; init; } = string.Empty;
+    public virtual string Descripcion { get; set; } = string.Empty;
 }
 
-public sealed class NomencladorCatalogEntity : CatalogEntityBase;
+public class NomencladorCatalogEntity : CatalogEntityBase;
 
-public sealed class EscalaSalarialCatalogEntity : CatalogEntityBase;
+public class EscalaSalarialCatalogEntity : CatalogEntityBase;
 
-public sealed class ZonaCatalogEntity : CatalogEntityBase;
+public class ZonaCatalogEntity : CatalogEntityBase;
 
-public sealed class CategoriaCatalogEntity : CatalogEntityBase
+public class CategoriaCatalogEntity : CatalogEntityBase
 {
-    public int EscalaSalarialId { get; init; }
+    public virtual int EscalaSalarialId { get; set; }
 
-    public int Numero { get; init; }
+    public virtual int Numero { get; set; }
 }
 
-public sealed class ConceptoCatalogEntity
+public class ConceptoCatalogEntity
 {
-    public int Id { get; init; }
+    public virtual int Id { get; set; }
 
-    public string Codigo { get; init; } = string.Empty;
+    public virtual string Codigo { get; set; } = string.Empty;
 
-    public int Subcodigo { get; init; }
+    public virtual int Subcodigo { get; set; }
 
-    public string DescripcionBreve { get; init; } = string.Empty;
+    public virtual string DescripcionBreve { get; set; } = string.Empty;
 
-    public string Descripcion { get; init; } = string.Empty;
+    public virtual string Descripcion { get; set; } = string.Empty;
 
-    public string Clasificacion { get; init; } = string.Empty;
 }
 
-public sealed class ValorFijoCatalogEntity : CatalogEntityBase
+public class ValorFijoCatalogEntity : CatalogEntityBase
 {
-    public string Tipo { get; init; } = string.Empty;
+    public virtual ValorFijoTipoCatalogEntity? Tipo { get; set; }
+    public virtual decimal Valor { get; set; }
+}
+
+public class ValorFijoTipoCatalogEntity : CatalogEntityBase;
+
+public class ValorCategoriaCatalogEntity : CatalogEntityBase
+{
+    public virtual ValorCategoriaTipoCatalogEntity? Tipo { get; set; }
+}
+
+public class ValorCategoriaTipoCatalogEntity : CatalogEntityBase;
+
+public class ReparticionTipoEmpleoNomencladorCatalogEntity 
+{
+    public virtual int ReparticionId { get; set; }
+    public virtual int TipoEmpleoId { get; set; }
+    public virtual int NomencladorId { get; set; }
 }

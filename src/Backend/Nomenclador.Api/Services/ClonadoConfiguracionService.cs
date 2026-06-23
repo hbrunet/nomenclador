@@ -20,21 +20,18 @@ public sealed class ClonadoConfiguracionService
                 {
                     IdConcepto = item.IdConcepto,
                     Orden = item.Orden,
-                    Activo = item.Activo
                 }).ToList()
                 : [],
             ValoresFijos = request.CopiarValoresFijos
                 ? source.ValoresFijos.Select(item => new ValorFijoConfiguradoInputDto
                 {
                     IdValorFijo = item.IdValorFijo,
-                    Importe = item.Importe
                 }).ToList()
                 : [],
             ValoresCategorias = request.CopiarValoresCategoria
                 ? source.ValoresCategorias.Select(item => new ValorCategoriaConfiguradoInputDto
                 {
-                    IdCategoria = item.IdCategoria,
-                    Importe = item.Importe
+                    IdValorCategoria = item.IdValorCategoria,
                 }).ToList()
                 : []
         };

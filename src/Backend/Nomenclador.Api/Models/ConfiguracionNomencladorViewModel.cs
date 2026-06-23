@@ -25,8 +25,6 @@ public sealed class ConfiguracionNomencladorViewModel
 
 public sealed class ConceptoConfiguradoViewModel
 {
-    public int IdRelacion { get; init; }
-
     public int IdConcepto { get; init; }
 
     public string Codigo { get; init; } = string.Empty;
@@ -35,35 +33,23 @@ public sealed class ConceptoConfiguradoViewModel
 
     public string Descripcion { get; init; } = string.Empty;
 
-    public string Clasificacion { get; init; } = string.Empty;
-
     public int Orden { get; init; }
-
-    public bool Activo { get; init; }
 }
 
 public sealed class ValorFijoConfiguradoViewModel
 {
-    public int IdRelacion { get; init; }
-
     public int IdValorFijo { get; init; }
 
     public string Descripcion { get; init; } = string.Empty;
 
     public string Tipo { get; init; } = string.Empty;
-
-    public decimal Importe { get; init; }
 }
 
 public sealed class ValorCategoriaConfiguradoViewModel
 {
-    public int IdRelacion { get; init; }
+    public int IdValorCategoria { get; init; }
 
-    public int IdCategoria { get; init; }
+    public string Descripcion { get; init; } = string.Empty;
 
-    public string CategoriaDescripcion { get; init; } = string.Empty;
-
-    public int NumeroCategoria { get; init; }
-
-    public decimal Importe { get; init; }
+    public string Tipo { get; init; } = string.Empty;
 }
