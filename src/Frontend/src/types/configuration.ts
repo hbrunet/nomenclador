@@ -12,40 +12,36 @@ export interface ValorFijoCatalogItem extends CatalogItem {
   tipo: string
 }
 
+export interface ValorCategoriaCatalogItem extends CatalogItem {
+  tipo: string
+}
+
 export interface ConceptoCatalogItem {
   id: number
   codigo: string
   subcodigo: number
   descripcionBreve: string
   descripcion: string
-  clasificacion: string
 }
 
 export interface ConceptoConfiguradoViewModel {
-  idRelacion: number
   idConcepto: number
   codigo: string
   subcodigo: number
   descripcion: string
-  clasificacion: string
   orden: number
-  activo: boolean
 }
 
 export interface ValorFijoConfiguradoViewModel {
-  idRelacion: number
   idValorFijo: number
   descripcion: string
   tipo: string
-  importe: number
 }
 
 export interface ValorCategoriaConfiguradoViewModel {
-  idRelacion: number
-  idCategoria: number
-  categoriaDescripcion: string
-  numeroCategoria: number
-  importe: number
+  idValorCategoria: number
+  descripcion: string
+  tipo: string
 }
 
 export interface ConfiguracionNomencladorListItemDto {
@@ -79,17 +75,14 @@ export interface ConfiguracionNomencladorDetailDto {
 export interface ConceptoConfiguradoInputDto {
   idConcepto: number
   orden: number
-  activo: boolean
 }
 
 export interface ValorFijoConfiguradoInputDto {
   idValorFijo: number
-  importe: number
 }
 
 export interface ValorCategoriaConfiguradoInputDto {
-  idCategoria: number
-  importe: number
+  idValorCategoria: number
 }
 
 export interface ConfiguracionNomencladorCreateUpdateDto {
@@ -137,4 +130,5 @@ export interface CatalogsState {
   zonas: CatalogItem[]
   categorias: CategoriaCatalogItem[]
   valoresFijos: ValorFijoCatalogItem[]
+  valoresCategorias: ValorCategoriaCatalogItem[]
 }

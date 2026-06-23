@@ -25,7 +25,6 @@ const emit = defineEmits<{
   (event: 'validate'): void
   (event: 'clone'): void
   (event: 'back'): void
-  (event: 'load-categorias', escalaId: number): void
 }>()
 
 const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias'>('conceptos')
@@ -69,7 +68,6 @@ const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias'>('con
         <span>Escala salarial</span>
         <select
           v-model.number="draft.idEscalaSalarial"
-          @change="emit('load-categorias', draft.idEscalaSalarial)"
         >
           <option :value="0">Seleccione</option>
           <option v-for="item in catalogs.escalas" :key="item.id" :value="item.id">
@@ -142,7 +140,7 @@ const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias'>('con
     <ValoresCategoriasGrid
       v-else
       v-model="draft.valoresCategorias"
-      :categorias="catalogs.categorias"
+      :valores-disponibles="catalogs.valoresCategorias"
     />
 
     <div class="validation-grid">

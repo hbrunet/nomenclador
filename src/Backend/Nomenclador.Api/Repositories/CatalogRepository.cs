@@ -90,5 +90,20 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             Tipo = item.Tipo?.Descripcion ?? string.Empty
         }).ToList();
     }
+
+    public async Task<IReadOnlyCollection<ValorCategoriaCatalogDto>> GetValoresCategoriasAsync()
+    {
+        var items = await session.Query<ValorCategoriaCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .OrderBy(item => item.Descripcion)
+            .ToListAsync();
+
+        return items.Select(item => new ValorCategoriaCatalogDto
+        {
+            Id = item.Id,
+            Descripcion = item.Descripcion,
+            Tipo = item.Tipo?.Descripcion ?? string.Empty
+        }).ToList();
+    }
 }
 

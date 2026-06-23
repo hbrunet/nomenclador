@@ -71,7 +71,7 @@ public sealed class ValorFijoCatalogMap : ClassMap<ValorFijoCatalogEntity>
         ReadOnly();
         Id(x => x.Id).Column("IDVALFIJO").GeneratedBy.Assigned();
         Map(x => x.Descripcion).Column("DESCRIPCION");
-        References(x => x.Tipo).Column("IDDVF").ReadOnly();
+        References(x => x.Tipo).Column("IDDVF").Nullable().NotFound.Ignore().ReadOnly();
         Map(x => x.Valor).Column("VALOR");
     }
 }
@@ -84,7 +84,7 @@ public sealed class ValorCategoriaCatalogMap : ClassMap<ValorCategoriaCatalogEnt
         ReadOnly();
         Id(x => x.Id).Column("IDVALCAT").GeneratedBy.Assigned();
         Map(x => x.Descripcion).Column("DESCRIPCION");
-        References(x => x.Tipo).Column("IDDVALCAT").ReadOnly();
+        References(x => x.Tipo).Column("IDDVALCAT").Nullable().NotFound.Ignore().ReadOnly();
     }
 }
 

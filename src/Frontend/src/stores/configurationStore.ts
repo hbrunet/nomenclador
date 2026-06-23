@@ -13,7 +13,6 @@ import type {
   ConfiguracionNomencladorDetailDto,
   ConfiguracionNomencladorListItemDto,
   ValidacionConfiguracionResponse,
-  ValorCategoriaConfiguradoInputDto,
 } from '../types/configuration'
 
 interface ConfigurationState {
@@ -52,15 +51,12 @@ function mapDetailToDraft(
     conceptos: detail.conceptos.map((item) => ({
       idConcepto: item.idConcepto,
       orden: item.orden,
-      activo: item.activo,
     })),
     valoresFijos: detail.valoresFijos.map((item) => ({
       idValorFijo: item.idValorFijo,
-      importe: item.importe,
     })),
     valoresCategorias: detail.valoresCategorias.map((item) => ({
-      idCategoria: item.idCategoria,
-      importe: item.importe,
+      idValorCategoria: item.idValorCategoria,
     })),
   }
 }
@@ -89,6 +85,7 @@ export const useConfigurationStore = defineStore('configuration', {
       zonas: [],
       categorias: [],
       valoresFijos: [],
+      valoresCategorias: [],
     },
     validation: createEmptyValidation(),
     loadingList: false,
@@ -103,11 +100,12 @@ export const useConfigurationStore = defineStore('configuration', {
     },
 
     async fetchCatalogs(escalaId?: number) {
-      const [nomencladores, escalas, zonas, valoresFijos] = await Promise.all([
+      const [nomencladores, escalas, zonas, valoresFijos, valoresCategorias] = await Promise.all([
         configurationService.getNomencladores(),
         configurationService.getEscalas(),
         configurationService.getZonas(),
         configurationService.getValoresFijos(),
+        configurationService.getValoresCategorias(),
       ])
 
       this.catalogs = {
@@ -116,6 +114,7 @@ export const useConfigurationStore = defineStore('configuration', {
         escalas,
         zonas,
         valoresFijos,
+        valoresCategorias,
       }
 
       if (escalaId) {
@@ -127,27 +126,6 @@ export const useConfigurationStore = defineStore('configuration', {
       this.catalogs.categorias = escalaId
         ? await configurationService.getCategorias(escalaId)
         : []
-
-      this.syncCategoriasWithCatalog()
-    },
-
-    syncCategoriasWithCatalog() {
-      const currentValuesByCategory = new Map(
-        this.draft.valoresCategorias.map((item) => [item.idCategoria, item]),
-      )
-
-      const normalizedValues: ValorCategoriaConfiguradoInputDto[] = this.catalogs.categorias.map(
-        (categoria) =>
-          currentValuesByCategory.get(categoria.id) ?? {
-            idCategoria: categoria.id,
-            importe: 0,
-          },
-      )
-
-      this.draft = {
-        ...this.draft,
-        valoresCategorias: normalizedValues,
-      }
     },
 
     async fetchList(filters: ConfigurationFilters = {}) {
@@ -166,7 +144,6 @@ export const useConfigurationStore = defineStore('configuration', {
       try {
         this.current = await configurationService.getById(id)
         this.draft = mapDetailToDraft(this.current)
-        await this.fetchCategorias(this.draft.idEscalaSalarial)
         this.validation = createEmptyValidation()
       } finally {
         this.loadingDetail = false
@@ -195,7 +172,6 @@ export const useConfigurationStore = defineStore('configuration', {
 
         this.current = result
         this.draft = mapDetailToDraft(result)
-        await this.fetchCategorias(this.draft.idEscalaSalarial)
         await this.fetchList()
         return result
       } finally {
@@ -217,7 +193,6 @@ export const useConfigurationStore = defineStore('configuration', {
         )
         this.current = clone
         this.draft = mapDetailToDraft(clone)
-        await this.fetchCategorias(this.draft.idEscalaSalarial)
         await this.fetchList()
         return clone
       } finally {

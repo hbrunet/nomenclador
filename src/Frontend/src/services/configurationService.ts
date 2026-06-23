@@ -8,6 +8,7 @@ import type {
   ConfiguracionNomencladorDetailDto,
   ConfiguracionNomencladorListItemDto,
   ValidacionConfiguracionResponse,
+  ValorCategoriaCatalogItem,
   ValorFijoCatalogItem,
 } from '../types/configuration'
 
@@ -90,6 +91,11 @@ export const configurationService = {
 
   async getValoresFijos() {
     const { data } = await apiClient.get<ValorFijoCatalogItem[]>('/catalogs/valores-fijos')
+    return data
+  },
+
+  async getValoresCategorias() {
+    const { data } = await apiClient.get<ValorCategoriaCatalogItem[]>('/catalogs/valores-categorias')
     return data
   },
 }

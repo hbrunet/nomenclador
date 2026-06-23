@@ -21,6 +21,11 @@ public sealed class ValorFijoCatalogDto : CatalogItemDto
     public string Tipo { get; init; } = string.Empty;
 }
 
+public sealed class ValorCategoriaCatalogDto : CatalogItemDto
+{
+    public string Tipo { get; init; } = string.Empty;
+}
+
 public sealed class ConceptoCatalogDto
 {
     public int Id { get; init; }

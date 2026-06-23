@@ -36,4 +36,10 @@ public sealed class CatalogsController(CatalogRepository catalogRepository) : Co
     {
         return Ok(await catalogRepository.GetValoresFijosAsync());
     }
+
+    [HttpGet("valores-categorias")]
+    public async Task<IActionResult> GetValoresCategorias()
+    {
+        return Ok(await catalogRepository.GetValoresCategoriasAsync());
+    }
 }
