@@ -116,8 +116,9 @@ public sealed class ReparticionTipoEmpleoNomencladorCatalogMap : ClassMap<Repart
     {
         Table("USUARIO.REPTENOMENCLADOR");
         ReadOnly();
-        Map(x => x.ReparticionId).Column("IDREP");
-        Map(x => x.TipoEmpleoId).Column("IDTE");
+        CompositeId()
+            .KeyProperty(x => x.ReparticionId, "IDREP")
+            .KeyProperty(x => x.TipoEmpleoId, "IDTE");
         Map(x => x.NomencladorId).Column("IDNOM");
     }
 }

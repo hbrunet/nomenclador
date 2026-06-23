@@ -36,8 +36,21 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next)
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
             {
                 mensaje = "Ocurrió un error inesperado al procesar la solicitud.",
-                detalle = exception.Message
+                detalle = BuildDetailMessage(exception)
             }, SerializerOptions));
         }
+    }
+
+    private static string BuildDetailMessage(Exception ex)
+    {
+        var parts = new System.Text.StringBuilder();
+        var current = ex;
+        while (current is not null)
+        {
+            if (parts.Length > 0) parts.Append(" --> ");
+            parts.Append(current.Message);
+            current = current.InnerException;
+        }
+        return parts.ToString();
     }
 }

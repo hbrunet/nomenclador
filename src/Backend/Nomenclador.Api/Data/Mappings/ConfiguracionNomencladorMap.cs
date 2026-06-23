@@ -66,7 +66,7 @@ public sealed class ValorFijoConfiguradoMap : ClassMap<ValorFijoConfiguradoEntit
         Table("USUARIO.HISTNOM_VALORUNICO");
         CompositeId()
             .KeyProperty(x => x.ConfiguracionNomencladorId, "IDHISTORIAL")
-            .KeyProperty(x => x.ValorFijoId, "IDVALORFIJO");
+            .KeyProperty(x => x.ValorFijoId, "IDVALFIJO");
     }
 }
 
