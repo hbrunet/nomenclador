@@ -35,20 +35,11 @@ const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias'>('con
     <div class="editor-toolbar">
       <div>
         <h2>Editor de configuración</h2>
-        <p class="muted">
-          Cabecera editable y pestañas para conceptos, valores fijos y categorías.
-        </p>
       </div>
       <div class="inline-actions">
         <button class="secondary-button" type="button" @click="emit('back')">Volver</button>
-        <button class="secondary-button" type="button" :disabled="loading" @click="emit('validate')">
-          Validar
-        </button>
         <button class="secondary-button" type="button" :disabled="loading" @click="emit('clone')">
           Clonar
-        </button>
-        <button class="primary-button" type="button" :disabled="loading" @click="emit('save')">
-          Guardar
         </button>
       </div>
     </div>

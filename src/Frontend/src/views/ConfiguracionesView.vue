@@ -50,7 +50,6 @@ onMounted(async () => {
     <div class="page-header">
       <div>
         <h2>Configuraciones de nomenclador</h2>
-        <p class="muted">Grilla inicial con filtros por nomenclador, escala, zona y estado.</p>
       </div>
     </div>
 

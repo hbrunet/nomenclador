@@ -122,6 +122,18 @@ public sealed class ConfiguracionNomencladorMapper
                             .ToList()
                     };
                 })
+                .ToList(),
+            Categorias = catalogs.Categorias.Values
+                .Where(item => item.EscalaSalarialId == entity.EscalaSalarialId)
+                .OrderBy(item => item.Numero)
+                .Select(item => new CategoriaCatalogDto
+                {
+                    Id = item.Id,
+                    EscalaSalarialId = item.EscalaSalarialId,
+                    Numero = item.Numero,
+                    Monto = item.Monto,
+                    Descripcion = item.Descripcion
+                })
                 .ToList()
         };
     }

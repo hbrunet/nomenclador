@@ -61,13 +61,6 @@ watch(() => route.fullPath, loadScreen)
 
 <template>
   <section class="stack">
-    <div class="page-card">
-      <h2>{{ currentId ? `Configuración #${currentId}` : 'Nueva configuración' }}</h2>
-      <p class="muted">
-        Vista inicial de detalle con formulario base, tabs navegables y acciones REST.
-      </p>
-    </div>
-
     <p v-if="loadingDetail" class="muted">Cargando configuración...</p>
 
     <ConfiguracionEditor

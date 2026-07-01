@@ -27,4 +27,6 @@ public sealed class ConfiguracionNomencladorDetailDto
     public IReadOnlyCollection<ValorFijoConfiguradoDto> ValoresFijos { get; init; } = [];
 
     public IReadOnlyCollection<ValorCategoriaConfiguradoDto> ValoresCategorias { get; init; } = [];
+
+    public IReadOnlyCollection<CategoriaCatalogDto> Categorias { get; init; } = [];
 }
