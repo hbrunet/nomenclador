@@ -1,4 +1,5 @@
 using NHibernate;
+using NHibernate.Criterion;
 using NHibernate.Linq;
 using Nomenclador.Api.Models;
 
@@ -6,43 +7,105 @@ namespace Nomenclador.Api.Repositories;
 
 public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession session)
 {
-    public async Task<IReadOnlyCollection<ConfiguracionNomencladorEntity>> GetAllAsync(
+    public async Task<(IReadOnlyCollection<ConfiguracionNomencladorEntity> Items, int Total)> GetAllAsync(
         int? nomencladorId,
         int? escalaSalarialId,
         int? zonaId,
-        DateOnly? vigenteEn)
+        DateOnly? vigenteEn,
+        string? estado,
+        int page,
+        int pageSize)
     {
-        var query = session.Query<ConfiguracionNomencladorEntity>();
+        ConfiguracionNomencladorEntity alias = null!;
+        var query = session.QueryOver(() => alias);
 
         if (nomencladorId.HasValue)
-            query = query.Where(c => c.NomencladorId == nomencladorId.Value);
+            query.Where(() => alias.NomencladorId == nomencladorId.Value);
 
         if (escalaSalarialId.HasValue)
-            query = query.Where(c => c.EscalaSalarialId == escalaSalarialId.Value);
+            query.Where(() => alias.EscalaSalarialId == escalaSalarialId.Value);
 
         if (zonaId.HasValue)
-            query = query.Where(c => c.ZonaId == zonaId.Value);
+            query.Where(() => alias.ZonaId == zonaId.Value);
 
-        var items = await query
-            .OrderByDescending(c => c.FechaInicio)
-            .ToListAsync();
-
-        // El filtro de vigencia con DateOnly? se aplica en memoria para evitar
-        // problemas de traducción SQL con tipos personalizados en Oracle 11g.
         if (vigenteEn.HasValue)
         {
-            items = items
-                .Where(c => c.FechaInicio <= vigenteEn.Value &&
-                            (!c.FechaFin.HasValue || c.FechaFin.Value >= vigenteEn.Value))
-                .ToList();
+            var fecha = vigenteEn.Value;
+            // Usar Restrictions para que la comparación de DateOnly? se traduzca
+            // correctamente a SQL en Oracle 11g sin pasar por el filtro en memoria.
+            query.Where(Restrictions.Le(
+                Projections.Property(() => alias.FechaInicio), fecha));
+            query.Where(Restrictions.Or(
+                Restrictions.IsNull(Projections.Property(() => alias.FechaFin)),
+                Restrictions.Ge(Projections.Property(() => alias.FechaFin), fecha)));
         }
 
-        return items;
+        if (!string.IsNullOrWhiteSpace(estado))
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            switch (estado.Trim().ToUpperInvariant())
+            {
+                case "FUTURA":
+                    query.Where(Restrictions.Gt(
+                        Projections.Property(() => alias.FechaInicio), today));
+                    break;
+                case "VENCIDA":
+                    query.Where(Restrictions.And(
+                        Restrictions.IsNotNull(Projections.Property(() => alias.FechaFin)),
+                        Restrictions.Lt(Projections.Property(() => alias.FechaFin), today)));
+                    break;
+                case "ACTIVA":
+                    query.Where(Restrictions.Le(
+                        Projections.Property(() => alias.FechaInicio), today));
+                    query.Where(Restrictions.Or(
+                        Restrictions.IsNull(Projections.Property(() => alias.FechaFin)),
+                        Restrictions.Ge(Projections.Property(() => alias.FechaFin), today)));
+                    break;
+            }
+        }
+
+        var total = await query.RowCountAsync();
+
+        var rawItems = await query
+            .OrderBy(() => alias.FechaInicio).Desc
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ListAsync();
+
+        return (rawItems.ToList(), total);
     }
 
     public async Task<ConfiguracionNomencladorEntity?> GetByIdAsync(int id)
     {
-        return await session.GetAsync<ConfiguracionNomencladorEntity>(id);
+        var entity = await session.GetAsync<ConfiguracionNomencladorEntity>(id);
+        if (entity == null) return null;
+
+        await LoadValorCategoriaItemsAsync(entity);
+
+        return entity;
+    }
+
+    private async Task LoadValorCategoriaItemsAsync(ConfiguracionNomencladorEntity entity)
+    {
+        var ids = entity.ValoresCategorias
+            .Select(vc => vc.ValorCategoriaId)
+            .Distinct()
+            .ToList();
+
+        if (ids.Count == 0) return;
+
+        var allItems = await session.Query<ValorCategoriaItemConfiguradoEntity>()
+            .Where(item => ids.Contains(item.ValorCategoriaId))
+            .ToListAsync();
+
+        var byId = allItems
+            .GroupBy(item => item.ValorCategoriaId)
+            .ToDictionary(g => g.Key, g => (IList<ValorCategoriaItemConfiguradoEntity>)g.ToList());
+
+        foreach (var vc in entity.ValoresCategorias)
+        {
+            vc.Items = byId.TryGetValue(vc.ValorCategoriaId, out var items) ? items : [];
+        }
     }
 
     public async Task AddAsync(ConfiguracionNomencladorEntity entity)

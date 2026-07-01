@@ -36,12 +36,20 @@ export interface ValorFijoConfiguradoViewModel {
   idValorFijo: number
   descripcion: string
   tipo: string
+  valor: number
+}
+
+export interface ValorCategoriaItemViewModel {
+  id: number
+  numeroCategoria: number
+  importe: number
 }
 
 export interface ValorCategoriaConfiguradoViewModel {
   idValorCategoria: number
   descripcion: string
   tipo: string
+  items: ValorCategoriaItemViewModel[]
 }
 
 export interface ConfiguracionNomencladorListItemDto {
@@ -79,10 +87,18 @@ export interface ConceptoConfiguradoInputDto {
 
 export interface ValorFijoConfiguradoInputDto {
   idValorFijo: number
+  valor: number
+}
+
+export interface ValorCategoriaItemInputDto {
+  id: number
+  numeroCategoria: number
+  importe: number
 }
 
 export interface ValorCategoriaConfiguradoInputDto {
   idValorCategoria: number
+  items: ValorCategoriaItemInputDto[]
 }
 
 export interface ConfiguracionNomencladorCreateUpdateDto {
@@ -116,12 +132,21 @@ export interface ClonarConfiguracionDto {
   copiarValoresCategoria: boolean
 }
 
+export interface PagedResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface ConfigurationFilters {
   nomencladorId?: number
   escalaSalarialId?: number
   zonaId?: number
   vigenteEn?: string
   estado?: string
+  page?: number
+  pageSize?: number
 }
 
 export interface CatalogsState {

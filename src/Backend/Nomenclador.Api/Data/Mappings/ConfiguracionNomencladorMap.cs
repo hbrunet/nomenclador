@@ -46,37 +46,3 @@ public sealed class ConfiguracionNomencladorMap : ClassMap<ConfiguracionNomencla
             .Cascade.AllDeleteOrphan();
     }
 }
-
-public sealed class ConceptoConfiguradoMap : ClassMap<ConceptoConfiguradoEntity>
-{
-    public ConceptoConfiguradoMap()
-    {
-        Table("USUARIO.HISTNOM_CONCEPTO");
-        CompositeId()
-            .KeyProperty(x => x.ConfiguracionNomencladorId, "IDHISTORIAL")
-            .KeyProperty(x => x.ConceptoId, "IDCONCEPTO");
-        Map(x => x.Orden).Column("ORDEN");
-    }
-}
-
-public sealed class ValorFijoConfiguradoMap : ClassMap<ValorFijoConfiguradoEntity>
-{
-    public ValorFijoConfiguradoMap()
-    {
-        Table("USUARIO.HISTNOM_VALORUNICO");
-        CompositeId()
-            .KeyProperty(x => x.ConfiguracionNomencladorId, "IDHISTORIAL")
-            .KeyProperty(x => x.ValorFijoId, "IDVALFIJO");
-    }
-}
-
-public sealed class ValorCategoriaConfiguradoMap : ClassMap<ValorCategoriaConfiguradoEntity>
-{
-    public ValorCategoriaConfiguradoMap()
-    {
-        Table("USUARIO.HISTNOM_VALPCAT");
-        CompositeId()
-            .KeyProperty(x => x.ConfiguracionNomencladorId, "IDHISTORIAL")
-            .KeyProperty(x => x.ValorCategoriaId, "IDVALCAT");
-    }
-}

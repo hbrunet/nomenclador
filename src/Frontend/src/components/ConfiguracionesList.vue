@@ -1,15 +1,22 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ConfiguracionNomencladorListItemDto } from '../types/configuration'
 
-defineProps<{
+const props = defineProps<{
   items: ConfiguracionNomencladorListItemDto[]
   loading: boolean
+  total: number
+  page: number
+  pageSize: number
 }>()
 
 defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: number): void
+  (event: 'page-change', page: number): void
 }>()
+
+const totalPages = computed(() => Math.ceil(props.total / props.pageSize) || 1)
 </script>
 
 <template>
@@ -63,6 +70,28 @@ defineEmits<{
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div v-if="total > 0" class="pagination">
+      <button
+        class="ghost-button"
+        type="button"
+        :disabled="page <= 1"
+        @click="$emit('page-change', page - 1)"
+      >
+        ← Anterior
+      </button>
+      <span class="muted pagination-info">
+        Página {{ page }} de {{ totalPages }} &middot; {{ total }} registros
+      </span>
+      <button
+        class="ghost-button"
+        type="button"
+        :disabled="page >= totalPages"
+        @click="$emit('page-change', page + 1)"
+      >
+        Siguiente →
+      </button>
     </div>
   </section>
 </template>

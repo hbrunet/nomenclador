@@ -7,6 +7,7 @@ import type {
   ConfiguracionNomencladorCreateUpdateDto,
   ConfiguracionNomencladorDetailDto,
   ConfiguracionNomencladorListItemDto,
+  PagedResult,
   ValidacionConfiguracionResponse,
   ValorCategoriaCatalogItem,
   ValorFijoCatalogItem,
@@ -21,7 +22,7 @@ export const apiClient = axios.create({
 
 export const configurationService = {
   async list(filters: ConfigurationFilters = {}) {
-    const { data } = await apiClient.get<ConfiguracionNomencladorListItemDto[]>(
+    const { data } = await apiClient.get<PagedResult<ConfiguracionNomencladorListItemDto>>(
       '/configuraciones-nomenclador',
       { params: filters },
     )

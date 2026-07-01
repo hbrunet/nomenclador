@@ -6,7 +6,8 @@ import { useConfiguration } from '../composables/useConfiguration'
 
 const router = useRouter()
 
-const { catalogs, configuraciones, loadingList, fetchCatalogs, fetchList } = useConfiguration()
+const { catalogs, configuraciones, pagination, loadingList, fetchCatalogs, fetchList } =
+  useConfiguration()
 
 const filters = reactive({
   nomencladorId: undefined as number | undefined,
@@ -16,14 +17,26 @@ const filters = reactive({
   estado: '',
 })
 
-async function loadList() {
-  await fetchList({
+const PAGE_SIZE = 20
+
+function buildParams(page: number) {
+  return {
     nomencladorId: filters.nomencladorId,
     escalaSalarialId: filters.escalaSalarialId,
     zonaId: filters.zonaId,
     vigenteEn: filters.vigenteEn || undefined,
     estado: filters.estado || undefined,
-  })
+    page,
+    pageSize: PAGE_SIZE,
+  }
+}
+
+async function loadList() {
+  await fetchList(buildParams(1))
+}
+
+async function goToPage(page: number) {
+  await fetchList(buildParams(page))
 }
 
 onMounted(async () => {
@@ -96,7 +109,12 @@ onMounted(async () => {
   <ConfiguracionesList
     :items="configuraciones"
     :loading="loadingList"
+    :total="pagination.total"
+    :page="pagination.page"
+    :page-size="pagination.pageSize"
     @create="router.push('/configuraciones/nueva')"
     @edit="router.push(`/configuraciones/${$event}`)"
+    @page-change="goToPage"
+  />
   />
 </template>

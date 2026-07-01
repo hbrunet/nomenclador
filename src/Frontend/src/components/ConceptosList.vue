@@ -68,8 +68,8 @@ function removeConcepto(idConcepto: number) {
       <table>
         <thead>
           <tr>
-            <th>Orden</th>
             <th>Código</th>
+            <th>Subcódigo</th>
             <th>Descripción</th>
             <th></th>
           </tr>
@@ -79,10 +79,8 @@ function removeConcepto(idConcepto: number) {
             <td colspan="4" class="muted">Agregue conceptos desde el catálogo.</td>
           </tr>
           <tr v-for="item in conceptos" :key="item.idConcepto">
-            <td>
-              <input v-model.number="item.orden" min="1" type="number" />
-            </td>
             <td>{{ selectedLookup.get(item.idConcepto)?.codigo ?? item.idConcepto }}</td>
+            <td>{{ selectedLookup.get(item.idConcepto)?.subcodigo ?? 'N/D' }}</td>
             <td>{{ selectedLookup.get(item.idConcepto)?.descripcion ?? 'Concepto sin catálogo' }}</td>
             <td>
               <button class="danger-button" type="button" @click="removeConcepto(item.idConcepto)">

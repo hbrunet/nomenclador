@@ -25,6 +25,7 @@ function addValorFijo() {
     ...valoresFijos.value,
     {
       idValorFijo: selectedValorId.value,
+      valor: 0,
     },
   ]
 }
@@ -55,16 +56,18 @@ function removeValorFijo(idValorFijo: number) {
           <tr>
             <th>Descripción</th>
             <th>Tipo</th>
+            <th>Valor</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="!valoresFijos.length">
-            <td colspan="3" class="muted">No hay valores fijos configurados.</td>
+            <td colspan="4" class="muted">No hay valores fijos configurados.</td>
           </tr>
           <tr v-for="item in valoresFijos" :key="item.idValorFijo">
             <td>{{ valuesById.get(item.idValorFijo)?.descripcion ?? 'Valor fijo' }}</td>
             <td>{{ valuesById.get(item.idValorFijo)?.tipo ?? 'N/D' }}</td>
+            <td>{{ item.valor }}</td>
             <td>
               <button class="danger-button" type="button" @click="removeValorFijo(item.idValorFijo)">
                 Quitar

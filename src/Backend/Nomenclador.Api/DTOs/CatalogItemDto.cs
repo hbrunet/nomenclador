@@ -1,6 +1,6 @@
-namespace Nomenclador.Api.Models;
+namespace Nomenclador.Api.DTOs;
 
-public sealed class CatalogItemViewModel
+public class CatalogItemDto
 {
     public int Id { get; init; }
 

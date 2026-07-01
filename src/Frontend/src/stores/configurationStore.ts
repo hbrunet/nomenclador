@@ -15,8 +15,15 @@ import type {
   ValidacionConfiguracionResponse,
 } from '../types/configuration'
 
+interface PaginationState {
+  total: number
+  page: number
+  pageSize: number
+}
+
 interface ConfigurationState {
   items: ConfiguracionNomencladorListItemDto[]
+  pagination: PaginationState
   current: ConfiguracionNomencladorDetailDto | null
   draft: ConfiguracionNomencladorCreateUpdateDto
   catalogs: CatalogsState
@@ -54,9 +61,15 @@ function mapDetailToDraft(
     })),
     valoresFijos: detail.valoresFijos.map((item) => ({
       idValorFijo: item.idValorFijo,
+      valor: item.valor,
     })),
     valoresCategorias: detail.valoresCategorias.map((item) => ({
       idValorCategoria: item.idValorCategoria,
+      items: item.items.map((subitem) => ({
+        id: subitem.id,
+        numeroCategoria: subitem.numeroCategoria,
+        importe: subitem.importe,
+      })),
     })),
   }
 }
@@ -77,6 +90,7 @@ function nextClonePayload(detail: ConfiguracionNomencladorDetailDto): ClonarConf
 export const useConfigurationStore = defineStore('configuration', {
   state: (): ConfigurationState => ({
     items: [],
+    pagination: { total: 0, page: 1, pageSize: 20 },
     current: null,
     draft: createEmptyDraft(),
     catalogs: {
@@ -132,7 +146,9 @@ export const useConfigurationStore = defineStore('configuration', {
       this.loadingList = true
 
       try {
-        this.items = await configurationService.list(filters)
+        const result = await configurationService.list(filters)
+        this.items = result.items
+        this.pagination = { total: result.total, page: result.page, pageSize: result.pageSize }
       } finally {
         this.loadingList = false
       }

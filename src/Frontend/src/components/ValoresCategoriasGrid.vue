@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import ValorCategoriaItemsModal from './ValorCategoriaItemsModal.vue'
 import type { ValorCategoriaCatalogItem, ValorCategoriaConfiguradoInputDto } from '../types/configuration'
 
 const valoresCategorias = defineModel<ValorCategoriaConfiguradoInputDto[]>({ required: true })
@@ -9,8 +10,26 @@ const props = defineProps<{
 }>()
 
 const selectedValorId = ref<number | null>(null)
+const selectedItemIndex = ref<number | null>(null)
+const modalRef = ref<InstanceType<typeof ValorCategoriaItemsModal> | null>(null)
 
 const valuesById = computed(() => new Map(props.valoresDisponibles.map((item) => [item.id, item])))
+
+const selectedItem = computed(() =>
+  selectedItemIndex.value !== null ? (valoresCategorias.value[selectedItemIndex.value] ?? null) : null,
+)
+
+const selectedDescripcion = computed(() =>
+  selectedItem.value
+    ? (valuesById.value.get(selectedItem.value.idValorCategoria)?.descripcion ?? 'Valor sin catálogo')
+    : '',
+)
+
+const selectedTipo = computed(() =>
+  selectedItem.value
+    ? (valuesById.value.get(selectedItem.value.idValorCategoria)?.tipo ?? 'N/D')
+    : '',
+)
 
 function addValorCategoria() {
   if (!selectedValorId.value) return
@@ -19,7 +38,7 @@ function addValorCategoria() {
 
   valoresCategorias.value = [
     ...valoresCategorias.value,
-    { idValorCategoria: selectedValorId.value },
+    { idValorCategoria: selectedValorId.value, items: [] },
   ]
 }
 
@@ -27,6 +46,11 @@ function removeValorCategoria(idValorCategoria: number) {
   valoresCategorias.value = valoresCategorias.value.filter(
     (item) => item.idValorCategoria !== idValorCategoria,
   )
+}
+
+function verItems(index: number) {
+  selectedItemIndex.value = index
+  modalRef.value?.open()
 }
 </script>
 
@@ -58,21 +82,37 @@ function removeValorCategoria(idValorCategoria: number) {
           <tr v-if="!valoresCategorias.length">
             <td colspan="3" class="muted">No hay valores por categoría configurados.</td>
           </tr>
-          <tr v-for="item in valoresCategorias" :key="item.idValorCategoria">
+          <tr v-for="(item, index) in valoresCategorias" :key="item.idValorCategoria">
             <td>{{ valuesById.get(item.idValorCategoria)?.descripcion ?? 'Valor sin catálogo' }}</td>
             <td>{{ valuesById.get(item.idValorCategoria)?.tipo ?? 'N/D' }}</td>
             <td>
-              <button
-                class="danger-button"
-                type="button"
-                @click="removeValorCategoria(item.idValorCategoria)"
-              >
-                Quitar
-              </button>
+              <div class="inline-actions">
+                <button
+                  class="secondary-button"
+                  type="button"
+                  @click="verItems(index)"
+                >
+                  Ver items
+                </button>
+                <button
+                  class="danger-button"
+                  type="button"
+                  @click="removeValorCategoria(item.idValorCategoria)"
+                >
+                  Quitar
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <ValorCategoriaItemsModal
+      ref="modalRef"
+      :item="selectedItem"
+      :descripcion="selectedDescripcion"
+      :tipo="selectedTipo"
+    />
   </div>
 </template>

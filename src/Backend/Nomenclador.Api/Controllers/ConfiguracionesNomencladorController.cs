@@ -14,10 +14,12 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         [FromQuery] int? escalaSalarialId,
         [FromQuery] int? zonaId,
         [FromQuery] DateOnly? vigenteEn,
-        [FromQuery] string? estado)
+        [FromQuery] string? estado,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        var items = await configuracionService.GetAllAsync(nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado);
-        return Ok(items);
+        var result = await configuracionService.GetAllAsync(nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize);
+        return Ok(result);
     }
 
     [HttpGet("{id:int}")]

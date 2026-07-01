@@ -41,23 +41,43 @@ public sealed class ConfiguracionNomencladorMapper
         return entity;
     }
 
-    public ConfiguracionNomencladorViewModel ToViewModel(ConfiguracionNomencladorEntity entity, CatalogSnapshot catalogs)
+    public ConfiguracionNomencladorListItemDto ToListItemDto(ConfiguracionNomencladorEntity entity, CatalogSnapshot catalogs)
     {
-        return new ConfiguracionNomencladorViewModel
+        return new ConfiguracionNomencladorListItemDto
         {
             Id = entity.Id,
-            Nomenclador = MapCatalogItem(catalogs.Nomencladores, entity.NomencladorId),
-            EscalaSalarial = MapCatalogItem(catalogs.EscalasSalariales, entity.EscalaSalarialId),
-            Zona = MapCatalogItem(catalogs.Zonas, entity.ZonaId),
+            NomencladorDescripcion = MapCatalogDescription(catalogs.Nomencladores, entity.NomencladorId),
+            EscalaDescripcion = MapCatalogDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId),
+            ZonaDescripcion = MapCatalogDescription(catalogs.Zonas, entity.ZonaId),
+            FechaInicio = entity.FechaInicio,
+            FechaFin = entity.FechaFin,
+            Estado = ResolveEstado(entity.FechaInicio, entity.FechaFin),
+            CantidadConceptos = entity.Conceptos.Count,
+            CantidadValoresFijos = entity.ValoresFijos.Count
+        };
+    }
+
+    public ConfiguracionNomencladorDetailDto ToDetailDto(ConfiguracionNomencladorEntity entity, CatalogSnapshot catalogs)
+    {
+        return new ConfiguracionNomencladorDetailDto
+        {
+            Id = entity.Id,
+            IdNomenclador = entity.NomencladorId,
+            NomencladorDescripcion = MapCatalogDescription(catalogs.Nomencladores, entity.NomencladorId),
+            IdEscalaSalarial = entity.EscalaSalarialId,
+            EscalaDescripcion = MapCatalogDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId),
+            IdZona = entity.ZonaId,
+            ZonaDescripcion = MapCatalogDescription(catalogs.Zonas, entity.ZonaId),
             FechaInicio = entity.FechaInicio,
             FechaFin = entity.FechaFin,
             Estado = ResolveEstado(entity.FechaInicio, entity.FechaFin),
             Conceptos = entity.Conceptos
-                .OrderBy(item => item.Orden)
+                .OrderBy(item => item.ConceptoCatalog.Codigo)
+                .ThenBy(item => item.ConceptoCatalog.Subcodigo)
                 .Select(item =>
                 {
                     var concepto = catalogs.Conceptos[item.ConceptoId];
-                    return new ConceptoConfiguradoViewModel
+                    return new ConceptoConfiguradoDto
                     {
                         IdConcepto = concepto.Id,
                         Codigo = concepto.Codigo,
@@ -68,76 +88,48 @@ public sealed class ConfiguracionNomencladorMapper
                 })
                 .ToList(),
             ValoresFijos = entity.ValoresFijos
+                .OrderBy(item => catalogs.ValoresFijos[item.ValorFijoId].Descripcion)
                 .Select(item =>
                 {
                     var valorFijo = catalogs.ValoresFijos[item.ValorFijoId];
-                    return new ValorFijoConfiguradoViewModel
+                    return new ValorFijoConfiguradoDto
                     {
                         IdValorFijo = valorFijo.Id,
                         Descripcion = valorFijo.Descripcion,
                         Tipo = valorFijo.Tipo?.Descripcion ?? string.Empty,
+                        Valor = valorFijo.Valor,
                     };
                 })
                 .ToList(),
             ValoresCategorias = entity.ValoresCategorias
+                .OrderBy(item => catalogs.ValoresCategorias[item.ValorCategoriaId].Descripcion)
                 .Select(item =>
                 {
                     var valorCategoria = catalogs.ValoresCategorias[item.ValorCategoriaId];
-                    return new ValorCategoriaConfiguradoViewModel
+                    return new ValorCategoriaConfiguradoDto
                     {
                         IdValorCategoria = valorCategoria.Id,
                         Descripcion = valorCategoria.Descripcion,
                         Tipo = valorCategoria.Tipo?.Descripcion ?? string.Empty,
+                        Items = item.Items
+                            .OrderBy(vc => vc.Numero)
+                            .Select(vc => new ValorCategoriaConfiguradoItemDto
+                            {
+                                Id = vc.Id,
+                                NumeroCategoria = vc.Numero,
+                                Importe = vc.Importe,
+                            })
+                            .ToList()
                     };
                 })
                 .ToList()
         };
     }
 
-    public ConfiguracionNomencladorListItemDto ToListItemDto(ConfiguracionNomencladorViewModel viewModel)
-    {
-        return new ConfiguracionNomencladorListItemDto
-        {
-            Id = viewModel.Id,
-            NomencladorDescripcion = viewModel.Nomenclador.Descripcion,
-            EscalaDescripcion = viewModel.EscalaSalarial.Descripcion,
-            ZonaDescripcion = viewModel.Zona.Descripcion,
-            FechaInicio = viewModel.FechaInicio,
-            FechaFin = viewModel.FechaFin,
-            Estado = viewModel.Estado,
-            CantidadConceptos = viewModel.Conceptos.Count,
-            CantidadValoresFijos = viewModel.ValoresFijos.Count
-        };
-    }
-
-    public ConfiguracionNomencladorDetailDto ToDetailDto(ConfiguracionNomencladorViewModel viewModel)
-    {
-        return new ConfiguracionNomencladorDetailDto
-        {
-            Id = viewModel.Id,
-            IdNomenclador = viewModel.Nomenclador.Id,
-            NomencladorDescripcion = viewModel.Nomenclador.Descripcion,
-            IdEscalaSalarial = viewModel.EscalaSalarial.Id,
-            EscalaDescripcion = viewModel.EscalaSalarial.Descripcion,
-            IdZona = viewModel.Zona.Id,
-            ZonaDescripcion = viewModel.Zona.Descripcion,
-            FechaInicio = viewModel.FechaInicio,
-            FechaFin = viewModel.FechaFin,
-            Estado = viewModel.Estado,
-            Conceptos = viewModel.Conceptos,
-            ValoresFijos = viewModel.ValoresFijos,
-            ValoresCategorias = viewModel.ValoresCategorias
-        };
-    }
-
-    private static CatalogItemViewModel MapCatalogItem<TCatalog>(IReadOnlyDictionary<int, TCatalog> catalog, int id)
+    private static string MapCatalogDescription<TCatalog>(IReadOnlyDictionary<int, TCatalog> catalog, int id)
         where TCatalog : CatalogEntityBase
     {
-        return new CatalogItemViewModel
-        {
-            Id = id,
-            Descripcion = catalog.TryGetValue(id, out var item) ? item.Descripcion : "Sin catálogo"
-        };
+        return catalog.TryGetValue(id, out var item) ? item.Descripcion : "Sin catálogo";
     }
 
     private static string ResolveEstado(DateOnly fechaInicio, DateOnly? fechaFin)
