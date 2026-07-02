@@ -9,6 +9,7 @@ const router = useRouter()
 
 const {
   catalogs,
+  current,
   draft,
   validation,
   loadingDetail,
@@ -67,6 +68,7 @@ watch(() => route.fullPath, loadScreen)
       v-else
       v-model:draft="draft"
       :catalogs="catalogs"
+      :categorias="current?.categorias ?? []"
       :conceptos-disponibles="conceptosDisponibles"
       :loading-conceptos="loadingConceptos"
       :validation="validation"
@@ -75,6 +77,7 @@ watch(() => route.fullPath, loadScreen)
       @validate="validateCurrent"
       @clone="handleClone"
       @back="router.push('/configuraciones')"
+      @catalog-refresh="fetchCatalogs()"
     />
   </section>
 </template>

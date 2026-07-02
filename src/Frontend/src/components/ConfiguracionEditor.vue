@@ -3,8 +3,10 @@ import { ref } from 'vue'
 import ConceptosList from './ConceptosList.vue'
 import ValoresFijosList from './ValoresFijosList.vue'
 import ValoresCategoriasGrid from './ValoresCategoriasGrid.vue'
+import CategoriasList from './CategoriasList.vue'
 import type {
   CatalogsState,
+  CategoriaCatalogItem,
   ConceptoCatalogItem,
   ConfiguracionNomencladorCreateUpdateDto,
   ValidacionConfiguracionResponse,
@@ -14,6 +16,7 @@ const draft = defineModel<ConfiguracionNomencladorCreateUpdateDto>('draft', { re
 
 defineProps<{
   catalogs: CatalogsState
+  categorias: CategoriaCatalogItem[]
   conceptosDisponibles: ConceptoCatalogItem[]
   loadingConceptos: boolean
   validation: ValidacionConfiguracionResponse
@@ -25,9 +28,10 @@ const emit = defineEmits<{
   (event: 'validate'): void
   (event: 'clone'): void
   (event: 'back'): void
+  (event: 'catalog-refresh'): void
 }>()
 
-const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias'>('conceptos')
+const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias' | 'categorias'>('conceptos')
 </script>
 
 <template>
@@ -113,6 +117,14 @@ const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias'>('con
       >
         Valores por categoría
       </button>
+      <button
+        class="tab-button"
+        :class="{ active: activeTab === 'categorias' }"
+        type="button"
+        @click="activeTab = 'categorias'"
+      >
+        Categorías Escala Salarial
+      </button>
     </div>
 
     <ConceptosList
@@ -126,12 +138,18 @@ const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias'>('con
       v-else-if="activeTab === 'valores-fijos'"
       v-model="draft.valoresFijos"
       :valores-disponibles="catalogs.valoresFijos"
+      @catalog-refresh="emit('catalog-refresh')"
     />
 
     <ValoresCategoriasGrid
-      v-else
+      v-else-if="activeTab === 'valores-categorias'"
       v-model="draft.valoresCategorias"
       :valores-disponibles="catalogs.valoresCategorias"
+    />
+
+    <CategoriasList
+      v-else-if="activeTab === 'categorias'"
+      :categorias="categorias"
     />
 
     <div class="validation-grid">

@@ -6,10 +6,13 @@ export interface CatalogItem {
 export interface CategoriaCatalogItem extends CatalogItem {
   escalaSalarialId: number
   numero: number
+  monto: number
 }
 
 export interface ValorFijoCatalogItem extends CatalogItem {
+  idTipo: number
   tipo: string
+  valor: number
 }
 
 export interface ValorCategoriaCatalogItem extends CatalogItem {
@@ -78,6 +81,7 @@ export interface ConfiguracionNomencladorDetailDto {
   conceptos: ConceptoConfiguradoViewModel[]
   valoresFijos: ValorFijoConfiguradoViewModel[]
   valoresCategorias: ValorCategoriaConfiguradoViewModel[]
+  categorias: CategoriaCatalogItem[]
 }
 
 export interface ConceptoConfiguradoInputDto {

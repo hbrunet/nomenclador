@@ -95,6 +95,21 @@ export const configurationService = {
     return data
   },
 
+  async getValorFijoUsages(id: number) {
+    const { data } = await apiClient.get<{ count: number }>(`/catalogs/valores-fijos/${id}/usages`)
+    return data
+  },
+
+  async updateValorFijo(id: number, valor: number) {
+    const { data } = await apiClient.put<ValorFijoCatalogItem>(`/catalogs/valores-fijos/${id}`, { valor })
+    return data
+  },
+
+  async createValorFijo(payload: { descripcion: string; idTipo: number; valor: number }) {
+    const { data } = await apiClient.post<ValorFijoCatalogItem>('/catalogs/valores-fijos', payload)
+    return data
+  },
+
   async getValoresCategorias() {
     const { data } = await apiClient.get<ValorCategoriaCatalogItem[]>('/catalogs/valores-categorias')
     return data
