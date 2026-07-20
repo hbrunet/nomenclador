@@ -71,9 +71,24 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                 Id = item.Id,
                 Descripcion = item.Descripcion,
                 EscalaSalarialId = item.EscalaSalarialId,
-                Numero = item.Numero
+                Numero = item.Numero,
+                Monto = item.Monto
             })
             .ToListAsync();
+    }
+
+    public async Task UpdateCategoriaMontosAsync(IReadOnlyCollection<CategoriaMontoUpdateDto> items)
+    {
+        foreach (var item in items)
+        {
+            var entity = await session.GetAsync<CategoriaCatalogEntity>(item.Id);
+            if (entity is not null)
+                entity.Monto = item.Monto;
+        }
+
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
     }
 
     public async Task<IReadOnlyCollection<ValorFijoCatalogDto>> GetValoresFijosAsync()
@@ -106,7 +121,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         return new ValorFijoUsagesDto { Count = count };
     }
 
-    public async Task<ValorFijoCatalogDto?> UpdateValorFijoAsync(int id, decimal valor)
+    public async Task<ValorFijoCatalogDto?> UpdateValorFijoAsync(int id, ValorFijoUpdateDto dto)
     {
         var entity = await session.Query<ValorFijoCatalogEntity>()
             .Fetch(x => x.Tipo)
@@ -114,7 +129,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
         if (entity is null) return null;
 
-        entity.Valor = valor;
+        entity.Descripcion = dto.Descripcion;
+        entity.Valor = dto.Valor;
 
         using var tx = session.BeginTransaction();
         await session.FlushAsync();
@@ -134,6 +150,17 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
         using var tx = session.BeginTransaction();
         await session.SaveAsync(entity);
+
+        if (dto.ConfiguracionId.HasValue)
+        {
+            var asociacion = new ValorFijoConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = dto.ConfiguracionId.Value,
+                ValorFijoId = entity.Id,
+            };
+            await session.SaveAsync(asociacion);
+        }
+
         await tx.CommitAsync();
 
         // Inicializar el proxy para obtener la descripción del tipo en la respuesta
@@ -152,6 +179,46 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             Valor = item.Valor
         };
 
+    public async Task<IReadOnlyCollection<ValorCategoriaConfiguradoItemDto>> UpdateValorCategoriaItemsAsync(
+        int valorCategoriaId,
+        IReadOnlyCollection<ValorCategoriaConfiguradoItemDto> items)
+    {
+        var existing = await session.Query<ValorCategoriaConfiguradoItemEntity>()
+            .Where(x => x.ValorCategoriaId == valorCategoriaId)
+            .ToListAsync();
+
+        using var tx = session.BeginTransaction();
+
+        foreach (var item in existing)
+            await session.DeleteAsync(item);
+
+        var saved = new List<ValorCategoriaConfiguradoItemEntity>();
+        foreach (var dto in items)
+        {
+            var entity = new ValorCategoriaConfiguradoItemEntity
+            {
+                ValorCategoriaId = valorCategoriaId,
+                Numero = dto.NumeroCategoria,
+                Importe = dto.Importe,
+            };
+            await session.SaveAsync(entity);
+            saved.Add(entity);
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return saved
+            .OrderBy(x => x.Numero)
+            .Select(x => new ValorCategoriaConfiguradoItemDto
+            {
+                Id = x.Id,
+                NumeroCategoria = x.Numero,
+                Importe = x.Importe,
+            })
+            .ToList();
+    }
+
     public async Task<IReadOnlyCollection<ValorCategoriaCatalogDto>> GetValoresCategoriasAsync()
     {
         var items = await session.Query<ValorCategoriaCatalogEntity>()
@@ -164,6 +231,21 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             Id = item.Id,
             Descripcion = item.Descripcion,
             Tipo = item.Tipo?.Descripcion ?? string.Empty
+        }).ToList();
+    }
+
+    public async Task<IReadOnlyCollection<ValorCategoriaConfiguradoItemDto>?> GetValorCategoriaConfiguradoItemsAsync(int id)
+    {
+        var items = await session.Query<ValorCategoriaConfiguradoItemEntity>()
+            .Where(x => x.ValorCategoriaId == id)
+            .OrderBy(x => x.Numero)
+            .ToListAsync();
+
+        return items.Select(item => new ValorCategoriaConfiguradoItemDto
+        {
+            Id = item.Id,
+            NumeroCategoria = item.Numero,
+            Importe = item.Importe,
         }).ToList();
     }
 }

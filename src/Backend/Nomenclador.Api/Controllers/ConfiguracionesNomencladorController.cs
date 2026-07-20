@@ -53,4 +53,5 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         var created = await configuracionService.CloneAsync(id, request);
         return CreatedAtAction(nameof(GetConfiguracion), new { id = created.Id }, created);
     }
+
 }

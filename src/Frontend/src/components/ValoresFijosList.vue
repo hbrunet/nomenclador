@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
 import type { ValorFijoCatalogItem, ValorFijoConfiguradoInputDto } from '../types/configuration'
 import ValorFijoEditModal from './ValorFijoEditModal.vue'
 import ValorFijoCombobox from './ValorFijoCombobox.vue'
@@ -8,6 +12,7 @@ const valoresFijos = defineModel<ValorFijoConfiguradoInputDto[]>({ required: tru
 
 const props = defineProps<{
   valoresDisponibles: ValorFijoCatalogItem[]
+  configuracionId?: number
 }>()
 
 const emit = defineEmits<{
@@ -15,26 +20,28 @@ const emit = defineEmits<{
 }>()
 
 const editModalRef = ref<InstanceType<typeof ValorFijoEditModal> | null>(null)
-
-const activeFilter = ref({ tipo: '', query: '' })
-
-function onFilterChange(payload: { tipo: string; query: string }) {
-  activeFilter.value = payload
-}
+const filterQuery = ref('')
 
 const valuesById = computed(() => new Map(props.valoresDisponibles.map((item) => [item.id, item])))
 const valoresExcluidos = computed(() => valoresFijos.value.map((item) => item.idValorFijo))
 
-const valoresFijosVisibles = computed(() => {
-  const { tipo, query } = activeFilter.value
-  const q = query.toLowerCase().trim()
-  if (!tipo && !q) return valoresFijos.value
-  return valoresFijos.value.filter((item) => {
-    const cat = valuesById.value.get(item.idValorFijo)
-    const matchesTipo = !tipo || cat?.tipo === tipo
-    const matchesQuery = !q || (cat?.descripcion ?? '').toLowerCase().includes(q)
-    return matchesTipo && matchesQuery
-  })
+const tableData = computed(() => {
+  const q = filterQuery.value.toLowerCase().trim()
+  return valoresFijos.value
+    .filter((item) => {
+      const cat = valuesById.value.get(item.idValorFijo)
+      const matchesQuery =
+        !q ||
+        (cat?.descripcion ?? '').toLowerCase().includes(q) ||
+        (cat?.tipo ?? '').toLowerCase().includes(q)
+      return matchesQuery
+    })
+    .map((item) => ({
+      idValorFijo: item.idValorFijo,
+      tipo: valuesById.value.get(item.idValorFijo)?.tipo ?? 'N/D',
+      descripcion: valuesById.value.get(item.idValorFijo)?.descripcion ?? 'Valor fijo',
+      valor: valuesById.value.get(item.idValorFijo)?.valor,
+    }))
 })
 
 function addValorFijo(id: number) {
@@ -66,62 +73,55 @@ function handleModalSaved(
 </script>
 
 <template>
-  <div class="stack">
+  <div class="flex flex-column gap-3 pt-3">
     <ValorFijoCombobox
       :valores-disponibles="valoresDisponibles"
       :valores-excluidos="valoresExcluidos"
       @add="addValorFijo"
-      @filter-change="onFilterChange"
     />
 
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Tipo</th>
-            <th>Descripción</th>
-            <th>Valor</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="!valoresFijosVisibles.length">
-            <td colspan="4" class="muted">
-              {{ valoresFijos.length ? 'Sin resultados para el filtro aplicado.' : 'No hay valores fijos configurados.' }}
-            </td>
-          </tr>
-          <tr v-for="item in valoresFijosVisibles" :key="item.idValorFijo">
-            <td>{{ valuesById.get(item.idValorFijo)?.tipo ?? 'N/D' }}</td>
-            <td>{{ valuesById.get(item.idValorFijo)?.descripcion ?? 'Valor fijo' }}</td>
-            <td>{{ valuesById.get(item.idValorFijo)?.valor ?? '—' }}</td>
-            <td class="row-actions">
-              <button
-                class="secondary-button"
-                type="button"
-                @click="openEditModal(item.idValorFijo)"
-              >
-                Editar valor
-              </button>
-              <button
-                class="danger-button"
-                type="button"
-                @click="removeValorFijo(item.idValorFijo)"
-              >
-                Quitar
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="flex flex-column gap-1" style="max-width: 400px">
+      <InputText v-model="filterQuery" placeholder="Buscar por descripción o tipo..." class="w-full" />
     </div>
 
-    <ValorFijoEditModal ref="editModalRef" @saved="handleModalSaved" />
+    <DataTable :value="tableData" striped-rows :sort-field="'descripcion'" :sort-order="1">
+      <template #empty>
+        <span class="muted">
+          {{ valoresFijos.length ? 'Sin resultados para el filtro aplicado.' : 'No hay valores fijos configurados.' }}
+        </span>
+      </template>
+      <Column field="idValorFijo" header="ID" sortable style="text-align: right"/>
+       <Column field="descripcion" header="Descripción" sortable />
+      <Column field="tipo" header="Tipo" sortable />
+      <Column header="Valor" style="text-align: right">
+        <template #body="{ data }">
+          {{ data.valor?.toLocaleString('es-AR', { minimumFractionDigits: 2 }) ?? '—' }}
+        </template>
+      </Column>
+      <Column style="width: 10rem">
+        <template #body="{ data }">
+          <div class="flex gap-1 align-items-center">
+            <Button
+              label="Editar"
+              icon="pi pi-pencil"
+              size="small"
+              severity="secondary"
+              outlined
+              @click="openEditModal(data.idValorFijo)"
+            />
+            <Button
+              icon="pi pi-trash"
+              size="small"
+              severity="danger"
+              text
+              rounded
+              @click="removeValorFijo(data.idValorFijo)"
+            />
+          </div>
+        </template>
+      </Column>
+    </DataTable>
+
+    <ValorFijoEditModal ref="editModalRef" :configuracion-id="props.configuracionId" @saved="handleModalSaved" />
   </div>
 </template>
-
-<style scoped>
-.row-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-</style>

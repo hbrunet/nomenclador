@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Button from 'primevue/button'
+import InputText from 'primevue/inputtext'
 import ValorCategoriaItemsModal from './ValorCategoriaItemsModal.vue'
+import ValorCategoriaCombobox from './ValorCategoriaCombobox.vue'
 import type { ValorCategoriaCatalogItem, ValorCategoriaConfiguradoInputDto } from '../types/configuration'
 
 const valoresCategorias = defineModel<ValorCategoriaConfiguradoInputDto[]>({ required: true })
@@ -9,11 +14,30 @@ const props = defineProps<{
   valoresDisponibles: ValorCategoriaCatalogItem[]
 }>()
 
-const selectedValorId = ref<number | null>(null)
 const selectedItemIndex = ref<number | null>(null)
 const modalRef = ref<InstanceType<typeof ValorCategoriaItemsModal> | null>(null)
+const filterQuery = ref('')
 
 const valuesById = computed(() => new Map(props.valoresDisponibles.map((item) => [item.id, item])))
+const valoresExcluidos = computed(() => valoresCategorias.value.map((item) => item.idValorCategoria))
+
+const tableData = computed(() => {
+  const q = filterQuery.value.toLowerCase().trim()
+  return valoresCategorias.value
+    .filter((item) => {
+      const cat = valuesById.value.get(item.idValorCategoria)
+      const matchesQuery =
+        !q ||
+        (cat?.descripcion ?? '').toLowerCase().includes(q) ||
+        (cat?.tipo ?? '').toLowerCase().includes(q)
+      return matchesQuery
+    })
+    .map((item) => ({
+      idValorCategoria: item.idValorCategoria,
+      tipo: valuesById.value.get(item.idValorCategoria)?.tipo ?? 'N/D',
+      descripcion: valuesById.value.get(item.idValorCategoria)?.descripcion ?? 'Valor sin catálogo',
+    }))
+})
 
 const selectedItem = computed(() =>
   selectedItemIndex.value !== null ? (valoresCategorias.value[selectedItemIndex.value] ?? null) : null,
@@ -31,15 +55,9 @@ const selectedTipo = computed(() =>
     : '',
 )
 
-function addValorCategoria() {
-  if (!selectedValorId.value) return
-
-  if (valoresCategorias.value.some((item) => item.idValorCategoria === selectedValorId.value)) return
-
-  valoresCategorias.value = [
-    ...valoresCategorias.value,
-    { idValorCategoria: selectedValorId.value, items: [] },
-  ]
+function addValorCategoria(id: number) {
+  if (valoresCategorias.value.some((item) => item.idValorCategoria === id)) return
+  valoresCategorias.value = [...valoresCategorias.value, { idValorCategoria: id, items: [] }]
 }
 
 function removeValorCategoria(idValorCategoria: number) {
@@ -48,65 +66,59 @@ function removeValorCategoria(idValorCategoria: number) {
   )
 }
 
-function verItems(index: number) {
+function verItems(idValorCategoria: number) {
+  const index = valoresCategorias.value.findIndex(
+    (item) => item.idValorCategoria === idValorCategoria,
+  )
   selectedItemIndex.value = index
-  modalRef.value?.open()
+  modalRef.value?.open(idValorCategoria)
 }
 </script>
 
 <template>
-  <div class="stack">
-    <div class="inline-actions">
-      <label class="field-stack">
-        <span>Agregar valor por categoría</span>
-        <select v-model.number="selectedValorId">
-          <option :value="null">Seleccione un valor</option>
-          <option v-for="item in valoresDisponibles" :key="item.id" :value="item.id">
-            {{ item.descripcion }} ({{ item.tipo }})
-          </option>
-        </select>
-      </label>
-      <button class="secondary-button" type="button" @click="addValorCategoria">Agregar</button>
+  <div class="flex flex-column gap-3 pt-3">
+    <ValorCategoriaCombobox
+      :valores-disponibles="valoresDisponibles"
+      :valores-excluidos="valoresExcluidos"
+      @add="addValorCategoria"
+    />
+
+    <div class="flex flex-column gap-1" style="max-width: 400px">
+      <InputText v-model="filterQuery" placeholder="Buscar por descripción o tipo..." class="w-full" />
     </div>
 
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Descripción</th>
-            <th>Tipo</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="!valoresCategorias.length">
-            <td colspan="3" class="muted">No hay valores por categoría configurados.</td>
-          </tr>
-          <tr v-for="(item, index) in valoresCategorias" :key="item.idValorCategoria">
-            <td>{{ valuesById.get(item.idValorCategoria)?.descripcion ?? 'Valor sin catálogo' }}</td>
-            <td>{{ valuesById.get(item.idValorCategoria)?.tipo ?? 'N/D' }}</td>
-            <td>
-              <div class="inline-actions">
-                <button
-                  class="secondary-button"
-                  type="button"
-                  @click="verItems(index)"
-                >
-                  Ver items
-                </button>
-                <button
-                  class="danger-button"
-                  type="button"
-                  @click="removeValorCategoria(item.idValorCategoria)"
-                >
-                  Quitar
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <DataTable :value="tableData" striped-rows :sort-field="'descripcion'" :sort-order="1">
+      <template #empty>
+        <span class="muted">
+          {{ valoresCategorias.length ? 'Sin resultados para el filtro aplicado.' : 'No hay valores por categoría configurados.' }}
+        </span>
+      </template>
+      <Column field="idValorCategoria" header="ID" sortable style="text-align: right" />
+      <Column field="descripcion" header="Descripción" sortable />
+      <Column field="tipo" header="Tipo" sortable />
+      <Column>
+        <template #body="{ data }">
+          <div class="flex gap-1 align-items-center">
+            <Button
+              label="Ver items"
+              icon="pi pi-list"
+              size="small"
+              severity="secondary"
+              outlined
+              @click="verItems(data.idValorCategoria)"
+            />
+            <Button
+              icon="pi pi-trash"
+              size="small"
+              severity="danger"
+              text
+              rounded
+              @click="removeValorCategoria(data.idValorCategoria)"
+            />
+          </div>
+        </template>
+      </Column>
+    </DataTable>
 
     <ValorCategoriaItemsModal
       ref="modalRef"

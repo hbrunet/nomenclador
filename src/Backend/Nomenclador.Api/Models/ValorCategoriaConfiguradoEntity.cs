@@ -8,7 +8,7 @@ public class ValorCategoriaConfiguradoEntity
 
     public virtual ValorCategoriaCatalogEntity ValorCategoria { get; set; } = new ValorCategoriaCatalogEntity();
 
-    public virtual IList<ValorCategoriaItemConfiguradoEntity> Items { get; set; } = [];
+    public virtual IList<ValorCategoriaConfiguradoItemEntity> Items { get; set; } = [];
 
     override public bool Equals(object? obj)
     {

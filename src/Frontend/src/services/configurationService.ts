@@ -2,6 +2,7 @@ import axios from 'axios'
 import type {
   CatalogItem,
   CategoriaCatalogItem,
+  CategoriaMontoUpdateItem,
   ClonarConfiguracionDto,
   ConfigurationFilters,
   ConfiguracionNomencladorCreateUpdateDto,
@@ -10,6 +11,7 @@ import type {
   PagedResult,
   ValidacionConfiguracionResponse,
   ValorCategoriaCatalogItem,
+  ValorCategoriaItemInputDto,
   ValorFijoCatalogItem,
 } from '../types/configuration'
 
@@ -90,6 +92,10 @@ export const configurationService = {
     return data
   },
 
+  async updateCategoriaMontos(items: CategoriaMontoUpdateItem[]) {
+    await apiClient.put('/catalogs/categorias/montos', items)
+  },
+
   async getValoresFijos() {
     const { data } = await apiClient.get<ValorFijoCatalogItem[]>('/catalogs/valores-fijos')
     return data
@@ -105,13 +111,26 @@ export const configurationService = {
     return data
   },
 
-  async createValorFijo(payload: { descripcion: string; idTipo: number; valor: number }) {
+  async createValorFijo(payload: { descripcion: string; idTipo: number; valor: number; configuracionId?: number }) {
     const { data } = await apiClient.post<ValorFijoCatalogItem>('/catalogs/valores-fijos', payload)
     return data
   },
 
   async getValoresCategorias() {
     const { data } = await apiClient.get<ValorCategoriaCatalogItem[]>('/catalogs/valores-categorias')
+    return data
+  },
+
+  async getValorCategoriaConfiguradoItems(id: number) {
+    const { data } = await apiClient.get<ValorCategoriaItemInputDto[]>(`/catalogs/valor-categoria-configurado-items/${id}`)
+    return data
+  },
+
+  async updateValorCategoriaItems(valorCategoriaId: number, items: ValorCategoriaItemInputDto[]) {
+    const { data } = await apiClient.put<ValorCategoriaItemInputDto[]>(
+      `/catalogs/valor-categoria-configurado-items/${valorCategoriaId}`,
+      items,
+    )
     return data
   },
 }

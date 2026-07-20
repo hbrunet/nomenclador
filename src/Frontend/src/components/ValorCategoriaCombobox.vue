@@ -5,10 +5,10 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
-import type { ValorFijoCatalogItem } from '../types/configuration'
+import type { ValorCategoriaCatalogItem } from '../types/configuration'
 
 const props = defineProps<{
-  valoresDisponibles: ValorFijoCatalogItem[]
+  valoresDisponibles: ValorCategoriaCatalogItem[]
   valoresExcluidos: number[]
 }>()
 
@@ -46,7 +46,7 @@ function handleClose() {
 <template>
   <div>
     <Button
-      label="Agregar valor fijo"
+      label="Agregar valor por categoría"
       icon="pi pi-plus"
       severity="secondary"
       @click="isOpen = true"
@@ -54,9 +54,9 @@ function handleClose() {
 
     <Dialog
       v-model:visible="isOpen"
-      header="Agregar valor fijo"
+      header="Agregar valor por categoría"
       :modal="true"
-      :style="{ width: '42rem' }"
+      :style="{ width: '38rem' }"
       :closable="true"
       @hide="query = ''"
     >
@@ -82,11 +82,6 @@ function handleClose() {
           </template>
           <Column field="descripcion" header="Descripción" sortable />
           <Column field="tipo" header="Tipo" sortable style="width: 10rem" />
-          <Column header="Valor" sortable sort-field="valor" style="width: 9rem; text-align: right">
-            <template #body="{ data }">
-              {{ (data.valor ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
-            </template>
-          </Column>
           <Column style="width: 4rem">
             <template #body="{ data }">
               <Button

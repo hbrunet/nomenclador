@@ -1,6 +1,6 @@
 namespace Nomenclador.Api.Models;
 
-public class ValorCategoriaItemConfiguradoEntity 
+public class ValorCategoriaConfiguradoItemEntity 
 {
     public virtual int Id { get; set; }
     public virtual int ValorCategoriaId { get; set; }

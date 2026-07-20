@@ -94,13 +94,13 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         if (ids.Count == 0) return;
 
-        var allItems = await session.Query<ValorCategoriaItemConfiguradoEntity>()
+        var allItems = await session.Query<ValorCategoriaConfiguradoItemEntity>()
             .Where(item => ids.Contains(item.ValorCategoriaId))
             .ToListAsync();
 
         var byId = allItems
             .GroupBy(item => item.ValorCategoriaId)
-            .ToDictionary(g => g.Key, g => (IList<ValorCategoriaItemConfiguradoEntity>)g.ToList());
+            .ToDictionary(g => g.Key, g => (IList<ValorCategoriaConfiguradoItemEntity>)g.ToList());
 
         foreach (var vc in entity.ValoresCategorias)
         {

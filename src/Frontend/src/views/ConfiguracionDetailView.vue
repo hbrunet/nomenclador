@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ProgressSpinner from 'primevue/progressspinner'
 import ConfiguracionEditor from '../components/ConfiguracionEditor.vue'
 import { useConfiguration } from '../composables/useConfiguration'
+import type { CategoriaCatalogItem } from '../types/configuration'
 
 const route = useRoute()
 const router = useRouter()
@@ -56,13 +58,22 @@ async function handleClone() {
   }
 }
 
+function handleMontosSaved(updatedCategorias: CategoriaCatalogItem[]) {
+  if (current.value) {
+    current.value = { ...current.value, categorias: updatedCategorias }
+  }
+}
+
 onMounted(loadScreen)
 watch(() => route.fullPath, loadScreen)
 </script>
 
 <template>
-  <section class="stack">
-    <p v-if="loadingDetail" class="muted">Cargando configuración...</p>
+  <section>
+    <div v-if="loadingDetail" class="flex flex-column align-items-center justify-content-center gap-3 p-8">
+      <ProgressSpinner style="width: 2.5rem; height: 2.5rem" />
+      <p class="muted">Cargando configuración...</p>
+    </div>
 
     <ConfiguracionEditor
       v-else
@@ -73,11 +84,13 @@ watch(() => route.fullPath, loadScreen)
       :loading-conceptos="loadingConceptos"
       :validation="validation"
       :loading="saving"
+      :configuracion-id="currentId ?? undefined"
       @save="handleSave"
       @validate="validateCurrent"
       @clone="handleClone"
       @back="router.push('/configuraciones')"
       @catalog-refresh="fetchCatalogs()"
+      @montos-saved="handleMontosSaved"
     />
   </section>
 </template>

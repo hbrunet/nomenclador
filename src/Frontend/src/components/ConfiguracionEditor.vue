@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import Select from 'primevue/select'
+import InputText from 'primevue/inputtext'
+import Button from 'primevue/button'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
+import TabPanels from 'primevue/tabpanels'
+import TabPanel from 'primevue/tabpanel'
+import Message from 'primevue/message'
+import DatePicker from 'primevue/datepicker';
 import ConceptosList from './ConceptosList.vue'
 import ValoresFijosList from './ValoresFijosList.vue'
 import ValoresCategoriasGrid from './ValoresCategoriasGrid.vue'
@@ -14,13 +24,14 @@ import type {
 
 const draft = defineModel<ConfiguracionNomencladorCreateUpdateDto>('draft', { required: true })
 
-defineProps<{
+const props = defineProps<{
   catalogs: CatalogsState
   categorias: CategoriaCatalogItem[]
   conceptosDisponibles: ConceptoCatalogItem[]
   loadingConceptos: boolean
-  validation: ValidacionConfiguracionResponse
   loading: boolean
+  validation: ValidacionConfiguracionResponse | null
+  configuracionId?: number
 }>()
 
 const emit = defineEmits<{
@@ -29,148 +40,151 @@ const emit = defineEmits<{
   (event: 'clone'): void
   (event: 'back'): void
   (event: 'catalog-refresh'): void
+  (event: 'montos-saved', categorias: CategoriaCatalogItem[]): void
 }>()
 
-const activeTab = ref<'conceptos' | 'valores-fijos' | 'valores-categorias' | 'categorias'>('conceptos')
+// Convert 0 ↔ null for PrimeVue Select (0 = not selected in the store)
+const nomencladorId = computed({
+  get: () => draft.value.idNomenclador || null,
+  set: (val: number | null) => { draft.value.idNomenclador = val ?? 0 },
+})
+const escalaSalarialId = computed({
+  get: () => draft.value.idEscalaSalarial || null,
+  set: (val: number | null) => { draft.value.idEscalaSalarial = val ?? 0 },
+})
+const zonaId = computed({
+  get: () => draft.value.idZona || null,
+  set: (val: number | null) => { draft.value.idZona = val ?? 0 },
+})
+
+const hasErrors = computed(() => (props.validation?.errores?.length ?? 0) > 0)
+const hasWarnings = computed(() => (props.validation?.warnings?.length ?? 0) > 0)
+
+const activeTab = ref('datos-generales')
 </script>
 
 <template>
-  <section class="page-card stack">
-    <div class="editor-toolbar">
-      <div>
-        <h2>Editor de configuración</h2>
-      </div>
-      <div class="inline-actions">
-        <button class="secondary-button" type="button" @click="emit('back')">Volver</button>
-        <button class="secondary-button" type="button" :disabled="loading" @click="emit('clone')">
-          Clonar
-        </button>
+  <section class="panel p-4 flex flex-column gap-3">
+    <div class="flex justify-content-between align-items-center flex-wrap gap-3">
+      <h2 class="text-xl mt-0 mb-0 font-semibold">Editor de configuración</h2>
+      <div class="flex gap-2 flex-wrap">
+        <Button label="Volver" severity="secondary" text icon="pi pi-arrow-left" @click="emit('back')" />
       </div>
     </div>
 
-    <div class="form-grid">
-      <label>
-        <span>Nomenclador</span>
-        <select v-model.number="draft.idNomenclador">
-          <option :value="0">Seleccione</option>
-          <option v-for="item in catalogs.nomencladores" :key="item.id" :value="item.id">
-            {{ item.descripcion }}
-          </option>
-        </select>
-      </label>
-
-      <label>
-        <span>Escala salarial</span>
-        <select
-          v-model.number="draft.idEscalaSalarial"
-        >
-          <option :value="0">Seleccione</option>
-          <option v-for="item in catalogs.escalas" :key="item.id" :value="item.id">
-            {{ item.descripcion }}
-          </option>
-        </select>
-      </label>
-
-      <label>
-        <span>Zona</span>
-        <select v-model.number="draft.idZona">
-          <option :value="0">Seleccione</option>
-          <option v-for="item in catalogs.zonas" :key="item.id" :value="item.id">
-            {{ item.descripcion }}
-          </option>
-        </select>
-      </label>
-
-      <label>
-        <span>Fecha inicio</span>
-        <input v-model="draft.fechaInicio" type="date" />
-      </label>
-
-      <label>
-        <span>Fecha fin</span>
-        <input v-model="draft.fechaFin" type="date" />
-      </label>
+    <div v-if="hasErrors || hasWarnings" class="flex flex-column gap-2">
+      <Message
+        v-for="msg in validation?.errores ?? []"
+        :key="msg.codigo"
+        severity="error"
+        :closable="false"
+      >
+        {{ msg.mensaje }}
+      </Message>
+      <Message
+        v-for="msg in validation?.warnings ?? []"
+        :key="msg.codigo"
+        severity="warn"
+        :closable="false"
+      >
+        {{ msg.mensaje }}
+      </Message>
     </div>
 
-    <div class="tab-list">
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'conceptos' }"
-        type="button"
-        @click="activeTab = 'conceptos'"
-      >
-        Conceptos
-      </button>
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'valores-fijos' }"
-        type="button"
-        @click="activeTab = 'valores-fijos'"
-      >
-        Valores fijos
-      </button>
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'valores-categorias' }"
-        type="button"
-        @click="activeTab = 'valores-categorias'"
-      >
-        Valores por categoría
-      </button>
-      <button
-        class="tab-button"
-        :class="{ active: activeTab === 'categorias' }"
-        type="button"
-        @click="activeTab = 'categorias'"
-      >
-        Categorías Escala Salarial
-      </button>
-    </div>
+    <Tabs v-model:value="activeTab">
+      <TabList>
+        <Tab value="datos-generales">Datos generales</Tab>
+        <Tab value="conceptos">Conceptos</Tab>
+        <Tab value="valores-fijos">Valores fijos</Tab>
+        <Tab value="valores-categorias">Valores por categoría</Tab>
+        <Tab value="categorias">Categorías escala</Tab>
+      </TabList>
 
-    <ConceptosList
-      v-if="activeTab === 'conceptos'"
-      v-model="draft.conceptos"
-      :conceptos-disponibles="conceptosDisponibles"
-      :loading-catalog="loadingConceptos"
-    />
+      <TabPanels>
+        <TabPanel value="datos-generales">
+          <form @submit.prevent="emit('save')">
+            <div class="grid pt-3">
+              <div class="col-6 flex flex-column gap-1">
+                <label class="field-label">Nomenclador</label>
+                <Select
+                  v-model="nomencladorId"
+                  :options="catalogs.nomencladores"
+                  option-label="descripcion"
+                  option-value="id"
+                  placeholder="Seleccione un nomenclador"
+                  class="w-full"
+                />
+              </div>
 
-    <ValoresFijosList
-      v-else-if="activeTab === 'valores-fijos'"
-      v-model="draft.valoresFijos"
-      :valores-disponibles="catalogs.valoresFijos"
-      @catalog-refresh="emit('catalog-refresh')"
-    />
+              <div class="col-6 flex flex-column gap-1">
+                <label class="field-label">Escala salarial</label>
+                <Select
+                  v-model="escalaSalarialId"
+                  :options="catalogs.escalas"
+                  option-label="descripcion"
+                  option-value="id"
+                  placeholder="Seleccione una escala"
+                  class="w-full"
+                />
+              </div>
 
-    <ValoresCategoriasGrid
-      v-else-if="activeTab === 'valores-categorias'"
-      v-model="draft.valoresCategorias"
-      :valores-disponibles="catalogs.valoresCategorias"
-    />
+              <div class="col-6 flex flex-column gap-1">
+                <label class="field-label">Zona</label>
+                <Select
+                  v-model="zonaId"
+                  :options="catalogs.zonas"
+                  option-label="descripcion"
+                  option-value="id"
+                  placeholder="Seleccione una zona"
+                  class="w-full"
+                />
+              </div>
 
-    <CategoriasList
-      v-else-if="activeTab === 'categorias'"
-      :categorias="categorias"
-    />
+              <div class="col-3 flex flex-column gap-1">
+                <label class="field-label">Fecha inicio</label>
+                <DatePicker v-model="draft.fechaInicio" type="date" class="w-full"  view="month" dateFormat="mm/yy"/>
+              </div>
 
-    <div class="validation-grid">
-      <div class="validation-box">
-        <span class="badge" :class="{ error: !validation.valida }">Errores</span>
-        <ul>
-          <li v-if="!validation.errores.length" class="muted">Sin errores.</li>
-          <li v-for="error in validation.errores" :key="error.codigo + error.mensaje">
-            {{ error.mensaje }}
-          </li>
-        </ul>
-      </div>
-      <div class="validation-box">
-        <span class="badge warning">Warnings</span>
-        <ul>
-          <li v-if="!validation.warnings.length" class="muted">Sin advertencias.</li>
-          <li v-for="warning in validation.warnings" :key="warning.codigo + warning.mensaje">
-            {{ warning.mensaje }}
-          </li>
-        </ul>
-      </div>
-    </div>
+              <div class="col-3 flex flex-column gap-1">
+                <label class="field-label">Fecha fin</label>
+                <DatePicker v-model="draft.fechaFin" type="date" class="w-full" view="month" dateFormat="mm/yy"/>
+              </div>
+            </div>
+
+            <div class="flex justify-content-end gap-2 mt-4">
+              <Button label="Guardar" severity="primary" :loading="loading" @click="emit('save')" />
+            </div>
+          </form>
+        </TabPanel>
+
+        <TabPanel value="conceptos">
+          <ConceptosList
+            v-model="draft.conceptos"
+            :conceptos-disponibles="conceptosDisponibles"
+            :loading-catalog="loadingConceptos"
+          />
+        </TabPanel>
+
+        <TabPanel value="valores-fijos">
+          <ValoresFijosList
+            v-model="draft.valoresFijos"
+            :valores-disponibles="catalogs.valoresFijos"
+            :configuracion-id="props.configuracionId"
+            @catalog-refresh="emit('catalog-refresh')"
+          />
+        </TabPanel>
+
+        <TabPanel value="valores-categorias">
+          <ValoresCategoriasGrid
+            v-model="draft.valoresCategorias"
+            :valores-disponibles="catalogs.valoresCategorias"
+          />
+        </TabPanel>
+
+        <TabPanel value="categorias">
+          <CategoriasList :categorias="categorias" @montos-saved="(cats) => emit('montos-saved', cats)" />
+        </TabPanel>
+      </TabPanels>
+    </Tabs>
   </section>
 </template>

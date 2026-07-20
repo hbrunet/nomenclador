@@ -1,31 +1,44 @@
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import AutoComplete from 'primevue/autocomplete'
+import type { AutoCompleteCompleteEvent } from 'primevue/autocomplete'
+import Select from 'primevue/select'
+import InputText from 'primevue/inputtext'
+import Button from 'primevue/button'
 import ConfiguracionesList from '../components/ConfiguracionesList.vue'
 import { useConfiguration } from '../composables/useConfiguration'
+import type { CatalogItem } from '../types/configuration'
 
 const router = useRouter()
 
 const { catalogs, configuraciones, pagination, loadingList, fetchCatalogs, fetchList } =
   useConfiguration()
 
+const selectedNomenclador = ref<CatalogItem | null>(null)
+const nomencladorSuggestions = ref<CatalogItem[]>([])
+
+function searchNomenclador(event: AutoCompleteCompleteEvent) {
+  const q = event.query.toLowerCase().trim()
+  nomencladorSuggestions.value = catalogs.value.nomencladores
+    .filter((n: CatalogItem) => !q || n.descripcion.toLowerCase().includes(q))
+    .slice(0, 20)
+}
+
 const filters = reactive({
-  nomencladorId: undefined as number | undefined,
-  escalaSalarialId: undefined as number | undefined,
-  zonaId: undefined as number | undefined,
   vigenteEn: '',
-  estado: '',
+  estado: null as string | null,
 })
+
+const estadoOptions = ['Activa', 'Futura', 'Vencida']
 
 const PAGE_SIZE = 20
 
 function buildParams(page: number) {
   return {
-    nomencladorId: filters.nomencladorId,
-    escalaSalarialId: filters.escalaSalarialId,
-    zonaId: filters.zonaId,
+    nomencladorId: selectedNomenclador.value?.id ?? undefined,
     vigenteEn: filters.vigenteEn || undefined,
-    estado: filters.estado || undefined,
+    estado: filters.estado ?? undefined,
     page,
     pageSize: PAGE_SIZE,
   }
@@ -46,61 +59,42 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="page-card stack">
-    <div class="page-header">
-      <div>
-        <h2>Configuraciones de nomenclador</h2>
+  <section class="panel p-4">
+    <h2 class="text-xl mt-0 mb-3 font-semibold">Configuraciones de nomenclador</h2>
+
+    <div class="flex flex-wrap gap-3 align-items-end">
+      <div class="flex flex-column gap-1" style="flex: 2 ">
+        <label class="field-label">Nomenclador</label>
+        <AutoComplete
+          v-model="selectedNomenclador"
+          :suggestions="nomencladorSuggestions"
+          option-label="descripcion"
+          placeholder="Escribir para buscar..."
+          force-selection
+          show-clear
+          fluid
+          @complete="searchNomenclador"
+        />
       </div>
-    </div>
 
-    <div class="filters-grid">
-      <label>
-        <span>Nomenclador</span>
-        <select v-model.number="filters.nomencladorId">
-          <option :value="undefined">Todos</option>
-          <option v-for="item in catalogs.nomencladores" :key="item.id" :value="item.id">
-            {{ item.descripcion }}
-          </option>
-        </select>
-      </label>
+      <div class="flex flex-column gap-1" style="flex: 1">
+        <label class="field-label">Vigente en</label>
+        <InputText v-model="filters.vigenteEn" type="date" class="w-full" />
+      </div>
 
-      <label>
-        <span>Escala</span>
-        <select v-model.number="filters.escalaSalarialId">
-          <option :value="undefined">Todas</option>
-          <option v-for="item in catalogs.escalas" :key="item.id" :value="item.id">
-            {{ item.descripcion }}
-          </option>
-        </select>
-      </label>
+      <div class="flex flex-column gap-1" style="flex: 1">
+        <label class="field-label">Estado</label>
+        <Select
+          v-model="filters.estado"
+          :options="estadoOptions"
+          placeholder="Todos"
+          show-clear
+          class="w-full"
+        />
+      </div>
 
-      <label>
-        <span>Zona</span>
-        <select v-model.number="filters.zonaId">
-          <option :value="undefined">Todas</option>
-          <option v-for="item in catalogs.zonas" :key="item.id" :value="item.id">
-            {{ item.descripcion }}
-          </option>
-        </select>
-      </label>
-
-      <label>
-        <span>Vigente en</span>
-        <input v-model="filters.vigenteEn" type="date" />
-      </label>
-
-      <label>
-        <span>Estado</span>
-        <select v-model="filters.estado">
-          <option value="">Todos</option>
-          <option value="Activa">Activa</option>
-          <option value="Futura">Futura</option>
-          <option value="Vencida">Vencida</option>
-        </select>
-      </label>
-
-      <div class="field-stack inline">
-        <button class="primary-button" type="button" @click="loadList">Aplicar filtros</button>
+      <div class="flex align-items-end">
+        <Button label="Aplicar filtros" icon="pi pi-search" @click="loadList" />
       </div>
     </div>
   </section>
@@ -114,6 +108,5 @@ onMounted(async () => {
     @create="router.push('/configuraciones/nueva')"
     @edit="router.push(`/configuraciones/${$event}`)"
     @page-change="goToPage"
-  />
   />
 </template>

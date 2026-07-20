@@ -9,6 +9,11 @@ export interface CategoriaCatalogItem extends CatalogItem {
   monto: number
 }
 
+export interface CategoriaMontoUpdateItem {
+  id: number
+  monto: number
+}
+
 export interface ValorFijoCatalogItem extends CatalogItem {
   idTipo: number
   tipo: string
@@ -109,8 +114,8 @@ export interface ConfiguracionNomencladorCreateUpdateDto {
   idNomenclador: number
   idEscalaSalarial: number
   idZona: number
-  fechaInicio: string
-  fechaFin: string | null
+  fechaInicio: Date
+  fechaFin: Date | null
   conceptos: ConceptoConfiguradoInputDto[]
   valoresFijos: ValorFijoConfiguradoInputDto[]
   valoresCategorias: ValorCategoriaConfiguradoInputDto[]
