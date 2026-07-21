@@ -7,6 +7,7 @@
       </div>
       <nav class="app-nav">
         <RouterLink to="/configuraciones">Configuraciones</RouterLink>
+        <RouterLink to="/escalas">Escalas</RouterLink>
         <RouterLink to="/configuraciones/nueva">Nueva configuración</RouterLink>
       </nav>
     </header>

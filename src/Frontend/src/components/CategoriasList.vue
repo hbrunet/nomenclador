@@ -4,6 +4,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import Message from 'primevue/message'
 import type { CategoriaCatalogItem, CategoriaMontoUpdateItem } from '../types/configuration'
 import { configurationService } from '../services/configurationService'
 
@@ -52,6 +53,10 @@ async function saveEdit() {
 
 <template>
   <div class="flex flex-column gap-3 pt-3">
+    <Message v-if="editMode" severity="warn" :closable="true">
+        Estás modificando los montos de una escala salarial compartida. Los cambios se aplicarán a
+        <strong>todas las configuraciones</strong> que usen esta misma escala.
+    </Message>
     <div class="flex justify-content-end">
       <div v-if="editMode" class="flex gap-2">
         <Button label="Cancelar" severity="secondary" :disabled="saving" @click="cancelEdit" />
