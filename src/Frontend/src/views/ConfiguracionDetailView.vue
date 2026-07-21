@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ProgressSpinner from 'primevue/progressspinner'
 import ConfiguracionEditor from '../components/ConfiguracionEditor.vue'
 import { useConfiguration } from '../composables/useConfiguration'
+import type { CategoriaCatalogItem } from '../types/configuration'
 
 const route = useRoute()
 const router = useRouter()
 
 const {
   catalogs,
+  current,
   draft,
   validation,
   loadingDetail,
@@ -55,33 +58,39 @@ async function handleClone() {
   }
 }
 
+function handleMontosSaved(updatedCategorias: CategoriaCatalogItem[]) {
+  if (current.value) {
+    current.value = { ...current.value, categorias: updatedCategorias }
+  }
+}
+
 onMounted(loadScreen)
 watch(() => route.fullPath, loadScreen)
 </script>
 
 <template>
-  <section class="stack">
-    <div class="page-card">
-      <h2>{{ currentId ? `Configuración #${currentId}` : 'Nueva configuración' }}</h2>
-      <p class="muted">
-        Vista inicial de detalle con formulario base, tabs navegables y acciones REST.
-      </p>
+  <section>
+    <div v-if="loadingDetail" class="flex flex-column align-items-center justify-content-center gap-3 p-8">
+      <ProgressSpinner style="width: 2.5rem; height: 2.5rem" />
+      <p class="muted">Cargando configuración...</p>
     </div>
-
-    <p v-if="loadingDetail" class="muted">Cargando configuración...</p>
 
     <ConfiguracionEditor
       v-else
       v-model:draft="draft"
       :catalogs="catalogs"
+      :categorias="current?.categorias ?? []"
       :conceptos-disponibles="conceptosDisponibles"
       :loading-conceptos="loadingConceptos"
       :validation="validation"
       :loading="saving"
+      :configuracion-id="currentId ?? undefined"
       @save="handleSave"
       @validate="validateCurrent"
       @clone="handleClone"
       @back="router.push('/configuraciones')"
+      @catalog-refresh="fetchCatalogs()"
+      @montos-saved="handleMontosSaved"
     />
   </section>
 </template>

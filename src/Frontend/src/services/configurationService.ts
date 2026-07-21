@@ -2,13 +2,16 @@ import axios from 'axios'
 import type {
   CatalogItem,
   CategoriaCatalogItem,
+  CategoriaMontoUpdateItem,
   ClonarConfiguracionDto,
   ConfigurationFilters,
   ConfiguracionNomencladorCreateUpdateDto,
   ConfiguracionNomencladorDetailDto,
   ConfiguracionNomencladorListItemDto,
+  PagedResult,
   ValidacionConfiguracionResponse,
   ValorCategoriaCatalogItem,
+  ValorCategoriaItemInputDto,
   ValorFijoCatalogItem,
 } from '../types/configuration'
 
@@ -21,7 +24,7 @@ export const apiClient = axios.create({
 
 export const configurationService = {
   async list(filters: ConfigurationFilters = {}) {
-    const { data } = await apiClient.get<ConfiguracionNomencladorListItemDto[]>(
+    const { data } = await apiClient.get<PagedResult<ConfiguracionNomencladorListItemDto>>(
       '/configuraciones-nomenclador',
       { params: filters },
     )
@@ -89,13 +92,45 @@ export const configurationService = {
     return data
   },
 
+  async updateCategoriaMontos(items: CategoriaMontoUpdateItem[]) {
+    await apiClient.put('/catalogs/categorias/montos', items)
+  },
+
   async getValoresFijos() {
     const { data } = await apiClient.get<ValorFijoCatalogItem[]>('/catalogs/valores-fijos')
     return data
   },
 
+  async getValorFijoUsages(id: number) {
+    const { data } = await apiClient.get<{ count: number }>(`/catalogs/valores-fijos/${id}/usages`)
+    return data
+  },
+
+  async updateValorFijo(id: number, valor: number) {
+    const { data } = await apiClient.put<ValorFijoCatalogItem>(`/catalogs/valores-fijos/${id}`, { valor })
+    return data
+  },
+
+  async createValorFijo(payload: { descripcion: string; idTipo: number; valor: number; configuracionId?: number }) {
+    const { data } = await apiClient.post<ValorFijoCatalogItem>('/catalogs/valores-fijos', payload)
+    return data
+  },
+
   async getValoresCategorias() {
     const { data } = await apiClient.get<ValorCategoriaCatalogItem[]>('/catalogs/valores-categorias')
+    return data
+  },
+
+  async getValorCategoriaConfiguradoItems(id: number) {
+    const { data } = await apiClient.get<ValorCategoriaItemInputDto[]>(`/catalogs/valor-categoria-configurado-items/${id}`)
+    return data
+  },
+
+  async updateValorCategoriaItems(valorCategoriaId: number, items: ValorCategoriaItemInputDto[]) {
+    const { data } = await apiClient.put<ValorCategoriaItemInputDto[]>(
+      `/catalogs/valor-categoria-configurado-items/${valorCategoriaId}`,
+      items,
+    )
     return data
   },
 }

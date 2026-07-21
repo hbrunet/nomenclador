@@ -1,68 +1,107 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Button from 'primevue/button'
+import Tag from 'primevue/tag'
+import Paginator from 'primevue/paginator'
 import type { ConfiguracionNomencladorListItemDto } from '../types/configuration'
 
-defineProps<{
+const props = defineProps<{
   items: ConfiguracionNomencladorListItemDto[]
   loading: boolean
+  total: number
+  page: number
+  pageSize: number
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: number): void
+  (event: 'page-change', page: number): void
 }>()
+
+const paginatorFirst = computed(() => (props.page - 1) * props.pageSize)
+
+function estadoSeverity(estado: string) {
+  if (estado === 'Activa') return 'success'
+  if (estado === 'Futura') return 'info'
+  if (estado === 'Vencida') return 'warn'
+  return 'secondary'
+}
+
+function onPageChange(event: { page: number }) {
+  emit('page-change', event.page + 1)
+}
 </script>
 
 <template>
-  <section class="section-card stack">
-    <div class="section-header">
+  <section class="panel p-4 flex flex-column gap-3">
+    <div class="flex justify-content-between align-items-center flex-wrap gap-3">
       <div>
-        <h2>Configuraciones disponibles</h2>
-        <p class="muted">Listado inicial con filtros y acceso rápido al editor.</p>
+        <h2 class="text-xl mt-0 mb-1 font-semibold">Configuraciones disponibles</h2>
+        <p class="muted m-0">Listado con filtros y acceso rápido al editor.</p>
       </div>
-      <button class="primary-button" type="button" @click="$emit('create')">
-        Nueva configuración
-      </button>
+      <Button
+        label="Nueva configuración"
+        icon="pi pi-plus"
+        @click="emit('create')"
+      />
     </div>
 
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Nomenclador</th>
-            <th>Escala</th>
-            <th>Zona</th>
-            <th>Vigencia</th>
-            <th>Estado</th>
-            <th>Conceptos</th>
-            <th>Valores fijos</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="8" class="muted">Cargando configuraciones...</td>
-          </tr>
-          <tr v-else-if="!items.length">
-            <td colspan="8" class="muted">No hay configuraciones para los filtros seleccionados.</td>
-          </tr>
-          <tr v-for="item in items" :key="item.id">
-            <td>{{ item.nomencladorDescripcion }}</td>
-            <td>{{ item.escalaDescripcion }}</td>
-            <td>{{ item.zonaDescripcion }}</td>
-            <td>{{ item.fechaInicio }} — {{ item.fechaFin ?? 'Vigente' }}</td>
-            <td>
-              <span class="badge">{{ item.estado }}</span>
-            </td>
-            <td>{{ item.cantidadConceptos }}</td>
-            <td>{{ item.cantidadValoresFijos }}</td>
-            <td>
-              <button class="ghost-button" type="button" @click="$emit('edit', item.id)">
-                Editar
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      :value="items"
+      :loading="loading"
+      striped-rows
+    >
+      <template #empty>
+        <span class="muted">No hay configuraciones para los filtros seleccionados.</span>
+      </template>
+
+      <Column field="nomencladorDescripcion" header="Nomenclador" />
+      <Column field="escalaDescripcion" header="Escala" />
+      <Column field="zonaDescripcion" header="Zona" />
+
+      <Column header="Vigencia">
+        <template #body="{ data }">
+          {{ data.fechaInicio }} — {{ data.fechaFin ?? 'Vigente' }}
+        </template>
+      </Column>
+
+      <Column header="Estado">
+        <template #body="{ data }">
+          <Tag :value="data.estado" :severity="estadoSeverity(data.estado)" />
+        </template>
+      </Column>
+
+      <Column field="cantidadConceptos" header="Conceptos" />
+      <Column field="cantidadValoresFijos" header="Val. fijos" />
+
+      <Column>
+        <template #body="{ data }">
+          <Button
+            label="Editar"
+            icon="pi pi-pencil"
+            size="small"
+            text
+            @click="emit('edit', data.id)"
+          />
+          <Button 
+            label="Clonar" 
+            icon="pi pi-copy" 
+            size="small"
+            text
+          />
+        </template>
+      </Column>
+    </DataTable>
+
+    <Paginator
+      v-if="total > 0"
+      :rows="pageSize"
+      :total-records="total"
+      :first="paginatorFirst"
+      @page="onPageChange"
+    />
   </section>
 </template>

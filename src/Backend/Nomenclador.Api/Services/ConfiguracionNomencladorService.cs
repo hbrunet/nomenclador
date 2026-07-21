@@ -12,27 +12,30 @@ public sealed class ConfiguracionNomencladorService(
     ConfiguracionNomencladorMapper mapper,
     ClonadoConfiguracionService clonadoConfiguracionService)
 {
-    public async Task<IReadOnlyCollection<ConfiguracionNomencladorListItemDto>> GetAllAsync(
+    public async Task<PagedResult<ConfiguracionNomencladorListItemDto>> GetAllAsync(
         int? nomencladorId,
         int? escalaSalarialId,
         int? zonaId,
         DateOnly? vigenteEn,
-        string? estado)
+        string? estado,
+        int page = 1,
+        int pageSize = 20)
     {
-        var entities = await configuracionRepository.GetAllAsync(nomencladorId, escalaSalarialId, zonaId, vigenteEn);
+        var (entities, total) = await configuracionRepository.GetAllAsync(
+            nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize);
         var catalogs = await catalogRepository.GetSnapshotAsync();
 
         var items = entities
-            .Select(entity => mapper.ToListItemDto(mapper.ToViewModel(entity, catalogs)));
-
-        if (string.IsNullOrWhiteSpace(estado))
-        {
-            return items.ToList();
-        }
-
-        return items
-            .Where(item => item.Estado.Equals(estado, StringComparison.OrdinalIgnoreCase))
+            .Select(entity => mapper.ToListItemDto(entity, catalogs))
             .ToList();
+
+        return new PagedResult<ConfiguracionNomencladorListItemDto>
+        {
+            Items = items,
+            Total = total,
+            Page = page,
+            PageSize = pageSize,
+        };
     }
 
     public async Task<ConfiguracionNomencladorDetailDto> GetByIdAsync(int id)
@@ -94,7 +97,6 @@ public sealed class ConfiguracionNomencladorService(
     private async Task<ConfiguracionNomencladorDetailDto> BuildDetailAsync(ConfiguracionNomencladorEntity entity)
     {
         var catalogs = await catalogRepository.GetSnapshotAsync();
-        var viewModel = mapper.ToViewModel(entity, catalogs);
-        return mapper.ToDetailDto(viewModel);
+        return mapper.ToDetailDto(entity, catalogs);
     }
 }
