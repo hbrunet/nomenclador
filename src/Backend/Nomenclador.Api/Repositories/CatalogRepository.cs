@@ -91,6 +91,156 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         await tx.CommitAsync();
     }
 
+    // ── Escalas ──────────────────────────────────────────────────────────────
+
+    public async Task<IReadOnlyCollection<EscalaListItemDto>> GetAllEscalasAsync()
+    {
+        var escalas = await session.Query<EscalaSalarialCatalogEntity>()
+            .OrderBy(x => x.Descripcion)
+            .ToListAsync();
+
+        var categoriaEscalaIds = await session.Query<CategoriaCatalogEntity>()
+            .Select(x => x.EscalaSalarialId)
+            .ToListAsync();
+
+        var countByEscala = categoriaEscalaIds
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return escalas.Select(e => new EscalaListItemDto
+        {
+            Id = e.Id,
+            Descripcion = e.Descripcion,
+            CantidadCategorias = countByEscala.GetValueOrDefault(e.Id, 0),
+        }).ToList();
+    }
+
+    public async Task<EscalaDetailDto?> GetEscalaDetailAsync(int id)
+    {
+        var escala = await session.GetAsync<EscalaSalarialCatalogEntity>(id);
+        if (escala is null) return null;
+
+        var categorias = await session.Query<CategoriaCatalogEntity>()
+            .Where(x => x.EscalaSalarialId == id)
+            .OrderBy(x => x.Numero)
+            .ToListAsync();
+
+        return new EscalaDetailDto
+        {
+            Id = escala.Id,
+            Descripcion = escala.Descripcion,
+            Categorias = categorias.Select(ToCategoriaCatalogDto).ToList(),
+        };
+    }
+
+    public async Task<EscalaDetailDto> CreateEscalaAsync(EscalaCreateUpdateDto dto)
+    {
+        var entity = new EscalaSalarialCatalogEntity { Descripcion = dto.Descripcion };
+
+        using var tx = session.BeginTransaction();
+        await session.SaveAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return new EscalaDetailDto { Id = entity.Id, Descripcion = entity.Descripcion };
+    }
+
+    public async Task<EscalaDetailDto?> UpdateEscalaAsync(int id, EscalaCreateUpdateDto dto)
+    {
+        var entity = await session.GetAsync<EscalaSalarialCatalogEntity>(id);
+        if (entity is null) return null;
+
+        entity.Descripcion = dto.Descripcion;
+
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return await GetEscalaDetailAsync(id);
+    }
+
+    public async Task<bool> DeleteEscalaAsync(int id)
+    {
+        var inUse = await session.Query<ConfiguracionNomencladorEntity>()
+            .Where(x => x.EscalaSalarialId == id)
+            .CountAsync() > 0;
+
+        if (inUse) return false;
+
+        var categorias = await session.Query<CategoriaCatalogEntity>()
+            .Where(x => x.EscalaSalarialId == id)
+            .ToListAsync();
+
+        var entity = await session.GetAsync<EscalaSalarialCatalogEntity>(id);
+        if (entity is null) return true;
+
+        using var tx = session.BeginTransaction();
+        foreach (var cat in categorias)
+            await session.DeleteAsync(cat);
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return true;
+    }
+
+    // ── Categorias ───────────────────────────────────────────────────────────
+
+    public async Task<CategoriaCatalogDto> CreateCategoriaAsync(int escalaId, CategoriaCreateUpdateDto dto)
+    {
+        var entity = new CategoriaCatalogEntity
+        {
+            EscalaSalarialId = escalaId,
+            Numero = dto.Numero,
+            Descripcion = dto.Descripcion,
+            Monto = dto.Monto,
+        };
+
+        using var tx = session.BeginTransaction();
+        await session.SaveAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return ToCategoriaCatalogDto(entity);
+    }
+
+    public async Task<CategoriaCatalogDto?> UpdateCategoriaAsync(int id, CategoriaCreateUpdateDto dto)
+    {
+        var entity = await session.GetAsync<CategoriaCatalogEntity>(id);
+        if (entity is null) return null;
+
+        entity.Numero = dto.Numero;
+        entity.Descripcion = dto.Descripcion;
+        entity.Monto = dto.Monto;
+
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return ToCategoriaCatalogDto(entity);
+    }
+
+    public async Task DeleteCategoriaAsync(int id)
+    {
+        var entity = await session.GetAsync<CategoriaCatalogEntity>(id);
+        if (entity is null) return;
+
+        using var tx = session.BeginTransaction();
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+    }
+
+    private static CategoriaCatalogDto ToCategoriaCatalogDto(CategoriaCatalogEntity c) =>
+        new()
+        {
+            Id = c.Id,
+            Descripcion = c.Descripcion,
+            EscalaSalarialId = c.EscalaSalarialId,
+            Numero = c.Numero,
+            Monto = c.Monto,
+        };
+
     public async Task<IReadOnlyCollection<ValorFijoCatalogDto>> GetValoresFijosAsync()
     {
         var items = await session.Query<ValorFijoCatalogEntity>()

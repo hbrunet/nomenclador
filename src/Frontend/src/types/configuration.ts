@@ -14,6 +14,28 @@ export interface CategoriaMontoUpdateItem {
   monto: number
 }
 
+export interface EscalaListItemDto {
+  id: number
+  descripcion: string
+  cantidadCategorias: number
+}
+
+export interface EscalaDetailDto {
+  id: number
+  descripcion: string
+  categorias: CategoriaCatalogItem[]
+}
+
+export interface EscalaCreateUpdateDto {
+  descripcion: string
+}
+
+export interface CategoriaCreateUpdateDto {
+  numero: number
+  descripcion: string
+  monto: number
+}
+
 export interface ValorFijoCatalogItem extends CatalogItem {
   idTipo: number
   tipo: string

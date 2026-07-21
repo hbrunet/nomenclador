@@ -8,8 +8,7 @@ public sealed class EscalaSalarialCatalogMap : ClassMap<EscalaSalarialCatalogEnt
     public EscalaSalarialCatalogMap()
     {
         Table("USUARIO.ESCALASALARIAL");
-        ReadOnly();
-        Id(x => x.Id).Column("IDESCALASAL").GeneratedBy.Assigned();
+        Id(x => x.Id).Column("IDESCALASAL").GeneratedBy.Sequence("USUARIO.ESCALASALARIAL_SEQ");
         Map(x => x.Descripcion).Column("DESCRIPCION");
     }
 }

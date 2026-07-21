@@ -8,7 +8,7 @@ public sealed class CategoriaCatalogMap : ClassMap<CategoriaCatalogEntity>
     public CategoriaCatalogMap()
     {
         Table("USUARIO.CATEGORIA");
-        Id(x => x.Id).Column("IDCATEGORIA").GeneratedBy.Assigned();
+        Id(x => x.Id).Column("IDCATEGORIA").GeneratedBy.Sequence("USUARIO.CATEGORIA_SEQ");
         Map(x => x.Descripcion).Column("CATEGORIA");
         Map(x => x.EscalaSalarialId).Column("IDESCALASAL");
         Map(x => x.Numero).Column("NROCAT");
