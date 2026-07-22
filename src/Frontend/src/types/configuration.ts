@@ -36,6 +36,36 @@ export interface CategoriaCreateUpdateDto {
   monto: number
 }
 
+export interface ValorCategoriaListItemDto {
+  id: number
+  descripcion: string
+  idTipo: number
+  tipo: string
+  cantidadItems: number
+}
+
+export interface ValorCategoriaDetailDto {
+  id: number
+  descripcion: string
+  idTipo: number
+  tipo: string
+  items: ValorCategoriaItemInputDto[]
+}
+
+export interface ValorCategoriaCreateUpdateDto {
+  descripcion: string
+  idTipo: number
+}
+
+export interface ValorCategoriaTipoCreateUpdateDto {
+  descripcion: string
+}
+
+export interface ValorCategoriaItemCreateUpdateDto {
+  numeroCategoria: number
+  importe: number
+}
+
 export interface ValorFijoCatalogItem extends CatalogItem {
   idTipo: number
   tipo: string

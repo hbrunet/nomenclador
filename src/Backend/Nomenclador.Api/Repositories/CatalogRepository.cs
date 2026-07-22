@@ -329,44 +329,18 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             Valor = item.Valor
         };
 
-    public async Task<IReadOnlyCollection<ValorCategoriaConfiguradoItemDto>> UpdateValorCategoriaItemsAsync(
-        int valorCategoriaId,
-        IReadOnlyCollection<ValorCategoriaConfiguradoItemDto> items)
+    public async Task UpdateValorCategoriaItemsAsync(IReadOnlyCollection<ValorCategoriaConfiguradoItemDto> items)
     {
-        var existing = await session.Query<ValorCategoriaConfiguradoItemEntity>()
-            .Where(x => x.ValorCategoriaId == valorCategoriaId)
-            .ToListAsync();
-
-        using var tx = session.BeginTransaction();
-
-        foreach (var item in existing)
-            await session.DeleteAsync(item);
-
-        var saved = new List<ValorCategoriaConfiguradoItemEntity>();
         foreach (var dto in items)
         {
-            var entity = new ValorCategoriaConfiguradoItemEntity
-            {
-                ValorCategoriaId = valorCategoriaId,
-                Numero = dto.NumeroCategoria,
-                Importe = dto.Importe,
-            };
-            await session.SaveAsync(entity);
-            saved.Add(entity);
+            var entity = await session.GetAsync<ValorCategoriaConfiguradoItemEntity>(dto.Id);
+            if (entity is not null)
+                entity.Importe = dto.Importe;
         }
 
+        using var tx = session.BeginTransaction();
         await session.FlushAsync();
         await tx.CommitAsync();
-
-        return saved
-            .OrderBy(x => x.Numero)
-            .Select(x => new ValorCategoriaConfiguradoItemDto
-            {
-                Id = x.Id,
-                NumeroCategoria = x.Numero,
-                Importe = x.Importe,
-            })
-            .ToList();
     }
 
     public async Task<IReadOnlyCollection<ValorCategoriaCatalogDto>> GetValoresCategoriasAsync()
@@ -382,6 +356,205 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             Descripcion = item.Descripcion,
             Tipo = item.Tipo?.Descripcion ?? string.Empty
         }).ToList();
+    }
+
+    // ── Valores por Categoría ABM ─────────────────────────────────────────────
+
+    public async Task<IReadOnlyCollection<CatalogItemDto>> GetValorCategoriaTiposAsync()
+    {
+        return await session.Query<ValorCategoriaTipoCatalogEntity>()
+            .OrderBy(x => x.Descripcion)
+            .Select(x => new CatalogItemDto { Id = x.Id, Descripcion = x.Descripcion })
+            .ToListAsync();
+    }
+
+    public async Task<CatalogItemDto> CreateValorCategoriaTipoAsync(ValorCategoriaTipoCreateUpdateDto dto)
+    {
+        var entity = new ValorCategoriaTipoCatalogEntity { Descripcion = dto.Descripcion };
+        using var tx = session.BeginTransaction();
+        await session.SaveAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return new CatalogItemDto { Id = entity.Id, Descripcion = entity.Descripcion };
+    }
+
+    public async Task<CatalogItemDto?> UpdateValorCategoriaTipoAsync(int id, ValorCategoriaTipoCreateUpdateDto dto)
+    {
+        var entity = await session.GetAsync<ValorCategoriaTipoCatalogEntity>(id);
+        if (entity is null) return null;
+        entity.Descripcion = dto.Descripcion;
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return new CatalogItemDto { Id = entity.Id, Descripcion = entity.Descripcion };
+    }
+
+    public async Task<bool> DeleteValorCategoriaTipoAsync(int id)
+    {
+        var inUse = await session.Query<ValorCategoriaCatalogEntity>()
+            .Where(x => x.Tipo != null && x.Tipo.Id == id)
+            .CountAsync() > 0;
+        if (inUse) return false;
+
+        var entity = await session.GetAsync<ValorCategoriaTipoCatalogEntity>(id);
+        if (entity is null) return true;
+        using var tx = session.BeginTransaction();
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return true;
+    }
+
+    public async Task<IReadOnlyCollection<ValorCategoriaListItemDto>> GetAllValoresCategoriasListAsync()
+    {
+        var valores = await session.Query<ValorCategoriaCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .OrderBy(x => x.Descripcion)
+            .ToListAsync();
+
+        var itemCounts = await session.Query<ValorCategoriaConfiguradoItemEntity>()
+            .Select(x => x.ValorCategoriaId)
+            .ToListAsync();
+
+        var countById = itemCounts
+            .GroupBy(id => id)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return valores.Select(v => new ValorCategoriaListItemDto
+        {
+            Id = v.Id,
+            Descripcion = v.Descripcion,
+            IdTipo = v.Tipo?.Id ?? 0,
+            Tipo = v.Tipo?.Descripcion ?? string.Empty,
+            CantidadItems = countById.GetValueOrDefault(v.Id, 0),
+        }).ToList();
+    }
+
+    public async Task<ValorCategoriaDetailDto?> GetValorCategoriaDetailAsync(int id)
+    {
+        var valor = await session.Query<ValorCategoriaCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .FirstOrDefaultAsync(x => x.Id == id);
+        if (valor is null) return null;
+
+        var items = await session.Query<ValorCategoriaConfiguradoItemEntity>()
+            .Where(x => x.ValorCategoriaId == id)
+            .OrderBy(x => x.Numero)
+            .ToListAsync();
+
+        return new ValorCategoriaDetailDto
+        {
+            Id = valor.Id,
+            Descripcion = valor.Descripcion,
+            IdTipo = valor.Tipo?.Id ?? 0,
+            Tipo = valor.Tipo?.Descripcion ?? string.Empty,
+            Items = items.Select(i => new ValorCategoriaConfiguradoItemDto
+            {
+                Id = i.Id,
+                NumeroCategoria = i.Numero,
+                Importe = i.Importe,
+            }).ToList(),
+        };
+    }
+
+    public async Task<ValorCategoriaDetailDto> CreateValorCategoriaAsync(ValorCategoriaCreateUpdateDto dto)
+    {
+        var entity = new ValorCategoriaCatalogEntity
+        {
+            Descripcion = dto.Descripcion,
+            Tipo = dto.IdTipo > 0 ? session.Load<ValorCategoriaTipoCatalogEntity>(dto.IdTipo) : null,
+        };
+        using var tx = session.BeginTransaction();
+        await session.SaveAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        await NHibernateUtil.InitializeAsync(entity.Tipo);
+        return new ValorCategoriaDetailDto
+        {
+            Id = entity.Id,
+            Descripcion = entity.Descripcion,
+            IdTipo = entity.Tipo?.Id ?? 0,
+            Tipo = entity.Tipo?.Descripcion ?? string.Empty,
+        };
+    }
+
+    public async Task<ValorCategoriaDetailDto?> UpdateValorCategoriaAsync(int id, ValorCategoriaCreateUpdateDto dto)
+    {
+        var entity = await session.Query<ValorCategoriaCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .FirstOrDefaultAsync(x => x.Id == id);
+        if (entity is null) return null;
+
+        entity.Descripcion = dto.Descripcion;
+        entity.Tipo = dto.IdTipo > 0 ? session.Load<ValorCategoriaTipoCatalogEntity>(dto.IdTipo) : null;
+
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return await GetValorCategoriaDetailAsync(id);
+    }
+
+    public async Task<bool> DeleteValorCategoriaAsync(int id)
+    {
+        var inUse = await session.Query<ValorCategoriaConfiguradoEntity>()
+            .Where(x => x.ValorCategoriaId == id)
+            .CountAsync() > 0;
+        if (inUse) return false;
+
+        var items = await session.Query<ValorCategoriaConfiguradoItemEntity>()
+            .Where(x => x.ValorCategoriaId == id)
+            .ToListAsync();
+
+        var entity = await session.GetAsync<ValorCategoriaCatalogEntity>(id);
+        if (entity is null) return true;
+
+        using var tx = session.BeginTransaction();
+        foreach (var item in items)
+            await session.DeleteAsync(item);
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return true;
+    }
+
+    public async Task<ValorCategoriaConfiguradoItemDto> CreateValorCategoriaItemAsync(
+        int valorCategoriaId, ValorCategoriaItemCreateUpdateDto dto)
+    {
+        var entity = new ValorCategoriaConfiguradoItemEntity
+        {
+            ValorCategoriaId = valorCategoriaId,
+            Numero = dto.NumeroCategoria,
+            Importe = dto.Importe,
+        };
+        using var tx = session.BeginTransaction();
+        await session.SaveAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return new ValorCategoriaConfiguradoItemDto { Id = entity.Id, NumeroCategoria = entity.Numero, Importe = entity.Importe };
+    }
+
+    public async Task<ValorCategoriaConfiguradoItemDto?> UpdateValorCategoriaItemAsync(
+        int id, ValorCategoriaItemCreateUpdateDto dto)
+    {
+        var entity = await session.GetAsync<ValorCategoriaConfiguradoItemEntity>(id);
+        if (entity is null) return null;
+        entity.Numero = dto.NumeroCategoria;
+        entity.Importe = dto.Importe;
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return new ValorCategoriaConfiguradoItemDto { Id = entity.Id, NumeroCategoria = entity.Numero, Importe = entity.Importe };
+    }
+
+    public async Task DeleteValorCategoriaItemAsync(int id)
+    {
+        var entity = await session.GetAsync<ValorCategoriaConfiguradoItemEntity>(id);
+        if (entity is null) return;
+        using var tx = session.BeginTransaction();
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
     }
 
     public async Task<IReadOnlyCollection<ValorCategoriaConfiguradoItemDto>?> GetValorCategoriaConfiguradoItemsAsync(int id)

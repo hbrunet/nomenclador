@@ -5,6 +5,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import Message from 'primevue/message'
 import type { ValorCategoriaConfiguradoInputDto, ValorCategoriaItemInputDto } from '../types/configuration'
 import { configurationService } from '../services/configurationService'
 
@@ -39,26 +40,13 @@ function startEdit() {
   isEditing.value = true
 }
 
-function agregarItem() {
-  if (!props.item) return
-  const maxNumero = props.item.items.reduce((max, i) => Math.max(max, i.numeroCategoria), 0)
-  props.item.items.push({ id: 0, numeroCategoria: maxNumero + 1, importe: 0 })
-}
-
-function eliminarItem(rowItem: ValorCategoriaItemInputDto) {
-  if (!props.item) return
-  const index = props.item.items.indexOf(rowItem)
-  if (index !== -1) props.item.items.splice(index, 1)
-}
-
 async function save() {
   isSaving.value = true
   try {
-    const saved = await configurationService.updateValorCategoriaItems(
+    await configurationService.updateValorCategoriaItems(
       valorCategoriaId.value,
       props.item?.items ?? [],
     )
-    props.item?.items.splice(0, props.item.items.length, ...saved)
     isEditing.value = false
     isVisible.value = false
   } finally {
@@ -92,9 +80,12 @@ defineExpose({ open })
     <template #default>
       <p class="muted" style="margin: 0 0 1rem">{{ tipo }}</p>
 
-      <div v-if="isEditing" class="flex justify-content-end mb-2">
-        <Button label="Agregar" icon="pi pi-plus" size="small" severity="secondary" outlined @click="agregarItem" />
-      </div>
+      <Message v-if="isEditing" severity="warn" :closable="true" class="mb-3">
+        
+          Estás modificando los importes de un valor compartido. Los cambios se aplicarán a
+          <strong>todas las configuraciones</strong> que usen este valor por categoría.
+
+      </Message>
 
       <DataTable :value="item?.items ?? []" :loading="isLoading" striped-rows :sort-field="'numeroCategoria'" :sort-order="1">
         <template #empty>
@@ -116,24 +107,12 @@ defineExpose({ open })
             </template>
           </template>
         </Column>
-        <Column v-if="isEditing" style="width: 3rem">
-          <template #body="{ data }">
-            <Button
-              icon="pi pi-trash"
-              size="small"
-              severity="danger"
-              text
-              rounded
-              @click="eliminarItem(data)"
-            />
-          </template>
-        </Column>
       </DataTable>
     </template>
 
     <template #footer>
       <template v-if="!isEditing">
-        <Button label="Editar" icon="pi pi-pencil" severity="secondary" outlined :disabled="isLoading" @click="startEdit" />
+        <Button label="Editar importes" icon="pi pi-pencil" severity="secondary" outlined :disabled="isLoading" @click="startEdit" />
         <Button label="Cerrar" severity="secondary" @click="close" />
       </template>
       <template v-else>

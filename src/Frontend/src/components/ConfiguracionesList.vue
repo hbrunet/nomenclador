@@ -7,6 +7,11 @@ import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
 import type { ConfiguracionNomencladorListItemDto } from '../types/configuration'
 
+function formatearFecha(fecha: string): string {
+  const date = new Date(fecha)
+  return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+}
+
 const props = defineProps<{
   items: ConfiguracionNomencladorListItemDto[]
   loading: boolean
@@ -18,7 +23,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: number): void
-  (event: 'page-change', page: number): void
+  (event: 'page-change', page: number, pageSize: number): void
 }>()
 
 const paginatorFirst = computed(() => (props.page - 1) * props.pageSize)
@@ -30,8 +35,8 @@ function estadoSeverity(estado: string) {
   return 'secondary'
 }
 
-function onPageChange(event: { page: number }) {
-  emit('page-change', event.page + 1)
+function onPageChange(event: { page: number; rows: number }) {
+  emit('page-change', event.page + 1, event.rows)
 }
 </script>
 
@@ -39,8 +44,7 @@ function onPageChange(event: { page: number }) {
   <section class="panel p-4 flex flex-column gap-3">
     <div class="flex justify-content-between align-items-center flex-wrap gap-3">
       <div>
-        <h2 class="text-xl mt-0 mb-1 font-semibold">Configuraciones disponibles</h2>
-        <p class="muted m-0">Listado con filtros y acceso rápido al editor.</p>
+       
       </div>
       <Button
         label="Nueva configuración"
@@ -53,18 +57,19 @@ function onPageChange(event: { page: number }) {
       :value="items"
       :loading="loading"
       striped-rows
+      :sort-field="'nomencladorDescripcion'" :sort-order="1"
     >
       <template #empty>
         <span class="muted">No hay configuraciones para los filtros seleccionados.</span>
       </template>
 
-      <Column field="nomencladorDescripcion" header="Nomenclador" />
-      <Column field="escalaDescripcion" header="Escala" />
-      <Column field="zonaDescripcion" header="Zona" />
+      <Column field="nomencladorDescripcion" header="Nomenclador" sortable />
+      <Column field="escalaDescripcion" header="Escala" sortable />
+      <Column field="zonaDescripcion" header="Zona" sortable />
 
       <Column header="Vigencia">
         <template #body="{ data }">
-          {{ data.fechaInicio }} — {{ data.fechaFin ?? 'Vigente' }}
+          {{ formatearFecha(data.fechaInicio) }} — {{ data.fechaFin ? formatearFecha(data.fechaFin) : 'Vigente' }}
         </template>
       </Column>
 
@@ -74,8 +79,6 @@ function onPageChange(event: { page: number }) {
         </template>
       </Column>
 
-      <Column field="cantidadConceptos" header="Conceptos" />
-      <Column field="cantidadValoresFijos" header="Val. fijos" />
 
       <Column>
         <template #body="{ data }">
@@ -101,6 +104,7 @@ function onPageChange(event: { page: number }) {
       :rows="pageSize"
       :total-records="total"
       :first="paginatorFirst"
+      :rows-per-page-options="[10, 20, 50, 100]"
       @page="onPageChange"
     />
   </section>

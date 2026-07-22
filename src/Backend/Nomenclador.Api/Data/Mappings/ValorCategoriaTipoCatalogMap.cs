@@ -8,8 +8,7 @@ public sealed class ValorCategoriaTipoCatalogMap : ClassMap<ValorCategoriaTipoCa
     public ValorCategoriaTipoCatalogMap()
     {
         Table("USUARIO.DESC_VALCAT");
-        ReadOnly();
-        Id(x => x.Id).Column("IDDVCAT").GeneratedBy.Assigned();
+        Id(x => x.Id).Column("IDDVCAT").GeneratedBy.Sequence("USUARIO.DESC_VALCAT_SEQ");
         Map(x => x.Descripcion).Column("DESCRIPCION");
     }
 }

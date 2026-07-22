@@ -127,10 +127,9 @@ export const configurationService = {
   },
 
   async updateValorCategoriaItems(valorCategoriaId: number, items: ValorCategoriaItemInputDto[]) {
-    const { data } = await apiClient.put<ValorCategoriaItemInputDto[]>(
+    await apiClient.put(
       `/catalogs/valor-categoria-configurado-items/${valorCategoriaId}`,
       items,
     )
-    return data
   },
 }

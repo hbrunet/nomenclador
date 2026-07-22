@@ -18,7 +18,6 @@ public sealed class ConfiguracionNomencladorMapper
         entity.FechaInicio = dto.FechaInicio;
         entity.FechaFin = dto.FechaFin;
         entity.Conceptos = dto.Conceptos
-            .OrderBy(item => item.Orden)
             .Select(item => new ConceptoConfiguradoEntity
             {
                 ConceptoId = item.IdConcepto,
@@ -52,8 +51,6 @@ public sealed class ConfiguracionNomencladorMapper
             FechaInicio = entity.FechaInicio,
             FechaFin = entity.FechaFin,
             Estado = ResolveEstado(entity.FechaInicio, entity.FechaFin),
-            CantidadConceptos = entity.Conceptos.Count,
-            CantidadValoresFijos = entity.ValoresFijos.Count
         };
     }
 
@@ -72,8 +69,6 @@ public sealed class ConfiguracionNomencladorMapper
             FechaFin = entity.FechaFin,
             Estado = ResolveEstado(entity.FechaInicio, entity.FechaFin),
             Conceptos = entity.Conceptos
-                .OrderBy(item => item.ConceptoCatalog.Codigo)
-                .ThenBy(item => item.ConceptoCatalog.Subcodigo)
                 .Select(item =>
                 {
                     var concepto = catalogs.Conceptos[item.ConceptoId];
@@ -88,7 +83,6 @@ public sealed class ConfiguracionNomencladorMapper
                 })
                 .ToList(),
             ValoresFijos = entity.ValoresFijos
-                .OrderBy(item => catalogs.ValoresFijos[item.ValorFijoId].Descripcion)
                 .Select(item =>
                 {
                     var valorFijo = catalogs.ValoresFijos[item.ValorFijoId];
@@ -102,7 +96,6 @@ public sealed class ConfiguracionNomencladorMapper
                 })
                 .ToList(),
             ValoresCategorias = entity.ValoresCategorias
-                .OrderBy(item => catalogs.ValoresCategorias[item.ValorCategoriaId].Descripcion)
                 .Select(item =>
                 {
                     var valorCategoria = catalogs.ValoresCategorias[item.ValorCategoriaId];
@@ -112,7 +105,6 @@ public sealed class ConfiguracionNomencladorMapper
                         Descripcion = valorCategoria.Descripcion,
                         Tipo = valorCategoria.Tipo?.Descripcion ?? string.Empty,
                         Items = item.Items
-                            .OrderBy(vc => vc.Numero)
                             .Select(vc => new ValorCategoriaConfiguradoItemDto
                             {
                                 Id = vc.Id,
@@ -125,7 +117,6 @@ public sealed class ConfiguracionNomencladorMapper
                 .ToList(),
             Categorias = catalogs.Categorias.Values
                 .Where(item => item.EscalaSalarialId == entity.EscalaSalarialId)
-                .OrderBy(item => item.Numero)
                 .Select(item => new CategoriaCatalogDto
                 {
                     Id = item.Id,

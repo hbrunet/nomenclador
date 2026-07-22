@@ -16,7 +16,4 @@ public sealed class ConfiguracionNomencladorListItemDto
 
     public string Estado { get; init; } = string.Empty;
 
-    public int CantidadConceptos { get; init; }
-
-    public int CantidadValoresFijos { get; init; }
 }

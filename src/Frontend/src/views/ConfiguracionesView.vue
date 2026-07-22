@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import DatePicker from 'primevue/datepicker'
 import { useRouter } from 'vue-router'
 import AutoComplete from 'primevue/autocomplete'
 import type { AutoCompleteCompleteEvent } from 'primevue/autocomplete'
 import Select from 'primevue/select'
-import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import ConfiguracionesList from '../components/ConfiguracionesList.vue'
 import { useConfiguration } from '../composables/useConfiguration'
@@ -26,21 +26,21 @@ function searchNomenclador(event: AutoCompleteCompleteEvent) {
 }
 
 const filters = reactive({
-  vigenteEn: '',
+  vigenteEn: null as Date | null,
   estado: null as string | null,
 })
 
 const estadoOptions = ['Activa', 'Futura', 'Vencida']
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = ref(20)
 
 function buildParams(page: number) {
   return {
     nomencladorId: selectedNomenclador.value?.id ?? undefined,
-    vigenteEn: filters.vigenteEn || undefined,
+    vigenteEn: filters.vigenteEn ? filters.vigenteEn.toISOString().substring(0, 7) : undefined,
     estado: filters.estado ?? undefined,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize: PAGE_SIZE.value,
   }
 }
 
@@ -48,7 +48,8 @@ async function loadList() {
   await fetchList(buildParams(1))
 }
 
-async function goToPage(page: number) {
+async function goToPage(page: number, pageSize: number) {
+  PAGE_SIZE.value = pageSize
   await fetchList(buildParams(page))
 }
 
@@ -60,8 +61,10 @@ onMounted(async () => {
 
 <template>
   <section class="panel p-4">
-    <h2 class="text-xl mt-0 mb-3 font-semibold">Configuraciones de nomenclador</h2>
-
+    <div>
+    <h2 class="text-xl mt-0 mb-3 font-semibold">Configuraciones</h2>
+    <p class="muted m-0">Filtros de búsqueda</p>
+    </div>  
     <div class="flex flex-wrap gap-3 align-items-end">
       <div class="flex flex-column gap-1" style="flex: 2 ">
         <label class="field-label">Nomenclador</label>
@@ -79,7 +82,7 @@ onMounted(async () => {
 
       <div class="flex flex-column gap-1" style="flex: 1">
         <label class="field-label">Vigente en</label>
-        <InputText v-model="filters.vigenteEn" type="date" class="w-full" />
+        <DatePicker v-model="filters.vigenteEn" type="date" class="w-full"  view="month" dateFormat="mm/yy"/>
       </div>
 
       <div class="flex flex-column gap-1" style="flex: 1">

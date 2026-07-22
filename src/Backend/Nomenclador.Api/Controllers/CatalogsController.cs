@@ -85,7 +85,7 @@ public sealed class CatalogsController(CatalogRepository catalogRepository) : Co
         int id,
         [FromBody] IReadOnlyCollection<ValorCategoriaConfiguradoItemDto> items)
     {
-        var result = await catalogRepository.UpdateValorCategoriaItemsAsync(id, items);
-        return Ok(result);
+        await catalogRepository.UpdateValorCategoriaItemsAsync(items);
+        return NoContent();
     }
 }

@@ -8,7 +8,7 @@
       <nav class="app-nav">
         <RouterLink to="/configuraciones">Configuraciones</RouterLink>
         <RouterLink to="/escalas">Escalas</RouterLink>
-        <RouterLink to="/configuraciones/nueva">Nueva configuración</RouterLink>
+        <RouterLink to="/valores-categoria">Valores por categoría</RouterLink>
       </nav>
     </header>
 
