@@ -169,13 +169,19 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         using var tx = session.BeginTransaction();
 
-        var entity = new ValorFijoConfiguradoEntity
-        {
-            ConfiguracionNomencladorId = configuracionId,
-            ValorFijoId = request.IdValorFijo,
-        };
+        var yaExiste = await session.Query<ValorFijoConfiguradoEntity>()
+            .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorFijoId == request.IdValorFijo);
 
-        await session.SaveAsync(entity);
+        if (!yaExiste)
+        {
+            await session.SaveAsync(new ValorFijoConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = configuracionId,
+                ValorFijoId = request.IdValorFijo,
+            });
+            await session.FlushAsync();
+        }
+
         await tx.CommitAsync();
     }
 
