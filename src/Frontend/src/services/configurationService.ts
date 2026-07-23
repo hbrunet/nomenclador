@@ -12,6 +12,7 @@ import type {
   PagedResult,
   ValidacionConfiguracionResponse,
   ValorCategoriaCatalogItem,
+  ValorCategoriaConfiguradoInputDto,
   ValorCategoriaItemInputDto,
   ValorFijoCatalogItem,
   ValorFijoConfiguradoInputDto,
@@ -98,6 +99,21 @@ export const configurationService = {
   async removeValorFijo(id: number, valorFijoId: number) {
     const { data } = await apiClient.delete<ConfiguracionNomencladorDetailDto>(
       `/configuraciones-nomenclador/${id}/valor-fijo/${valorFijoId}`,
+    )
+    return data
+  },
+
+  async addValorPorCategoria(id: number, valorCategoria: ValorCategoriaConfiguradoInputDto) {
+    const { data } = await apiClient.post<ConfiguracionNomencladorDetailDto>(
+      `/configuraciones-nomenclador/${id}/valor-categoria`,
+      { idValorCategoria: valorCategoria.idValorCategoria },
+    )
+    return data
+  },
+
+  async removeValorPorCategoria(id: number, valorCategoriaId: number) {
+    const { data } = await apiClient.delete<ConfiguracionNomencladorDetailDto>(
+      `/configuraciones-nomenclador/${id}/valor-categoria/${valorCategoriaId}`,
     )
     return data
   },

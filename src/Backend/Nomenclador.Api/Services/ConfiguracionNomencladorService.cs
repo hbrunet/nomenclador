@@ -149,4 +149,29 @@ public sealed class ConfiguracionNomencladorService(
 
         return await BuildDetailAsync(updatedEntity);
     }
+
+    public async Task<ConfiguracionNomencladorDetailDto> AddValorPorCategoriaAsync(int id, ValorCategoriaConfiguradoInputDto valorCategoria)
+    {
+        if (await configuracionRepository.GetByIdAsync(id) is null)
+            throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+        await configuracionRepository.AddValorPorCategoriaAsync(id, valorCategoria);
+
+        var updatedEntity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        return await BuildDetailAsync(updatedEntity);
+    }
+
+    public async Task<ConfiguracionNomencladorDetailDto> RemoveValorPorCategoriaAsync(int id, int valorCategoriaId)
+    {
+        var entity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        await configuracionRepository.RemoveValorPorCategoriaAsync(id, valorCategoriaId);
+
+        var updatedEntity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        return await BuildDetailAsync(updatedEntity);
+    }
 }

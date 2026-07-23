@@ -4,19 +4,33 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
 import ValorCategoriaItemsModal from './ValorCategoriaItemsModal.vue'
 import ValorCategoriaCombobox from './ValorCategoriaCombobox.vue'
-import type { ValorCategoriaCatalogItem, ValorCategoriaConfiguradoInputDto } from '../types/configuration'
+import { configurationService } from '../services/configurationService'
+import type {
+  ConfiguracionNomencladorDetailDto,
+  ValorCategoriaCatalogItem,
+  ValorCategoriaConfiguradoInputDto,
+} from '../types/configuration'
 
 const valoresCategorias = defineModel<ValorCategoriaConfiguradoInputDto[]>({ required: true })
 
 const props = defineProps<{
   valoresDisponibles: ValorCategoriaCatalogItem[]
+  configuracionId?: number
+}>()
+
+const emit = defineEmits<{
+  (e: 'detail-updated', detail: ConfiguracionNomencladorDetailDto): void
 }>()
 
 const selectedItemIndex = ref<number | null>(null)
 const modalRef = ref<InstanceType<typeof ValorCategoriaItemsModal> | null>(null)
 const filterQuery = ref('')
+const saving = ref(false)
+const removingIds = ref<Set<number>>(new Set())
+const errorMessage = ref<string | null>(null)
 
 const valuesById = computed(() => new Map(props.valoresDisponibles.map((item) => [item.id, item])))
 const valoresExcluidos = computed(() => valoresCategorias.value.map((item) => item.idValorCategoria))
@@ -55,15 +69,57 @@ const selectedTipo = computed(() =>
     : '',
 )
 
-function addValorCategoria(id: number) {
+async function addValorCategoria(id: number) {
+  if (saving.value) return
   if (valoresCategorias.value.some((item) => item.idValorCategoria === id)) return
-  valoresCategorias.value = [...valoresCategorias.value, { idValorCategoria: id, items: [] }]
+
+  errorMessage.value = null
+
+  if (!props.configuracionId) {
+    // Configuración aún no persistida: se agrega solo al borrador local.
+    valoresCategorias.value = [...valoresCategorias.value, { idValorCategoria: id, items: [] }]
+    return
+  }
+
+  saving.value = true
+  try {
+    const updated = await configurationService.addValorPorCategoria(props.configuracionId, { idValorCategoria: id, items: [] })
+    valoresCategorias.value = updated.valoresCategorias.map((item) => ({
+      idValorCategoria: item.idValorCategoria,
+      items: item.items.map((i) => ({ id: i.id, numeroCategoria: i.numeroCategoria, importe: i.importe })),
+    }))
+    emit('detail-updated', updated)
+  } catch (e: any) {
+    errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo agregar el valor por categoría seleccionado.'
+  } finally {
+    saving.value = false
+  }
 }
 
-function removeValorCategoria(idValorCategoria: number) {
-  valoresCategorias.value = valoresCategorias.value.filter(
-    (item) => item.idValorCategoria !== idValorCategoria,
-  )
+async function removeValorCategoria(idValorCategoria: number) {
+  errorMessage.value = null
+
+  if (!props.configuracionId) {
+    // Configuración aún no persistida: se quita solo del borrador local.
+    valoresCategorias.value = valoresCategorias.value.filter(
+      (item) => item.idValorCategoria !== idValorCategoria,
+    )
+    return
+  }
+
+  removingIds.value.add(idValorCategoria)
+  try {
+    const updated = await configurationService.removeValorPorCategoria(props.configuracionId, idValorCategoria)
+    valoresCategorias.value = updated.valoresCategorias.map((item) => ({
+      idValorCategoria: item.idValorCategoria,
+      items: item.items.map((i) => ({ id: i.id, numeroCategoria: i.numeroCategoria, importe: i.importe })),
+    }))
+    emit('detail-updated', updated)
+  } catch (e: any) {
+    errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo eliminar el valor por categoría seleccionado.'
+  } finally {
+    removingIds.value.delete(idValorCategoria)
+  }
 }
 
 function verItems(idValorCategoria: number) {
@@ -77,6 +133,8 @@ function verItems(idValorCategoria: number) {
 
 <template>
   <div class="flex flex-column gap-3 pt-3">
+    <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
+
     <ValorCategoriaCombobox
       :valores-disponibles="valoresDisponibles"
       :valores-excluidos="valoresExcluidos"
@@ -113,6 +171,8 @@ function verItems(idValorCategoria: number) {
               severity="danger"
               text
               rounded
+              :loading="removingIds.has(data.idValorCategoria)"
+              :disabled="removingIds.has(data.idValorCategoria)"
               @click="removeValorCategoria(data.idValorCategoria)"
             />
           </div>
