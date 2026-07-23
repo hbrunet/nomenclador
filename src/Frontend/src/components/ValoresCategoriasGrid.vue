@@ -70,6 +70,7 @@ const selectedTipo = computed(() =>
 )
 
 async function addValorCategoria(id: number) {
+  if (saving.value) return
   if (valoresCategorias.value.some((item) => item.idValorCategoria === id)) return
 
   errorMessage.value = null
