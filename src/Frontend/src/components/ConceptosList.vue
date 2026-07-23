@@ -45,31 +45,27 @@ const tableData = computed(() =>
   }))
 )
 
-async function addConceptos(ids: number[]) {
-  const existentes = new Set(conceptos.value.map((item) => item.idConcepto))
-  const nuevos = ids.filter((id) => !existentes.has(id))
-  if (!nuevos.length) return
+async function addConcepto(idConcepto: number) {
+  if (conceptos.value.some((item) => item.idConcepto === idConcepto)) return
 
   errorMessage.value = null
 
-  const nuevosItems = nuevos.map((idConcepto, index) => ({
-    idConcepto,
-    orden: conceptos.value.length + index + 1,
-  }))
-
   if (!props.configuracionId) {
     // Configuración aún no persistida: se agrega solo al borrador local.
-    conceptos.value = [...conceptos.value, ...nuevosItems]
+    conceptos.value = [...conceptos.value, { idConcepto, orden: conceptos.value.length + 1 }]
     return
   }
 
   saving.value = true
   try {
-    const updated = await configurationService.addConceptos(props.configuracionId, nuevosItems)
+    const updated = await configurationService.addConcepto(props.configuracionId, {
+      idConcepto,
+      orden: conceptos.value.length + 1,
+    })
     conceptos.value = updated.conceptos.map((item) => ({ idConcepto: item.idConcepto, orden: item.orden }))
     emit('detail-updated', updated)
   } catch (e: any) {
-    errorMessage.value = e.response?.data?.mensaje ?? 'No se pudieron guardar los conceptos seleccionados.'
+    errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo agregar el concepto seleccionado.'
   } finally {
     saving.value = false
   }
@@ -107,7 +103,7 @@ async function removeConcepto(idConcepto: number) {
       :conceptos-disponibles="conceptosDisponibles"
       :conceptos-excluidos="conceptosExcluidos"
       :loading-catalog="loadingCatalog || saving"
-      @add-multiple="addConceptos"
+      @add="addConcepto"
     />
 
     <DataTable :value="tableData" striped-rows>

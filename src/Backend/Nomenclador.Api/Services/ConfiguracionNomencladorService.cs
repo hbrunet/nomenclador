@@ -72,11 +72,11 @@ public sealed class ConfiguracionNomencladorService(
         return await BuildDetailAsync(entity);
     }
 
-    public async Task<ConfiguracionNomencladorDetailDto> AddConceptosAsync(int id, IReadOnlyCollection<ConceptoConfiguradoInputDto> conceptos)
+    public async Task<ConfiguracionNomencladorDetailDto> AddConceptoAsync(int id, ConceptoConfiguradoInputDto concepto)
     {
         if (await configuracionRepository.GetByIdAsync(id) is null)
             throw new KeyNotFoundException($"No se encontró la configuración {id}.");
-        await configuracionRepository.AddConceptosAsync(id, conceptos);
+        await configuracionRepository.AddConceptoAsync(id, concepto);
 
         var updatedEntity = await configuracionRepository.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
@@ -123,5 +123,30 @@ public sealed class ConfiguracionNomencladorService(
     {
         var catalogs = await catalogRepository.GetSnapshotAsync();
         return mapper.ToDetailDto(entity, catalogs);
+    }
+
+    public async Task<ConfiguracionNomencladorDetailDto> AddValorFijoAsync(int id, ValorFijoConfiguradoInputDto valorFijo)
+    {
+        if (await configuracionRepository.GetByIdAsync(id) is null)
+            throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+        await configuracionRepository.AddValorFijoAsync(id, valorFijo);
+
+        var updatedEntity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        return await BuildDetailAsync(updatedEntity);
+    }
+
+    public async Task<ConfiguracionNomencladorDetailDto> RemoveValorFijoAsync(int id, int valorFijoId)
+    {
+        var entity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        await configuracionRepository.RemoveValorFijoAsync(id, valorFijoId);
+
+        var updatedEntity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        return await BuildDetailAsync(updatedEntity);
     }
 }
