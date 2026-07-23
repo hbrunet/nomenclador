@@ -14,6 +14,7 @@ import type {
   ValorCategoriaCatalogItem,
   ValorCategoriaItemInputDto,
   ValorFijoCatalogItem,
+  ValorFijoConfiguradoInputDto,
 } from '../types/configuration'
 
 export const apiClient = axios.create({
@@ -71,17 +72,32 @@ export const configurationService = {
     return data
   },
 
-  async addConceptos(id: number, conceptos: ConceptoConfiguradoInputDto[]) {
+  async addConcepto(id: number, concepto: ConceptoConfiguradoInputDto) {
     const { data } = await apiClient.post<ConfiguracionNomencladorDetailDto>(
-      `/configuraciones-nomenclador/${id}/conceptos`,
-      conceptos,
+      `/configuraciones-nomenclador/${id}/concepto`,
+      concepto,
     )
     return data
   },
 
   async removeConcepto(id: number, conceptoId: number) {
     const { data } = await apiClient.delete<ConfiguracionNomencladorDetailDto>(
-      `/configuraciones-nomenclador/${id}/conceptos/${conceptoId}`,
+      `/configuraciones-nomenclador/${id}/concepto/${conceptoId}`,
+    )
+    return data
+  },
+
+  async addValorFijo(id: number, valorFijo: ValorFijoConfiguradoInputDto) {
+    const { data } = await apiClient.post<ConfiguracionNomencladorDetailDto>(
+      `/configuraciones-nomenclador/${id}/valor-fijo`,
+      { idValorFijo: valorFijo.idValorFijo },
+    )
+    return data
+  },
+
+  async removeValorFijo(id: number, valorFijoId: number) {
+    const { data } = await apiClient.delete<ConfiguracionNomencladorDetailDto>(
+      `/configuraciones-nomenclador/${id}/valor-fijo/${valorFijoId}`,
     )
     return data
   },

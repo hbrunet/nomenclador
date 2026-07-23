@@ -41,23 +41,37 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         return Ok(await configuracionService.UpdateAsync(id, request));
     }
 
-    [HttpPost("{id:int}/conceptos")]
-    public async Task<IActionResult> AgregarConceptos(int id, [FromBody] List<ConceptoConfiguradoInputDto> request)
+    [HttpPost("validar")]
+    public async Task<IActionResult> ValidarConfiguracion([FromBody] ConfiguracionNomencladorCreateUpdateDto request, [FromQuery] int? excludedId = null)
     {
-        return Ok(await configuracionService.AddConceptosAsync(id, request));
+        return Ok(await configuracionService.ValidateAsync(request, excludedId));
     }
 
-    [HttpDelete("{id:int}/conceptos/{conceptoId:int}")]
+    [HttpPost("{id:int}/concepto")]
+    public async Task<IActionResult> AgregarConcepto(int id, [FromBody] ConceptoConfiguradoInputDto request)
+    {
+        return Ok(await configuracionService.AddConceptoAsync(id, request));
+    }
+
+    [HttpDelete("{id:int}/concepto/{conceptoId:int}")]
     public async Task<IActionResult> EliminarConcepto(int id, int conceptoId)
     {
         return Ok(await configuracionService.RemoveConceptoAsync(id, conceptoId));
     }
 
-    [HttpPost("validar")]
-    public async Task<IActionResult> ValidarConfiguracion([FromBody] ConfiguracionNomencladorCreateUpdateDto request)
+
+    [HttpPost("{id:int}/valor-fijo")]
+    public async Task<IActionResult> AgregarValorFijo(int id, [FromBody] ValorFijoConfiguradoInputDto request)
     {
-        return Ok(await configuracionService.ValidateAsync(request));
+        return Ok(await configuracionService.AddValorFijoAsync(id, request));
     }
+
+    [HttpDelete("{id:int}/valor-fijo/{valorFijoId:int}")]
+    public async Task<IActionResult> EliminarValorFijo(int id, int valorFijoId)
+    {
+        return Ok(await configuracionService.RemoveValorFijoAsync(id, valorFijoId));
+    }
+
 
     [HttpPost("{id:int}/clonar")]
     public async Task<IActionResult> ClonarConfiguracion(int id, [FromBody] ClonarConfiguracionDto request)

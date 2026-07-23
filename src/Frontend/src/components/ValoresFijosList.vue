@@ -4,7 +4,13 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import type { ValorFijoCatalogItem, ValorFijoConfiguradoInputDto } from '../types/configuration'
+import Message from 'primevue/message'
+import type {
+  ConfiguracionNomencladorDetailDto,
+  ValorFijoCatalogItem,
+  ValorFijoConfiguradoInputDto,
+} from '../types/configuration'
+import { configurationService } from '../services/configurationService'
 import ValorFijoEditModal from './ValorFijoEditModal.vue'
 import ValorFijoCombobox from './ValorFijoCombobox.vue'
 
@@ -17,10 +23,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'catalog-refresh'): void
+  (e: 'detail-updated', detail: ConfiguracionNomencladorDetailDto): void
 }>()
 
 const editModalRef = ref<InstanceType<typeof ValorFijoEditModal> | null>(null)
 const filterQuery = ref('')
+const saving = ref(false)
+const removingIds = ref<Set<number>>(new Set())
+const errorMessage = ref<string | null>(null)
 
 const valuesById = computed(() => new Map(props.valoresDisponibles.map((item) => [item.id, item])))
 const valoresExcluidos = computed(() => valoresFijos.value.map((item) => item.idValorFijo))
@@ -44,13 +54,48 @@ const tableData = computed(() => {
     }))
 })
 
-function addValorFijo(id: number) {
+async function addValorFijo(id: number) {
   if (valoresFijos.value.some((item) => item.idValorFijo === id)) return
-  valoresFijos.value = [...valoresFijos.value, { idValorFijo: id, valor: 0 }]
+
+  errorMessage.value = null
+
+  if (!props.configuracionId) {
+    // Configuración aún no persistida: se agrega solo al borrador local.
+    valoresFijos.value = [...valoresFijos.value, { idValorFijo: id, valor: 0 }]
+    return
+  }
+
+  saving.value = true
+  try {
+    const updated = await configurationService.addValorFijo(props.configuracionId, { idValorFijo: id, valor: 0 })
+    valoresFijos.value = updated.valoresFijos.map((item) => ({ idValorFijo: item.idValorFijo, valor: item.valor }))
+    emit('detail-updated', updated)
+  } catch (e: any) {
+    errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo agregar el valor fijo seleccionado.'
+  } finally {
+    saving.value = false
+  }
 }
 
-function removeValorFijo(idValorFijo: number) {
-  valoresFijos.value = valoresFijos.value.filter((item) => item.idValorFijo !== idValorFijo)
+async function removeValorFijo(idValorFijo: number) {
+  errorMessage.value = null
+
+  if (!props.configuracionId) {
+    // Configuración aún no persistida: se quita solo del borrador local.
+    valoresFijos.value = valoresFijos.value.filter((item) => item.idValorFijo !== idValorFijo)
+    return
+  }
+
+  removingIds.value.add(idValorFijo)
+  try {
+    const updated = await configurationService.removeValorFijo(props.configuracionId, idValorFijo)
+    valoresFijos.value = updated.valoresFijos.map((item) => ({ idValorFijo: item.idValorFijo, valor: item.valor }))
+    emit('detail-updated', updated)
+  } catch (e: any) {
+    errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo eliminar el valor fijo seleccionado.'
+  } finally {
+    removingIds.value.delete(idValorFijo)
+  }
 }
 
 function openEditModal(idValorFijo: number) {
@@ -74,6 +119,8 @@ function handleModalSaved(
 
 <template>
   <div class="flex flex-column gap-3 pt-3">
+    <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
+
     <ValorFijoCombobox
       :valores-disponibles="valoresDisponibles"
       :valores-excluidos="valoresExcluidos"
@@ -115,6 +162,8 @@ function handleModalSaved(
               severity="danger"
               text
               rounded
+              :loading="removingIds.has(data.idValorFijo)"
+              :disabled="removingIds.has(data.idValorFijo)"
               @click="removeValorFijo(data.idValorFijo)"
             />
           </div>

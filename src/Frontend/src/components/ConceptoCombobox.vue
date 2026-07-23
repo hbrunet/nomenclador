@@ -14,12 +14,11 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'add-multiple', ids: number[]): void
+  (e: 'add', id: number): void
 }>()
 
 const isOpen = ref(false)
 const query = ref('')
-const selectedItems = ref<ConceptoCatalogItem[]>([])
 
 const excludedSet = computed(() => new Set(props.conceptosExcluidos))
 
@@ -37,33 +36,19 @@ const filteredItems = computed(() => {
     )
 })
 
-function handleOpen() {
-  selectedItems.value = []
-  query.value = ''
-  isOpen.value = true
-}
-
-function handleAddSelected() {
-  if (!selectedItems.value.length) return
-  emit(
-    'add-multiple',
-    selectedItems.value.map((item) => item.id),
-  )
-  selectedItems.value = []
-  isOpen.value = false
-  query.value = ''
+function handleAdd(id: number) {
+  emit('add', id)
 }
 
 function handleClose() {
   isOpen.value = false
-  selectedItems.value = []
   query.value = ''
 }
 </script>
 
 <template>
   <div>
-    <Button label="Agregar concepto" icon="pi pi-plus" severity="secondary" @click="handleOpen" />
+    <Button label="Agregar concepto" icon="pi pi-plus" severity="secondary" @click="isOpen = true" />
 
     <Dialog
       v-model:visible="isOpen"
@@ -71,7 +56,7 @@ function handleClose() {
       :modal="true"
       :style="{ width: '52rem' }"
       :closable="true"
-      @hide="handleClose"
+      @hide="query = ''"
     >
       <div class="flex flex-column gap-3">
         <InputText
@@ -82,9 +67,7 @@ function handleClose() {
         />
 
         <DataTable
-          v-model:selection="selectedItems"
           :value="filteredItems"
-          data-key="id"
           scrollable
           scroll-height="320px"
           striped-rows
@@ -96,22 +79,26 @@ function handleClose() {
           <template #empty>
             <span class="muted">No hay conceptos disponibles para agregar.</span>
           </template>
-          <Column selection-mode="multiple" header-style="width: 3rem" />
           <Column field="codigo" header="Código" sortable style="width: 8rem; text-align: right" />
           <Column field="subcodigo" header="Subcódigo" sortable style="width: 8rem; text-align: right" />
           <Column field="descripcionBreve" header="Descripción Breve" sortable />
           <Column field="descripcion" header="Descripción" sortable />
+          <Column style="width: 4rem">
+            <template #body="{ data }">
+              <Button
+                icon="pi pi-plus"
+                size="small"
+                rounded
+                severity="success"
+                @click="handleAdd(data.id)"
+              />
+            </template>
+          </Column>
         </DataTable>
       </div>
 
       <template #footer>
         <Button label="Cerrar" severity="secondary" @click="handleClose" />
-        <Button
-          :label="`Agregar seleccionados${selectedItems.length ? ' (' + selectedItems.length + ')' : ''}`"
-          icon="pi pi-check"
-          :disabled="!selectedItems.length"
-          @click="handleAddSelected"
-        />
       </template>
     </Dialog>
   </div>

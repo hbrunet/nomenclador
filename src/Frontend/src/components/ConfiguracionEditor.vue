@@ -175,6 +175,7 @@ const activeTab = ref('datos-generales')
             :valores-disponibles="catalogs.valoresFijos"
             :configuracion-id="props.configuracionId"
             @catalog-refresh="emit('catalog-refresh')"
+            @detail-updated="(detail) => emit('detail-updated', detail)"
           />
         </TabPanel>
 

@@ -115,27 +115,23 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         await tx.CommitAsync();
     }
 
-    public async Task AddConceptosAsync(int configuracionId, IReadOnlyCollection<Nomenclador.Api.DTOs.ConceptoConfiguradoInputDto> conceptos)
+    public async Task AddConceptoAsync(int configuracionId, Nomenclador.Api.DTOs.ConceptoConfiguradoInputDto request)
     {
         using var tx = session.BeginTransaction();
 
-        var existentes = await session.Query<ConceptoConfiguradoEntity>()
-            .Where(c => c.ConfiguracionNomencladorId == configuracionId)
-            .Select(c => c.ConceptoId)
-            .ToListAsync();
+        var yaExiste = await session.Query<ConceptoConfiguradoEntity>()
+            .AnyAsync(c => c.ConfiguracionNomencladorId == configuracionId && c.ConceptoId == request.IdConcepto);
 
-        var existentesSet = existentes.ToHashSet();
-        var siguienteOrden = existentes.Count + 1;
-
-        foreach (var item in conceptos)
+        if (!yaExiste)
         {
-            if (!existentesSet.Add(item.IdConcepto)) continue; // ya está configurado, se omite
+            var siguienteOrden = await session.Query<ConceptoConfiguradoEntity>()
+                .CountAsync(c => c.ConfiguracionNomencladorId == configuracionId) + 1;
 
             await session.SaveAsync(new ConceptoConfiguradoEntity
             {
                 ConfiguracionNomencladorId = configuracionId,
-                ConceptoId = item.IdConcepto,
-                Orden = siguienteOrden++,
+                ConceptoId = request.IdConcepto,
+                Orden = siguienteOrden,
             });
         }
 
@@ -164,6 +160,42 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         for (var i = 0; i < restantes.Count; i++)
         {
             restantes[i].Orden = i + 1;
+        }
+
+        await tx.CommitAsync();
+    }
+
+    public async Task AddValorFijoAsync(int configuracionId, Nomenclador.Api.DTOs.ValorFijoConfiguradoInputDto request)
+    {
+        using var tx = session.BeginTransaction();
+
+        var yaExiste = await session.Query<ValorFijoConfiguradoEntity>()
+            .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorFijoId == request.IdValorFijo);
+
+        if (!yaExiste)
+        {
+            await session.SaveAsync(new ValorFijoConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = configuracionId,
+                ValorFijoId = request.IdValorFijo,
+            });
+            await session.FlushAsync();
+        }
+
+        await tx.CommitAsync();
+    }
+
+    public async Task RemoveValorFijoAsync(int configuracionId, int valorFijoId)
+    {
+        using var tx = session.BeginTransaction();
+
+        var entity = await session.Query<ValorFijoConfiguradoEntity>()
+            .FirstOrDefaultAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorFijoId == valorFijoId);
+
+        if (entity is not null)
+        {
+            await session.DeleteAsync(entity);
+            await session.FlushAsync();
         }
 
         await tx.CommitAsync();
