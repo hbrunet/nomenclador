@@ -74,9 +74,8 @@ public sealed class ConfiguracionNomencladorService(
 
     public async Task<ConfiguracionNomencladorDetailDto> AddConceptosAsync(int id, IReadOnlyCollection<ConceptoConfiguradoInputDto> conceptos)
     {
-        var entity = await configuracionRepository.GetByIdAsync(id)
-            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
-
+        if (await configuracionRepository.GetByIdAsync(id) is null)
+            throw new KeyNotFoundException($"No se encontró la configuración {id}.");
         await configuracionRepository.AddConceptosAsync(id, conceptos);
 
         var updatedEntity = await configuracionRepository.GetByIdAsync(id)
