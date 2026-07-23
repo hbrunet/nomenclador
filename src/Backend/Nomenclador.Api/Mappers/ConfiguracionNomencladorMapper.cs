@@ -79,8 +79,11 @@ public sealed class ConfiguracionNomencladorMapper
                         Subcodigo = concepto.Subcodigo,
                         Descripcion = concepto.Descripcion,
                         Orden = item.Orden,
+                        DescripcionBreve = concepto.DescripcionBreve,
                     };
                 })
+                .OrderBy(item => item.Codigo)
+                .ThenBy(item => item.Subcodigo)
                 .ToList(),
             ValoresFijos = entity.ValoresFijos
                 .Select(item =>

@@ -19,6 +19,7 @@ import type {
   CategoriaCatalogItem,
   ConceptoCatalogItem,
   ConfiguracionNomencladorCreateUpdateDto,
+  ConfiguracionNomencladorDetailDto,
   ValidacionConfiguracionResponse,
 } from '../types/configuration'
 
@@ -41,6 +42,7 @@ const emit = defineEmits<{
   (event: 'back'): void
   (event: 'catalog-refresh'): void
   (event: 'montos-saved', categorias: CategoriaCatalogItem[]): void
+  (event: 'detail-updated', detail: ConfiguracionNomencladorDetailDto): void
 }>()
 
 // Convert 0 ↔ null for PrimeVue Select (0 = not selected in the store)
@@ -162,6 +164,8 @@ const activeTab = ref('datos-generales')
             v-model="draft.conceptos"
             :conceptos-disponibles="conceptosDisponibles"
             :loading-catalog="loadingConceptos"
+            :configuracion-id="props.configuracionId"
+            @detail-updated="(detail) => emit('detail-updated', detail)"
           />
         </TabPanel>
 

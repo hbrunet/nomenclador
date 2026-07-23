@@ -5,6 +5,7 @@ import type {
   CategoriaMontoUpdateItem,
   ClonarConfiguracionDto,
   ConfigurationFilters,
+  ConceptoConfiguradoInputDto,
   ConfiguracionNomencladorCreateUpdateDto,
   ConfiguracionNomencladorDetailDto,
   ConfiguracionNomencladorListItemDto,
@@ -66,6 +67,21 @@ export const configurationService = {
     const { data } = await apiClient.post<ConfiguracionNomencladorDetailDto>(
       `/configuraciones-nomenclador/${id}/clonar`,
       payload,
+    )
+    return data
+  },
+
+  async addConceptos(id: number, conceptos: ConceptoConfiguradoInputDto[]) {
+    const { data } = await apiClient.post<ConfiguracionNomencladorDetailDto>(
+      `/configuraciones-nomenclador/${id}/conceptos`,
+      conceptos,
+    )
+    return data
+  },
+
+  async removeConcepto(id: number, conceptoId: number) {
+    const { data } = await apiClient.delete<ConfiguracionNomencladorDetailDto>(
+      `/configuraciones-nomenclador/${id}/conceptos/${conceptoId}`,
     )
     return data
   },
