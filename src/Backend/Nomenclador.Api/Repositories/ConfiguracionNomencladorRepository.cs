@@ -205,23 +205,42 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         using var tx = session.BeginTransaction();
 
-        // Se agrega a la colección ValoresCategorias del padre (en vez de un SaveAsync directo)
-        // para que, si esa colección ya fue inicializada en esta sesión (p. ej. por el chequeo de
-        // existencia previo en el Service), quede reflejada de inmediato en memoria. De lo contrario
-        // la colección cacheada queda desactualizada y el nuevo valor recién aparece en el próximo
-        // request (bug de "hay que hacer 2 clics").
         var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
-        if (configuracion is not null
-            && !configuracion.ValoresCategorias.Any(v => v.ValorCategoriaId == request.IdValorCategoria))
+        if (configuracion is not null)
         {
-            configuracion.ValoresCategorias.Add(new ValorCategoriaConfiguradoEntity
+            if (NHibernateUtil.IsInitialized(configuracion.ValoresCategorias))
             {
-                ConfiguracionNomencladorId = configuracionId,
-                ValorCategoriaId = request.IdValorCategoria,
-            });
+                // Collection already in memory (e.g. loaded earlier in this session): use it to
+                // avoid an extra DB round-trip and keep the in-memory cache up to date.
+                if (!configuracion.ValoresCategorias.Any(v => v.ValorCategoriaId == request.IdValorCategoria))
+                {
+                    configuracion.ValoresCategorias.Add(new ValorCategoriaConfiguradoEntity
+                    {
+                        ConfiguracionNomencladorId = configuracionId,
+                        ValorCategoriaId = request.IdValorCategoria,
+                    });
+                    await session.FlushAsync();
+                }
+            }
+            else
+            {
+                // Collection not yet loaded: check and insert at DB level to avoid forcing a full
+                // collection load just to verify existence.
+                var yaExiste = await session.Query<ValorCategoriaConfiguradoEntity>()
+                    .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorCategoriaId == request.IdValorCategoria);
+
+                if (!yaExiste)
+                {
+                    await session.SaveAsync(new ValorCategoriaConfiguradoEntity
+                    {
+                        ConfiguracionNomencladorId = configuracionId,
+                        ValorCategoriaId = request.IdValorCategoria,
+                    });
+                    await session.FlushAsync();
+                }
+            }
         }
 
-        await session.FlushAsync();
         await tx.CommitAsync();
     }
 
