@@ -41,6 +41,12 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         return Ok(await configuracionService.UpdateAsync(id, request));
     }
 
+    [HttpPost("validar")]
+    public async Task<IActionResult> ValidarConfiguracion([FromBody] ConfiguracionNomencladorCreateUpdateDto request, [FromQuery] int? excludedId = null)
+    {
+        return Ok(await configuracionService.ValidateAsync(request, excludedId));
+    }
+
     [HttpPost("{id:int}/concepto")]
     public async Task<IActionResult> AgregarConcepto(int id, [FromBody] ConceptoConfiguradoInputDto request)
     {
