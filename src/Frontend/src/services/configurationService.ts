@@ -90,7 +90,7 @@ export const configurationService = {
   async addValorFijo(id: number, valorFijo: ValorFijoConfiguradoInputDto) {
     const { data } = await apiClient.post<ConfiguracionNomencladorDetailDto>(
       `/configuraciones-nomenclador/${id}/valor-fijo`,
-      valorFijo,
+      { idValorFijo: valorFijo.idValorFijo },
     )
     return data
   },
