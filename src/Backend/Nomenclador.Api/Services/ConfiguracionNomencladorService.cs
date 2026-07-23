@@ -72,6 +72,31 @@ public sealed class ConfiguracionNomencladorService(
         return await BuildDetailAsync(entity);
     }
 
+    public async Task<ConfiguracionNomencladorDetailDto> AddConceptosAsync(int id, IReadOnlyCollection<ConceptoConfiguradoInputDto> conceptos)
+    {
+        if (await configuracionRepository.GetByIdAsync(id) is null)
+            throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+        await configuracionRepository.AddConceptosAsync(id, conceptos);
+
+        var updatedEntity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        return await BuildDetailAsync(updatedEntity);
+    }
+
+    public async Task<ConfiguracionNomencladorDetailDto> RemoveConceptoAsync(int id, int conceptoId)
+    {
+        var entity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        await configuracionRepository.RemoveConceptoAsync(id, conceptoId);
+
+        var updatedEntity = await configuracionRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+        return await BuildDetailAsync(updatedEntity);
+    }
+
     public Task<ValidacionConfiguracionResponse> ValidateAsync(ConfiguracionNomencladorCreateUpdateDto request, int? excludedId = null)
     {
         return validacionService.ValidateAsync(request, excludedId);

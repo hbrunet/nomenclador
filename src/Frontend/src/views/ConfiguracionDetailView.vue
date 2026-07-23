@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import ProgressSpinner from 'primevue/progressspinner'
 import ConfiguracionEditor from '../components/ConfiguracionEditor.vue'
 import { useConfiguration } from '../composables/useConfiguration'
-import type { CategoriaCatalogItem } from '../types/configuration'
+import type { CategoriaCatalogItem, ConfiguracionNomencladorDetailDto } from '../types/configuration'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,6 +64,10 @@ function handleMontosSaved(updatedCategorias: CategoriaCatalogItem[]) {
   }
 }
 
+function handleDetailUpdated(detail: ConfiguracionNomencladorDetailDto) {
+  current.value = detail
+}
+
 onMounted(loadScreen)
 watch(() => route.fullPath, loadScreen)
 </script>
@@ -91,6 +95,7 @@ watch(() => route.fullPath, loadScreen)
       @back="router.push('/configuraciones')"
       @catalog-refresh="fetchCatalogs()"
       @montos-saved="handleMontosSaved"
+      @detail-updated="handleDetailUpdated"
     />
   </section>
 </template>

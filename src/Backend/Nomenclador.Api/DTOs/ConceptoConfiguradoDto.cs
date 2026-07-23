@@ -11,4 +11,5 @@ public sealed class ConceptoConfiguradoDto
     public string Descripcion { get; init; } = string.Empty;
 
     public int Orden { get; init; }
+    public string DescripcionBreve { get; init; } = string.Empty;
 }

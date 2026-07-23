@@ -115,6 +115,60 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         await tx.CommitAsync();
     }
 
+    public async Task AddConceptosAsync(int configuracionId, IReadOnlyCollection<Nomenclador.Api.DTOs.ConceptoConfiguradoInputDto> conceptos)
+    {
+        using var tx = session.BeginTransaction();
+
+        var existentes = await session.Query<ConceptoConfiguradoEntity>()
+            .Where(c => c.ConfiguracionNomencladorId == configuracionId)
+            .Select(c => c.ConceptoId)
+            .ToListAsync();
+
+        var existentesSet = existentes.ToHashSet();
+        var siguienteOrden = existentes.Count + 1;
+
+        foreach (var item in conceptos)
+        {
+            if (!existentesSet.Add(item.IdConcepto)) continue; // ya está configurado, se omite
+
+            await session.SaveAsync(new ConceptoConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = configuracionId,
+                ConceptoId = item.IdConcepto,
+                Orden = siguienteOrden++,
+            });
+        }
+
+        await tx.CommitAsync();
+    }
+
+    public async Task RemoveConceptoAsync(int configuracionId, int conceptoId)
+    {
+        using var tx = session.BeginTransaction();
+
+        var entity = await session.Query<ConceptoConfiguradoEntity>()
+            .FirstOrDefaultAsync(c => c.ConfiguracionNomencladorId == configuracionId && c.ConceptoId == conceptoId);
+
+        if (entity is not null)
+        {
+            await session.DeleteAsync(entity);
+            await session.FlushAsync();
+        }
+
+        // Renumerar el orden de los conceptos restantes para que sea consecutivo.
+        var restantes = await session.Query<ConceptoConfiguradoEntity>()
+            .Where(c => c.ConfiguracionNomencladorId == configuracionId)
+            .OrderBy(c => c.Orden)
+            .ToListAsync();
+
+        for (var i = 0; i < restantes.Count; i++)
+        {
+            restantes[i].Orden = i + 1;
+        }
+
+        await tx.CommitAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         using var tx = session.BeginTransaction();
