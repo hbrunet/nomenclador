@@ -205,19 +205,23 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         using var tx = session.BeginTransaction();
 
-        var yaExiste = await session.Query<ValorCategoriaConfiguradoEntity>()
-            .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorCategoriaId == request.IdValorCategoria);
-
-        if (!yaExiste)
+        // Se agrega a la colección ValoresCategorias del padre (en vez de un SaveAsync directo)
+        // para que, si esa colección ya fue inicializada en esta sesión (p. ej. por el chequeo de
+        // existencia previo en el Service), quede reflejada de inmediato en memoria. De lo contrario
+        // la colección cacheada queda desactualizada y el nuevo valor recién aparece en el próximo
+        // request (bug de "hay que hacer 2 clics").
+        var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
+        if (configuracion is not null
+            && !configuracion.ValoresCategorias.Any(v => v.ValorCategoriaId == request.IdValorCategoria))
         {
-            await session.SaveAsync(new ValorCategoriaConfiguradoEntity
+            configuracion.ValoresCategorias.Add(new ValorCategoriaConfiguradoEntity
             {
                 ConfiguracionNomencladorId = configuracionId,
                 ValorCategoriaId = request.IdValorCategoria,
             });
-            await session.FlushAsync();
         }
 
+        await session.FlushAsync();
         await tx.CommitAsync();
     }
 
