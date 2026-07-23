@@ -201,6 +201,48 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         await tx.CommitAsync();
     }
 
+    public async Task AddValorPorCategoriaAsync(int configuracionId, Nomenclador.Api.DTOs.ValorCategoriaConfiguradoInputDto request)
+    {
+        using var tx = session.BeginTransaction();
+
+        var yaExiste = await session.Query<ValorCategoriaConfiguradoEntity>()
+            .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorCategoriaId == request.IdValorCategoria);
+
+        if (!yaExiste)
+        {
+            await session.SaveAsync(new ValorCategoriaConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = configuracionId,
+                ValorCategoriaId = request.IdValorCategoria,
+            });
+            await session.FlushAsync();
+        }
+
+        await tx.CommitAsync();
+    }
+
+    public async Task RemoveValorPorCategoriaAsync(int configuracionId, int valorCategoriaId)
+    {
+        using var tx = session.BeginTransaction();
+
+        // La colección ValoresCategorias del padre está mapeada con Cascade.AllDeleteOrphan().
+        // Si el padre ya fue cargado en esta sesión (p. ej. por GetByIdAsync), el ítem también
+        // queda referenciado en esa colección. Eliminarlo directamente con session.DeleteAsync
+        // mientras sigue en la colección provoca "deleted object would be re-saved by cascade".
+        // Por eso se remueve de la colección del padre para que el cascade emita el DELETE.
+        var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
+        var entity = configuracion?.ValoresCategorias
+            .FirstOrDefault(v => v.ValorCategoriaId == valorCategoriaId);
+
+        if (configuracion is not null && entity is not null)
+        {
+            configuracion.ValoresCategorias.Remove(entity);
+            await session.FlushAsync();
+        }
+
+        await tx.CommitAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         using var tx = session.BeginTransaction();

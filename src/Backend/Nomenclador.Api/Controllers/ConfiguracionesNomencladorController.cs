@@ -72,6 +72,17 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         return Ok(await configuracionService.RemoveValorFijoAsync(id, valorFijoId));
     }
 
+    [HttpPost("{id:int}/valor-categoria")]
+    public async Task<IActionResult> AgregarValorPorCategoria(int id, [FromBody] ValorCategoriaConfiguradoInputDto request)
+    {
+        return Ok(await configuracionService.AddValorPorCategoriaAsync(id, request));
+    }
+
+    [HttpDelete("{id:int}/valor-categoria/{valorCategoriaId:int}")]
+    public async Task<IActionResult> EliminarValorPorCategoria(int id, int valorCategoriaId)
+    {
+        return Ok(await configuracionService.RemoveValorPorCategoriaAsync(id, valorCategoriaId));
+    }
 
     [HttpPost("{id:int}/clonar")]
     public async Task<IActionResult> ClonarConfiguracion(int id, [FromBody] ClonarConfiguracionDto request)

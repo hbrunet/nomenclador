@@ -183,6 +183,8 @@ const activeTab = ref('datos-generales')
           <ValoresCategoriasGrid
             v-model="draft.valoresCategorias"
             :valores-disponibles="catalogs.valoresCategorias"
+            :configuracion-id="props.configuracionId"
+            @detail-updated="(detail) => emit('detail-updated', detail)"
           />
         </TabPanel>
 
