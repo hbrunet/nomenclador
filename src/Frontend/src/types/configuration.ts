@@ -89,6 +89,7 @@ export interface ConceptoConfiguradoViewModel {
   codigo: string
   subcodigo: number
   descripcion: string
+  descripcionBreve: string
   orden: number
 }
 

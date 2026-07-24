@@ -71,7 +71,19 @@ public sealed class ConfiguracionNomencladorMapper
             Conceptos = entity.Conceptos
                 .Select(item =>
                 {
-                    var concepto = catalogs.Conceptos[item.ConceptoId];
+                    if (!catalogs.Conceptos.TryGetValue(item.ConceptoId, out var concepto))
+                    {
+                        return new ConceptoConfiguradoDto
+                        {
+                            IdConcepto = item.ConceptoId,
+                            Codigo = "N/D",
+                            Subcodigo = 0,
+                            Descripcion = "Concepto no encontrado en el catálogo",
+                            DescripcionBreve = "N/D",
+                            Orden = item.Orden,
+                        };
+                    }
+
                     return new ConceptoConfiguradoDto
                     {
                         IdConcepto = concepto.Id,
@@ -88,7 +100,17 @@ public sealed class ConfiguracionNomencladorMapper
             ValoresFijos = entity.ValoresFijos
                 .Select(item =>
                 {
-                    var valorFijo = catalogs.ValoresFijos[item.ValorFijoId];
+                    if (!catalogs.ValoresFijos.TryGetValue(item.ValorFijoId, out var valorFijo))
+                    {
+                        return new ValorFijoConfiguradoDto
+                        {
+                            IdValorFijo = item.ValorFijoId,
+                            Descripcion = "Valor fijo no encontrado en el catálogo",
+                            Tipo = string.Empty,
+                            Valor = 0,
+                        };
+                    }
+
                     return new ValorFijoConfiguradoDto
                     {
                         IdValorFijo = valorFijo.Id,
@@ -101,20 +123,32 @@ public sealed class ConfiguracionNomencladorMapper
             ValoresCategorias = entity.ValoresCategorias
                 .Select(item =>
                 {
-                    var valorCategoria = catalogs.ValoresCategorias[item.ValorCategoriaId];
+                    var items = item.Items
+                        .Select(vc => new ValorCategoriaConfiguradoItemDto
+                        {
+                            Id = vc.Id,
+                            NumeroCategoria = vc.Numero,
+                            Importe = vc.Importe,
+                        })
+                        .ToList();
+
+                    if (!catalogs.ValoresCategorias.TryGetValue(item.ValorCategoriaId, out var valorCategoria))
+                    {
+                        return new ValorCategoriaConfiguradoDto
+                        {
+                            IdValorCategoria = item.ValorCategoriaId,
+                            Descripcion = "Valor por categoría no encontrado en el catálogo",
+                            Tipo = string.Empty,
+                            Items = items
+                        };
+                    }
+
                     return new ValorCategoriaConfiguradoDto
                     {
                         IdValorCategoria = valorCategoria.Id,
                         Descripcion = valorCategoria.Descripcion,
                         Tipo = valorCategoria.Tipo?.Descripcion ?? string.Empty,
-                        Items = item.Items
-                            .Select(vc => new ValorCategoriaConfiguradoItemDto
-                            {
-                                Id = vc.Id,
-                                NumeroCategoria = vc.Numero,
-                                Importe = vc.Importe,
-                            })
-                            .ToList()
+                        Items = items
                     };
                 })
                 .ToList(),
