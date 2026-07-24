@@ -33,16 +33,6 @@ public sealed class ValidacionConfiguracionService(
             });
         }
 
-        if (request.IdZona <= 0)
-        {
-            errores.Add(new ValidationMessageDto
-            {
-                Codigo = "ZONA_REQUERIDA",
-                Mensaje = "Debe seleccionar una zona.",
-                Campo = "idZona"
-            });
-        }
-
         if (request.FechaFin.HasValue && request.FechaFin.Value < request.FechaInicio)
         {
             errores.Add(new ValidationMessageDto

@@ -50,8 +50,15 @@ public sealed class ConfiguracionNomencladorService(
     {
         await EnsureValidAsync(request, null);
 
+        // Primero se guarda la entidad solo con los campos escalares para que la secuencia
+        // le asigne un Id (entity.Id queda disponible de inmediato tras SaveAsync). Recién
+        // entonces se pueden armar Conceptos/ValoresFijos/ValoresCategorias, cuya clave
+        // compuesta requiere ese Id (ver ConfiguracionNomencladorMapper.ApplyChildren).
         var entity = mapper.ToNewEntity(request);
         await configuracionRepository.AddAsync(entity);
+
+        mapper.ApplyChildren(entity, request);
+        await configuracionRepository.SaveChangesAsync();
 
         var createdEntity = await configuracionRepository.GetByIdAsync(entity.Id)
             ?? throw new KeyNotFoundException("No se pudo recuperar la configuración creada.");

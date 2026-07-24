@@ -54,8 +54,8 @@ const escalaSalarialId = computed({
   set: (val: number | null) => { draft.value.idEscalaSalarial = val ?? 0 },
 })
 const zonaId = computed({
-  get: () => draft.value.idZona || null,
-  set: (val: number | null) => { draft.value.idZona = val ?? 0 },
+  get: () => draft.value.idZona,
+  set: (val: number | null) => { draft.value.idZona = val },
 })
 
 const hasErrors = computed(() => (props.validation?.errores?.length ?? 0) > 0)
@@ -130,13 +130,14 @@ const activeTab = ref('datos-generales')
               </div>
 
               <div class="col-6 flex flex-column gap-1">
-                <label class="field-label">Zona</label>
+                <label class="field-label">Zona (opcional)</label>
                 <Select
                   v-model="zonaId"
                   :options="catalogs.zonas"
                   option-label="descripcion"
                   option-value="id"
                   placeholder="Seleccione una zona"
+                  show-clear
                   class="w-full"
                 />
               </div>

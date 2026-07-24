@@ -6,9 +6,10 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
 import type { ConfiguracionNomencladorListItemDto } from '../types/configuration'
+import { parseLocalDate } from '../utils/date'
 
 function formatearFecha(fecha: string): string {
-  const date = new Date(fecha)
+  const date = parseLocalDate(fecha)
   return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
 }
 

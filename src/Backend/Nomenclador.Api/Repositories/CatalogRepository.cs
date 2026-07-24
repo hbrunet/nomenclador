@@ -69,7 +69,9 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
         var nomenclador = await session.GetAsync<NomencladorCatalogEntity>(entity.NomencladorId);
         var escala = await session.GetAsync<EscalaSalarialCatalogEntity>(entity.EscalaSalarialId);
-        var zona = await session.GetAsync<ZonaCatalogEntity>(entity.ZonaId);
+        var zona = entity.ZonaId.HasValue
+            ? await session.GetAsync<ZonaCatalogEntity>(entity.ZonaId.Value)
+            : null;
 
         var categorias = await session.Query<CategoriaCatalogEntity>()
             .Where(item => item.EscalaSalarialId == entity.EscalaSalarialId)

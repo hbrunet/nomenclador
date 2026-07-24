@@ -325,12 +325,35 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         // Se cargan los candidatos por nomenclador/escala/zona y el solapamiento
         // de fechas se verifica en memoria (los registros por combinación son pocos).
-        var candidatos = await session.Query<ConfiguracionNomencladorEntity>()
+        var query = session.Query<ConfiguracionNomencladorEntity>()
             .Where(c => c.NomencladorId == entity.NomencladorId)
-            .Where(c => c.EscalaSalarialId == entity.EscalaSalarialId)
-            .Where(c => c.ZonaId == entity.ZonaId)
-            .Where(c => !excludedId.HasValue || c.Id != excludedId.Value)
-            .ToListAsync();
+            .Where(c => c.EscalaSalarialId == entity.EscalaSalarialId);
+
+        // ZonaId es opcional (nullable). Igual que con excludedId más abajo: no comparar
+        // "c.ZonaId == entity.ZonaId" directamente cuando entity.ZonaId puede ser null,
+        // para evitar que el traductor LINQ de NHibernate arme una comparación contra NULL
+        // poco confiable; se arma condicionalmente en C#.
+        if (entity.ZonaId.HasValue)
+        {
+            var zonaId = entity.ZonaId.Value;
+            query = query.Where(c => c.ZonaId == zonaId);
+        }
+        else
+        {
+            query = query.Where(c => !c.ZonaId.HasValue);
+        }
+
+        // Nota: no usar "!excludedId.HasValue || c.Id != excludedId.Value" en un único
+        // Where: el traductor LINQ de NHibernate evalúa "excludedId.Value" al armar el
+        // árbol de expresión aunque el OR debería evitarlo en tiempo de ejecución, y
+        // lanza "Nullable object must have a value" cuando excludedId es null (Create).
+        if (excludedId.HasValue)
+        {
+            var idAExcluir = excludedId.Value;
+            query = query.Where(c => c.Id != idAExcluir);
+        }
+
+        var candidatos = await query.ToListAsync();
 
         return candidatos.Any(c =>
             RangesOverlap(c.FechaInicio, c.FechaFin, entity.FechaInicio, entity.FechaFin));
