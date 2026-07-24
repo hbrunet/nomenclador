@@ -56,11 +56,9 @@ const tableData = computed(() =>
     const resolved = resolvedLookup.value.get(item.idConcepto)
     return {
       idConcepto: item.idConcepto,
-      orden: item.orden,
       codigo: resolved?.codigo ?? String(item.idConcepto),
-      subcodigo: resolved?.subcodigo ?? 'N/D',
+      subcodigo: resolved && resolved.codigo !== 'N/D' ? resolved.subcodigo : 'N/D',
       descripcion: resolved?.descripcion ?? 'N/D',
-      descripcionBreve: resolved?.descripcionBreve ?? 'N/D',
     }
   })
 )
