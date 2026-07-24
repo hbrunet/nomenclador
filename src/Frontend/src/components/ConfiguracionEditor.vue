@@ -17,7 +17,7 @@ import CategoriasList from './CategoriasList.vue'
 import type {
   CatalogsState,
   CategoriaCatalogItem,
-  ConceptoCatalogItem,
+  ConceptoConfiguradoViewModel,
   ConfiguracionNomencladorCreateUpdateDto,
   ConfiguracionNomencladorDetailDto,
   ValidacionConfiguracionResponse,
@@ -28,8 +28,7 @@ const draft = defineModel<ConfiguracionNomencladorCreateUpdateDto>('draft', { re
 const props = defineProps<{
   catalogs: CatalogsState
   categorias: CategoriaCatalogItem[]
-  conceptosDisponibles: ConceptoCatalogItem[]
-  loadingConceptos: boolean
+  conceptosConfigurados: ConceptoConfiguradoViewModel[]
   loading: boolean
   validation: ValidacionConfiguracionResponse | null
   configuracionId?: number
@@ -162,8 +161,7 @@ const activeTab = ref('datos-generales')
         <TabPanel value="conceptos">
           <ConceptosList
             v-model="draft.conceptos"
-            :conceptos-disponibles="conceptosDisponibles"
-            :loading-catalog="loadingConceptos"
+            :conceptos-resueltos="conceptosConfigurados"
             :configuracion-id="props.configuracionId"
             @detail-updated="(detail) => emit('detail-updated', detail)"
           />

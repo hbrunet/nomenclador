@@ -22,6 +22,9 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
 
         return await concepts
             .OrderBy(item => item.Codigo)
+            // Tope de seguridad: el catálogo de conceptos es grande, nunca devolvemos
+            // más de 100 resultados aunque el término de búsqueda sea muy genérico.
+            .Take(100)
             .Select(item => new ConceptoCatalogDto
             {
                 Id = item.Id,

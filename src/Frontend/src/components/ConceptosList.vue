@@ -7,6 +7,7 @@ import Message from 'primevue/message'
 import type {
   ConceptoCatalogItem,
   ConceptoConfiguradoInputDto,
+  ConceptoConfiguradoViewModel,
   ConfiguracionNomencladorDetailDto,
 } from '../types/configuration'
 import { configurationService } from '../services/configurationService'
@@ -15,8 +16,10 @@ import ConceptoCombobox from './ConceptoCombobox.vue'
 const conceptos = defineModel<ConceptoConfiguradoInputDto[]>({ required: true })
 
 const props = defineProps<{
-  conceptosDisponibles: ConceptoCatalogItem[]
-  loadingCatalog: boolean
+  // Conceptos ya resueltos por el backend (codigo/descripcion), provenientes del
+  // detalle de la configuración. Para una configuración nueva (sin guardar) viene vacío;
+  // en ese caso usamos localResolved (ver abajo) con lo que el usuario fue agregando.
+  conceptosResueltos: ConceptoConfiguradoViewModel[]
   configuracionId?: number
 }>()
 
@@ -28,27 +31,44 @@ const saving = ref(false)
 const removingIds = ref<Set<number>>(new Set())
 const errorMessage = ref<string | null>(null)
 
-const selectedLookup = computed(
-  () => new Map(props.conceptosDisponibles.map((item) => [item.id, item])),
-)
+// Cache local de conceptos agregados en esta sesión de edición, capturados directamente
+// desde los resultados de búsqueda del combobox. Evita depender del catálogo completo
+// (grande) solo para mostrar código/descripción de lo que ya se seleccionó.
+const localResolved = ref<Map<number, ConceptoCatalogItem>>(new Map())
+
+const resolvedLookup = computed(() => {
+  const map = new Map<number, { codigo: string; subcodigo: number; descripcion: string; descripcionBreve: string }>()
+  for (const item of props.conceptosResueltos) {
+    map.set(item.idConcepto, item)
+  }
+  for (const [id, item] of localResolved.value) {
+    if (!map.has(id)) {
+      map.set(id, item)
+    }
+  }
+  return map
+})
 
 const conceptosExcluidos = computed(() => conceptos.value.map((item) => item.idConcepto))
 
 const tableData = computed(() =>
-  conceptos.value.map((item) => ({
-    idConcepto: item.idConcepto,
-    orden: item.orden,
-    codigo: selectedLookup.value.get(item.idConcepto)?.codigo ?? String(item.idConcepto),
-    subcodigo: selectedLookup.value.get(item.idConcepto)?.subcodigo ?? 'N/D',
-    descripcion: selectedLookup.value.get(item.idConcepto)?.descripcion ?? 'N/D',
-    descripcionBreve: selectedLookup.value.get(item.idConcepto)?.descripcionBreve ?? 'N/D',
-  }))
+  conceptos.value.map((item) => {
+    const resolved = resolvedLookup.value.get(item.idConcepto)
+    return {
+      idConcepto: item.idConcepto,
+      codigo: resolved?.codigo ?? String(item.idConcepto),
+      subcodigo: resolved && resolved.codigo !== 'N/D' ? resolved.subcodigo : 'N/D',
+      descripcion: resolved?.descripcion ?? 'N/D',
+    }
+  })
 )
 
-async function addConcepto(idConcepto: number) {
-  if (conceptos.value.some((item) => item.idConcepto === idConcepto)) return
+async function addConcepto(item: ConceptoCatalogItem) {
+  const idConcepto = item.id
+  if (conceptos.value.some((c) => c.idConcepto === idConcepto)) return
 
   errorMessage.value = null
+  localResolved.value.set(idConcepto, item)
 
   if (!props.configuracionId) {
     // Configuración aún no persistida: se agrega solo al borrador local.
@@ -62,7 +82,7 @@ async function addConcepto(idConcepto: number) {
       idConcepto,
       orden: conceptos.value.length + 1,
     })
-    conceptos.value = updated.conceptos.map((item) => ({ idConcepto: item.idConcepto, orden: item.orden }))
+    conceptos.value = updated.conceptos.map((c) => ({ idConcepto: c.idConcepto, orden: c.orden }))
     emit('detail-updated', updated)
   } catch (e: any) {
     errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo agregar el concepto seleccionado.'
@@ -100,13 +120,18 @@ async function removeConcepto(idConcepto: number) {
     <Message v-if="errorMessage" severity="error" :closable="false">{{ errorMessage }}</Message>
 
     <ConceptoCombobox
-      :conceptos-disponibles="conceptosDisponibles"
       :conceptos-excluidos="conceptosExcluidos"
-      :loading-catalog="loadingCatalog || saving"
+      :saving="saving"
       @add="addConcepto"
     />
 
-    <DataTable :value="tableData" striped-rows>
+    <DataTable
+      :value="tableData"
+      striped-rows
+      scrollable
+      scroll-height="600px"
+      :virtual-scroller-options="{ itemSize: 46 }"
+    >
       <template #empty>
         <span class="muted">Agregue conceptos desde el catálogo.</span>
       </template>

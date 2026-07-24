@@ -16,10 +16,7 @@ const {
   validation,
   loadingDetail,
   saving,
-  conceptosDisponibles,
-  loadingConceptos,
   fetchCatalogs,
-  fetchConceptos,
   fetchDetail,
   initializeDraft,
   saveCurrent,
@@ -33,15 +30,18 @@ const currentId = computed(() => {
 })
 
 async function loadScreen() {
-  await fetchCatalogs()
-  await fetchConceptos()
+  // Catálogos y detalle son independientes entre sí, se disparan en paralelo.
+  // El catálogo de conceptos ya NO se precarga completo: ConceptoCombobox lo
+  // busca bajo demanda (búsqueda server-side), porque esa tabla es grande.
+  const tasks: Promise<unknown>[] = [fetchCatalogs()]
 
   if (currentId.value) {
-    await fetchDetail(currentId.value)
-    return
+    tasks.push(fetchDetail(currentId.value))
+  } else {
+    initializeDraft()
   }
 
-  initializeDraft()
+  await Promise.all(tasks)
 }
 
 async function handleSave() {
@@ -84,8 +84,7 @@ watch(() => route.fullPath, loadScreen)
       v-model:draft="draft"
       :catalogs="catalogs"
       :categorias="current?.categorias ?? []"
-      :conceptos-disponibles="conceptosDisponibles"
-      :loading-conceptos="loadingConceptos"
+      :conceptos-configurados="current?.conceptos ?? []"
       :validation="validation"
       :loading="saving"
       :configuracion-id="currentId ?? undefined"

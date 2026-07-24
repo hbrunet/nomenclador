@@ -23,7 +23,7 @@ public sealed class ConfiguracionNomencladorService(
     {
         var (entities, total) = await configuracionRepository.GetAllAsync(
             nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize);
-        var catalogs = await catalogRepository.GetSnapshotAsync();
+        var catalogs = await catalogRepository.GetSnapshotForListAsync();
 
         var items = entities
             .Select(entity => mapper.ToListItemDto(entity, catalogs))
@@ -121,7 +121,7 @@ public sealed class ConfiguracionNomencladorService(
 
     private async Task<ConfiguracionNomencladorDetailDto> BuildDetailAsync(ConfiguracionNomencladorEntity entity)
     {
-        var catalogs = await catalogRepository.GetSnapshotAsync();
+        var catalogs = await catalogRepository.GetSnapshotForEntityAsync(entity);
         return mapper.ToDetailDto(entity, catalogs);
     }
 

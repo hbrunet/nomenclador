@@ -131,7 +131,15 @@ function handleModalSaved(
       <InputText v-model="filterQuery" placeholder="Buscar por descripción o tipo..." class="w-full" />
     </div>
 
-    <DataTable :value="tableData" striped-rows :sort-field="'descripcion'" :sort-order="1">
+    <DataTable
+      :value="tableData"
+      striped-rows
+      :sort-field="'descripcion'"
+      :sort-order="1"
+      scrollable
+      scroll-height="600px"
+      :virtual-scroller-options="{ itemSize: 46 }"
+    >
       <template #empty>
         <span class="muted">
           {{ valoresFijos.length ? 'Sin resultados para el filtro aplicado.' : 'No hay valores fijos configurados.' }}

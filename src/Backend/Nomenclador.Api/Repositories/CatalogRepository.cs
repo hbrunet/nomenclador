@@ -33,6 +33,86 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         };
     }
 
+    /// <summary>
+    /// Snapshot liviano para el listado paginado: ToListItemDto solo resuelve
+    /// Nomenclador/Escala/Zona, así que evitamos traer Conceptos/Categorias/ValoresFijos/
+    /// ValoresCategorias completos (catálogos grandes) sin necesidad.
+    /// </summary>
+    public async Task<CatalogSnapshot> GetSnapshotForListAsync()
+    {
+        var nomencladores = await session.Query<NomencladorCatalogEntity>().ToListAsync();
+        var escalas = await session.Query<EscalaSalarialCatalogEntity>().ToListAsync();
+        var zonas = await session.Query<ZonaCatalogEntity>().ToListAsync();
+
+        return new CatalogSnapshot
+        {
+            Nomencladores = nomencladores.ToDictionary(item => item.Id),
+            EscalasSalariales = escalas.ToDictionary(item => item.Id),
+            Zonas = zonas.ToDictionary(item => item.Id),
+            Categorias = new Dictionary<int, CategoriaCatalogEntity>(),
+            Conceptos = new Dictionary<int, ConceptoCatalogEntity>(),
+            ValoresFijos = new Dictionary<int, ValorFijoCatalogEntity>(),
+            ValoresCategorias = new Dictionary<int, ValorCategoriaCatalogEntity>()
+        };
+    }
+
+    /// <summary>
+    /// Snapshot acotado a una única configuración: en vez de traer las tablas completas de
+    /// Conceptos/Categorias/ValoresFijos/ValoresCategorias, filtra por los IDs que la entidad
+    /// realmente referencia. El costo queda ligado al tamaño de la configuración, no al del catálogo.
+    /// </summary>
+    public async Task<CatalogSnapshot> GetSnapshotForEntityAsync(ConfiguracionNomencladorEntity entity)
+    {
+        var conceptoIds = entity.Conceptos.Select(item => item.ConceptoId).Distinct().ToList();
+        var valorFijoIds = entity.ValoresFijos.Select(item => item.ValorFijoId).Distinct().ToList();
+        var valorCategoriaIds = entity.ValoresCategorias.Select(item => item.ValorCategoriaId).Distinct().ToList();
+
+        var nomenclador = await session.GetAsync<NomencladorCatalogEntity>(entity.NomencladorId);
+        var escala = await session.GetAsync<EscalaSalarialCatalogEntity>(entity.EscalaSalarialId);
+        var zona = await session.GetAsync<ZonaCatalogEntity>(entity.ZonaId);
+
+        var categorias = await session.Query<CategoriaCatalogEntity>()
+            .Where(item => item.EscalaSalarialId == entity.EscalaSalarialId)
+            .ToListAsync();
+
+        var conceptos = conceptoIds.Count == 0
+            ? []
+            : await session.Query<ConceptoCatalogEntity>()
+                .Where(item => conceptoIds.Contains(item.Id))
+                .ToListAsync();
+
+        var valoresFijos = valorFijoIds.Count == 0
+            ? []
+            : await session.Query<ValorFijoCatalogEntity>()
+                .Fetch(x => x.Tipo)
+                .Where(item => valorFijoIds.Contains(item.Id))
+                .ToListAsync();
+
+        var valoresCategorias = valorCategoriaIds.Count == 0
+            ? []
+            : await session.Query<ValorCategoriaCatalogEntity>()
+                .Fetch(x => x.Tipo)
+                .Where(item => valorCategoriaIds.Contains(item.Id))
+                .ToListAsync();
+
+        return new CatalogSnapshot
+        {
+            Nomencladores = nomenclador is null
+                ? new Dictionary<int, NomencladorCatalogEntity>()
+                : new Dictionary<int, NomencladorCatalogEntity> { [nomenclador.Id] = nomenclador },
+            EscalasSalariales = escala is null
+                ? new Dictionary<int, EscalaSalarialCatalogEntity>()
+                : new Dictionary<int, EscalaSalarialCatalogEntity> { [escala.Id] = escala },
+            Zonas = zona is null
+                ? new Dictionary<int, ZonaCatalogEntity>()
+                : new Dictionary<int, ZonaCatalogEntity> { [zona.Id] = zona },
+            Categorias = categorias.ToDictionary(item => item.Id),
+            Conceptos = conceptos.ToDictionary(item => item.Id),
+            ValoresFijos = valoresFijos.ToDictionary(item => item.Id),
+            ValoresCategorias = valoresCategorias.ToDictionary(item => item.Id)
+        };
+    }
+
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetNomencladoresAsync()
     {
         return await session.Query<NomencladorCatalogEntity>()
@@ -279,7 +359,10 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
         if (entity is null) return null;
 
-        entity.Descripcion = dto.Descripcion;
+        // Este endpoint solo actualiza el Valor. No tocar Descripcion aquí: el frontend
+        // nunca la envía, y Oracle guarda un string vacío como NULL, lo que borraba
+        // la descripción del catálogo (compartida por todas las configuraciones que
+        // usan este valor fijo) en cada edición.
         entity.Valor = dto.Valor;
 
         using var tx = session.BeginTransaction();
