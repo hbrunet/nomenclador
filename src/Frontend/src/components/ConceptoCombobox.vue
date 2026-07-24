@@ -30,6 +30,11 @@ let debounceHandle: ReturnType<typeof setTimeout> | undefined
 
 watch(query, (value) => {
   if (debounceHandle) clearTimeout(debounceHandle)
+  debounceHandle = undefined
+
+  if (!isOpen.value) {
+    return
+  }
 
   const trimmed = value.trim()
   if (trimmed.length > 0 && trimmed.length < MIN_QUERY_LENGTH) {
@@ -44,6 +49,9 @@ watch(query, (value) => {
 // Al abrir el popup precargamos los primeros conceptos (igual que valores fijos/por
 // categoría) en vez de mostrar la grilla vacía hasta que el usuario tipee.
 watch(isOpen, (open) => {
+  if (debounceHandle) clearTimeout(debounceHandle)
+  debounceHandle = undefined
+
   if (open) {
     fetchConceptos(query.value.trim())
   }
