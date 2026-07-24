@@ -119,20 +119,45 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         using var tx = session.BeginTransaction();
 
-        var yaExiste = await session.Query<ConceptoConfiguradoEntity>()
-            .AnyAsync(c => c.ConfiguracionNomencladorId == configuracionId && c.ConceptoId == request.IdConcepto);
-
-        if (!yaExiste)
+        var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
+        if (configuracion is not null)
         {
-            var siguienteOrden = await session.Query<ConceptoConfiguradoEntity>()
-                .CountAsync(c => c.ConfiguracionNomencladorId == configuracionId) + 1;
-
-            await session.SaveAsync(new ConceptoConfiguradoEntity
+            if (NHibernateUtil.IsInitialized(configuracion.Conceptos))
             {
-                ConfiguracionNomencladorId = configuracionId,
-                ConceptoId = request.IdConcepto,
-                Orden = siguienteOrden,
-            });
+                // Collection already in memory: use it to avoid extra DB round-trips and keep
+                // the in-memory cache up to date.
+                if (!configuracion.Conceptos.Any(c => c.ConceptoId == request.IdConcepto))
+                {
+                    configuracion.Conceptos.Add(new ConceptoConfiguradoEntity
+                    {
+                        ConfiguracionNomencladorId = configuracionId,
+                        ConceptoId = request.IdConcepto,
+                        Orden = configuracion.Conceptos.Count + 1,
+                    });
+                    await session.FlushAsync();
+                }
+            }
+            else
+            {
+                // Collection not yet loaded: check and insert at DB level to avoid forcing a full
+                // collection load just to verify existence.
+                var yaExiste = await session.Query<ConceptoConfiguradoEntity>()
+                    .AnyAsync(c => c.ConfiguracionNomencladorId == configuracionId && c.ConceptoId == request.IdConcepto);
+
+                if (!yaExiste)
+                {
+                    var siguienteOrden = await session.Query<ConceptoConfiguradoEntity>()
+                        .CountAsync(c => c.ConfiguracionNomencladorId == configuracionId) + 1;
+
+                    await session.SaveAsync(new ConceptoConfiguradoEntity
+                    {
+                        ConfiguracionNomencladorId = configuracionId,
+                        ConceptoId = request.IdConcepto,
+                        Orden = siguienteOrden,
+                    });
+                    await session.FlushAsync();
+                }
+            }
         }
 
         await tx.CommitAsync();
@@ -169,17 +194,40 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         using var tx = session.BeginTransaction();
 
-        var yaExiste = await session.Query<ValorFijoConfiguradoEntity>()
-            .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorFijoId == request.IdValorFijo);
-
-        if (!yaExiste)
+        var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
+        if (configuracion is not null)
         {
-            await session.SaveAsync(new ValorFijoConfiguradoEntity
+            if (NHibernateUtil.IsInitialized(configuracion.ValoresFijos))
             {
-                ConfiguracionNomencladorId = configuracionId,
-                ValorFijoId = request.IdValorFijo,
-            });
-            await session.FlushAsync();
+                // Collection already in memory: use it to avoid an extra DB round-trip and keep
+                // the in-memory cache up to date.
+                if (!configuracion.ValoresFijos.Any(v => v.ValorFijoId == request.IdValorFijo))
+                {
+                    configuracion.ValoresFijos.Add(new ValorFijoConfiguradoEntity
+                    {
+                        ConfiguracionNomencladorId = configuracionId,
+                        ValorFijoId = request.IdValorFijo,
+                    });
+                    await session.FlushAsync();
+                }
+            }
+            else
+            {
+                // Collection not yet loaded: check and insert at DB level to avoid forcing a full
+                // collection load just to verify existence.
+                var yaExiste = await session.Query<ValorFijoConfiguradoEntity>()
+                    .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorFijoId == request.IdValorFijo);
+
+                if (!yaExiste)
+                {
+                    await session.SaveAsync(new ValorFijoConfiguradoEntity
+                    {
+                        ConfiguracionNomencladorId = configuracionId,
+                        ValorFijoId = request.IdValorFijo,
+                    });
+                    await session.FlushAsync();
+                }
+            }
         }
 
         await tx.CommitAsync();
@@ -205,17 +253,40 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         using var tx = session.BeginTransaction();
 
-        var yaExiste = await session.Query<ValorCategoriaConfiguradoEntity>()
-            .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorCategoriaId == request.IdValorCategoria);
-
-        if (!yaExiste)
+        var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
+        if (configuracion is not null)
         {
-            await session.SaveAsync(new ValorCategoriaConfiguradoEntity
+            if (NHibernateUtil.IsInitialized(configuracion.ValoresCategorias))
             {
-                ConfiguracionNomencladorId = configuracionId,
-                ValorCategoriaId = request.IdValorCategoria,
-            });
-            await session.FlushAsync();
+                // Collection already in memory (e.g. loaded earlier in this session): use it to
+                // avoid an extra DB round-trip and keep the in-memory cache up to date.
+                if (!configuracion.ValoresCategorias.Any(v => v.ValorCategoriaId == request.IdValorCategoria))
+                {
+                    configuracion.ValoresCategorias.Add(new ValorCategoriaConfiguradoEntity
+                    {
+                        ConfiguracionNomencladorId = configuracionId,
+                        ValorCategoriaId = request.IdValorCategoria,
+                    });
+                    await session.FlushAsync();
+                }
+            }
+            else
+            {
+                // Collection not yet loaded: check and insert at DB level to avoid forcing a full
+                // collection load just to verify existence.
+                var yaExiste = await session.Query<ValorCategoriaConfiguradoEntity>()
+                    .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorCategoriaId == request.IdValorCategoria);
+
+                if (!yaExiste)
+                {
+                    await session.SaveAsync(new ValorCategoriaConfiguradoEntity
+                    {
+                        ConfiguracionNomencladorId = configuracionId,
+                        ValorCategoriaId = request.IdValorCategoria,
+                    });
+                    await session.FlushAsync();
+                }
+            }
         }
 
         await tx.CommitAsync();
