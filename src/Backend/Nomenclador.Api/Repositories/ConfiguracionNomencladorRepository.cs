@@ -108,10 +108,12 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         }
     }
 
-    public async Task AddAsync(ConfiguracionNomencladorEntity entity)
+    public async Task AddAsync(ConfiguracionNomencladorEntity entity, Action<ConfiguracionNomencladorEntity>? afterSave = null)
     {
         using var tx = session.BeginTransaction();
         await session.SaveAsync(entity);
+        afterSave?.Invoke(entity);
+        await session.FlushAsync();
         await tx.CommitAsync();
     }
 
