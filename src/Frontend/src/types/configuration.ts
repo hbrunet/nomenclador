@@ -131,7 +131,7 @@ export interface ConfiguracionNomencladorDetailDto {
   nomencladorDescripcion: string
   idEscalaSalarial: number
   escalaDescripcion: string
-  idZona: number
+  idZona: number | null
   zonaDescripcion: string
   fechaInicio: string
   fechaFin: string | null
@@ -166,7 +166,7 @@ export interface ValorCategoriaConfiguradoInputDto {
 export interface ConfiguracionNomencladorCreateUpdateDto {
   idNomenclador: number
   idEscalaSalarial: number
-  idZona: number
+  idZona: number | null
   fechaInicio: Date
   fechaFin: Date | null
   conceptos: ConceptoConfiguradoInputDto[]

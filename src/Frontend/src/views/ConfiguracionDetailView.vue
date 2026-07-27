@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProgressSpinner from 'primevue/progressspinner'
+import Message from 'primevue/message'
 import ConfiguracionEditor from '../components/ConfiguracionEditor.vue'
 import { useConfiguration } from '../composables/useConfiguration'
 import type { CategoriaCatalogItem, ConfiguracionNomencladorDetailDto } from '../types/configuration'
@@ -44,10 +45,17 @@ async function loadScreen() {
   await Promise.all(tasks)
 }
 
+const saveError = ref<string | null>(null)
+
 async function handleSave() {
-  const saved = await saveCurrent()
-  if (saved) {
-    await router.replace(`/configuraciones/${saved.id}`)
+  saveError.value = null
+  try {
+    const saved = await saveCurrent()
+    if (saved) {
+      await router.replace(`/configuraciones/${saved.id}`)
+    }
+  } catch (e: any) {
+    saveError.value = e.response?.data?.mensaje ?? 'No se pudo guardar la configuración.'
   }
 }
 
@@ -78,6 +86,10 @@ watch(() => route.fullPath, loadScreen)
       <ProgressSpinner style="width: 2.5rem; height: 2.5rem" />
       <p class="muted">Cargando configuración...</p>
     </div>
+
+    <Message v-if="saveError" severity="error" :closable="true" @close="saveError = null">
+      {{ saveError }}
+    </Message>
 
     <ConfiguracionEditor
       v-else

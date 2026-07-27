@@ -6,7 +6,7 @@ public sealed class ConfiguracionNomencladorCreateUpdateDto
 
     public int IdEscalaSalarial { get; init; }
 
-    public int IdZona { get; init; }
+    public int? IdZona { get; init; }
 
     public DateOnly FechaInicio { get; init; }
 

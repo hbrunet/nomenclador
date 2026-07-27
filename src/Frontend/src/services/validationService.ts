@@ -34,14 +34,6 @@ export function validateDraft(
     })
   }
 
-  if (!draft.idZona) {
-    errores.push({
-      codigo: 'ZONA_REQUERIDA',
-      mensaje: 'Seleccione una zona.',
-      campo: 'idZona',
-    })
-  }
-
   if (!draft.fechaInicio) {
     errores.push({
       codigo: 'FECHA_INICIO_REQUERIDA',

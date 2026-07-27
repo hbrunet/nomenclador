@@ -8,7 +8,7 @@ public class ConfiguracionNomencladorEntity
 
     public virtual int EscalaSalarialId { get; set; }
 
-    public virtual int ZonaId { get; set; }
+    public virtual int? ZonaId { get; set; }
 
     public virtual DateOnly FechaInicio { get; set; }
 

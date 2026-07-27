@@ -15,7 +15,7 @@ public sealed class ConfiguracionNomencladorMap : ClassMap<ConfiguracionNomencla
 
         Map(x => x.NomencladorId).Column("IDNOM").Not.Nullable();
         Map(x => x.EscalaSalarialId).Column("IDESCALASAL").Not.Nullable();
-        Map(x => x.ZonaId).Column("IDZONAS").Not.Nullable();
+        Map(x => x.ZonaId).Column("IDZONAS").Nullable();
 
         Map(x => x.FechaInicio)
             .Column("FENCHAINICIAL")

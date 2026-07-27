@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { formatLocalDate } from '../utils/date'
 import type {
   CatalogItem,
   CategoriaCatalogItem,
@@ -25,6 +26,18 @@ export const apiClient = axios.create({
   },
 })
 
+// El draft usa Date (para que los DatePicker funcionen en horario local); acá se
+// serializa a "YYYY-MM-DD" en horario local antes de mandarlo al backend. Usar
+// JSON.stringify por defecto (Date.toISOString(), en UTC) puede correr la fecha
+// un día para atrás/adelante según la zona horaria del navegador.
+function toApiPayload(payload: ConfiguracionNomencladorCreateUpdateDto) {
+  return {
+    ...payload,
+    fechaInicio: formatLocalDate(payload.fechaInicio),
+    fechaFin: payload.fechaFin ? formatLocalDate(payload.fechaFin) : null,
+  }
+}
+
 export const configurationService = {
   async list(filters: ConfigurationFilters = {}) {
     const { data } = await apiClient.get<PagedResult<ConfiguracionNomencladorListItemDto>>(
@@ -44,7 +57,7 @@ export const configurationService = {
   async create(payload: ConfiguracionNomencladorCreateUpdateDto) {
     const { data } = await apiClient.post<ConfiguracionNomencladorDetailDto>(
       '/configuraciones-nomenclador',
-      payload,
+      toApiPayload(payload),
     )
     return data
   },
@@ -52,7 +65,7 @@ export const configurationService = {
   async update(id: number, payload: ConfiguracionNomencladorCreateUpdateDto) {
     const { data } = await apiClient.put<ConfiguracionNomencladorDetailDto>(
       `/configuraciones-nomenclador/${id}`,
-      payload,
+      toApiPayload(payload),
     )
     return data
   },
@@ -60,7 +73,7 @@ export const configurationService = {
   async validate(payload: ConfiguracionNomencladorCreateUpdateDto) {
     const { data } = await apiClient.post<ValidacionConfiguracionResponse>(
       '/configuraciones-nomenclador/validar',
-      payload,
+      toApiPayload(payload),
     )
     return data
   },

@@ -12,7 +12,7 @@ public sealed class ConfiguracionNomencladorDetailDto
 
     public string EscalaDescripcion { get; init; } = string.Empty;
 
-    public int IdZona { get; init; }
+    public int? IdZona { get; init; }
 
     public string ZonaDescripcion { get; init; } = string.Empty;
 

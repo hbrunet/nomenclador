@@ -108,10 +108,14 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         }
     }
 
-    public async Task AddAsync(ConfiguracionNomencladorEntity entity)
+    public async Task AddAsync(ConfiguracionNomencladorEntity entity, Action<ConfiguracionNomencladorEntity>? afterSave = null)
     {
         using var tx = session.BeginTransaction();
+        // SaveAsync hace que la secuencia de Oracle asigne entity.Id de inmediato,
+        // de modo que el callback puede usarlo (p. ej. para setear las FK de los hijos).
         await session.SaveAsync(entity);
+        afterSave?.Invoke(entity);
+        await session.FlushAsync();
         await tx.CommitAsync();
     }
 
@@ -325,12 +329,30 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         // Se cargan los candidatos por nomenclador/escala/zona y el solapamiento
         // de fechas se verifica en memoria (los registros por combinación son pocos).
-        var candidatos = await session.Query<ConfiguracionNomencladorEntity>()
-            .Where(c => c.NomencladorId == entity.NomencladorId)
-            .Where(c => c.EscalaSalarialId == entity.EscalaSalarialId)
-            .Where(c => c.ZonaId == entity.ZonaId)
-            .Where(c => !excludedId.HasValue || c.Id != excludedId.Value)
-            .ToListAsync();
+        ConfiguracionNomencladorEntity alias = null!;
+        var query = session.QueryOver(() => alias)
+            .Where(() => alias.NomencladorId == entity.NomencladorId)
+            .Where(() => alias.EscalaSalarialId == entity.EscalaSalarialId);
+
+        // ZonaId es opcional (nullable). Se usa Restrictions.IsNull/IsNotNull para
+        // garantizar una traducción Oracle correcta sin depender del traductor LINQ.
+        if (entity.ZonaId.HasValue)
+        {
+            var zonaId = entity.ZonaId.Value;
+            query.Where(() => alias.ZonaId == zonaId);
+        }
+        else
+        {
+            query.Where(Restrictions.IsNull(Projections.Property(() => alias.ZonaId)));
+        }
+
+        if (excludedId.HasValue)
+        {
+            var idAExcluir = excludedId.Value;
+            query.Where(() => alias.Id != idAExcluir);
+        }
+
+        var candidatos = await query.ListAsync();
 
         return candidatos.Any(c =>
             RangesOverlap(c.FechaInicio, c.FechaFin, entity.FechaInicio, entity.FechaFin));

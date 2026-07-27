@@ -5,6 +5,7 @@ import {
   mergeValidationResults,
   validateDraft,
 } from '../services/validationService'
+import { parseLocalDate, formatLocalDate } from '../utils/date'
 import type {
   CatalogsState,
   ClonarConfiguracionDto,
@@ -37,8 +38,8 @@ function createEmptyDraft(): ConfiguracionNomencladorCreateUpdateDto {
   return {
     idNomenclador: 0,
     idEscalaSalarial: 0,
-    idZona: 0,
-    fechaInicio: new Date().toISOString().slice(0, 10),
+    idZona: null,
+    fechaInicio: new Date(),
     fechaFin: null,
     conceptos: [],
     valoresFijos: [],
@@ -53,8 +54,8 @@ function mapDetailToDraft(
     idNomenclador: detail.idNomenclador,
     idEscalaSalarial: detail.idEscalaSalarial,
     idZona: detail.idZona,
-    fechaInicio: detail.fechaInicio,
-    fechaFin: detail.fechaFin,
+    fechaInicio: parseLocalDate(detail.fechaInicio),
+    fechaFin: detail.fechaFin ? parseLocalDate(detail.fechaFin) : null,
     conceptos: detail.conceptos.map((item) => ({
       idConcepto: item.idConcepto,
       orden: item.orden,
@@ -75,11 +76,11 @@ function mapDetailToDraft(
 }
 
 function nextClonePayload(detail: ConfiguracionNomencladorDetailDto): ClonarConfiguracionDto {
-  const startDate = new Date(detail.fechaInicio)
+  const startDate = parseLocalDate(detail.fechaInicio)
   startDate.setFullYear(startDate.getFullYear() + 1)
 
   return {
-    fechaInicio: startDate.toISOString().slice(0, 10),
+    fechaInicio: formatLocalDate(startDate),
     fechaFin: null,
     copiarConceptos: true,
     copiarValoresFijos: true,
@@ -168,8 +169,8 @@ export const useConfigurationStore = defineStore('configuration', {
 
     async validateCurrent() {
       const localValidation = validateDraft(this.draft)
-      const serverValidation = await configurationService.validate(this.draft)
-      this.validation = mergeValidationResults(localValidation, serverValidation)
+      //const serverValidation = await configurationService.validate(this.draft)
+      this.validation = mergeValidationResults(localValidation)
       return this.validation
     },
 
