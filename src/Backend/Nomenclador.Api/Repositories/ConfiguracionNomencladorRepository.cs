@@ -329,35 +329,30 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         // Se cargan los candidatos por nomenclador/escala/zona y el solapamiento
         // de fechas se verifica en memoria (los registros por combinación son pocos).
-        var query = session.Query<ConfiguracionNomencladorEntity>()
-            .Where(c => c.NomencladorId == entity.NomencladorId)
-            .Where(c => c.EscalaSalarialId == entity.EscalaSalarialId);
+        ConfiguracionNomencladorEntity alias = null!;
+        var query = session.QueryOver(() => alias)
+            .Where(() => alias.NomencladorId == entity.NomencladorId)
+            .Where(() => alias.EscalaSalarialId == entity.EscalaSalarialId);
 
-        // ZonaId es opcional (nullable). Igual que con excludedId más abajo: no comparar
-        // "c.ZonaId == entity.ZonaId" directamente cuando entity.ZonaId puede ser null,
-        // para evitar que el traductor LINQ de NHibernate arme una comparación contra NULL
-        // poco confiable; se arma condicionalmente en C#.
+        // ZonaId es opcional (nullable). Se usa Restrictions.IsNull/IsNotNull para
+        // garantizar una traducción Oracle correcta sin depender del traductor LINQ.
         if (entity.ZonaId.HasValue)
         {
             var zonaId = entity.ZonaId.Value;
-            query = query.Where(c => c.ZonaId == zonaId);
+            query.Where(() => alias.ZonaId == zonaId);
         }
         else
         {
-            query = query.Where(c => !c.ZonaId.HasValue);
+            query.Where(Restrictions.IsNull(Projections.Property(() => alias.ZonaId)));
         }
 
-        // Nota: no usar "!excludedId.HasValue || c.Id != excludedId.Value" en un único
-        // Where: el traductor LINQ de NHibernate evalúa "excludedId.Value" al armar el
-        // árbol de expresión aunque el OR debería evitarlo en tiempo de ejecución, y
-        // lanza "Nullable object must have a value" cuando excludedId es null (Create).
         if (excludedId.HasValue)
         {
             var idAExcluir = excludedId.Value;
-            query = query.Where(c => c.Id != idAExcluir);
+            query.Where(() => alias.Id != idAExcluir);
         }
 
-        var candidatos = await query.ToListAsync();
+        var candidatos = await query.ListAsync();
 
         return candidatos.Any(c =>
             RangesOverlap(c.FechaInicio, c.FechaFin, entity.FechaInicio, entity.FechaFin));
