@@ -111,6 +111,8 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     public async Task AddAsync(ConfiguracionNomencladorEntity entity, Action<ConfiguracionNomencladorEntity>? afterSave = null)
     {
         using var tx = session.BeginTransaction();
+        // SaveAsync hace que la secuencia de Oracle asigne entity.Id de inmediato,
+        // de modo que el callback puede usarlo (p. ej. para setear las FK de los hijos).
         await session.SaveAsync(entity);
         afterSave?.Invoke(entity);
         await session.FlushAsync();
