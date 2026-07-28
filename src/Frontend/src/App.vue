@@ -1,3 +1,7 @@
+<script setup lang="ts">
+
+</script>
+
 <template>
   <div class="app-shell">
     <header class="app-header">
@@ -9,6 +13,7 @@
         <RouterLink to="/configuraciones">Configuraciones</RouterLink>
         <RouterLink to="/escalas">Escalas</RouterLink>
         <RouterLink to="/valores-categoria">Valores por categoría</RouterLink>
+        <RouterLink to="/valores-fijos">Valores fijos</RouterLink>
       </nav>
     </header>
 
