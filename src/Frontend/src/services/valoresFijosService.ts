@@ -15,12 +15,12 @@ export const valoresFijosService = {
   async createTipo(dto: { descripcion: string }): Promise<CatalogItem> {
     const { data } = await apiClient.post<CatalogItem>('/valores-fijos/tipos', dto)
     return data
-  }
+  },
 
   async updateTipo(id: number, dto: { descripcion: string }): Promise<CatalogItem> {
     const { data } = await apiClient.put<CatalogItem>(`/valores-fijos/tipos/${id}`, dto)
     return data
-  }
+  },
 
   async deleteTipo(id: number): Promise<void> {
     await apiClient.delete(`/valores-fijos/tipos/${id}`)
