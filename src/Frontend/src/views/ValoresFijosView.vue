@@ -99,7 +99,7 @@ function openEditTipo(tipo: CatalogItem) {
   tipoDialogRef.value?.open('edit', tipo.descripcion)
 }
 
-async function handleTipoSave(dto: CatalogItem) {
+async function handleTipoSave(dto: { descripcion: string }) {
   if (editingTipoId) {
     const updated = await valoresFijosService.updateTipo(editingTipoId, dto)
     const idx = tipos.value.findIndex((t) => t.id === editingTipoId)
