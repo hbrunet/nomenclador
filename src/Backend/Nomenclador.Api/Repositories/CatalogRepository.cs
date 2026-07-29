@@ -710,15 +710,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         return true;
     }
 
-    public async Task<IReadOnlyCollection<ValorFijoCatalogDto>> GetAllValoresFijosListAsync()
-    {
-        var valores = await session.Query<ValorFijoCatalogEntity>()
-            .Fetch(x => x.Tipo)
-            .OrderBy(x => x.Descripcion)
-            .ToListAsync();
-
-        return valores.Select(ToValorFijoCatalogDto).ToList();
-    }
+    public Task<IReadOnlyCollection<ValorFijoCatalogDto>> GetAllValoresFijosListAsync()
+        => GetValoresFijosAsync();
 
     public async Task<ValorFijoCatalogDto?> GetValorFijoDetailAsync(int id)
     {
