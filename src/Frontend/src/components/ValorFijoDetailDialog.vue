@@ -52,7 +52,7 @@ async function handleSave() {
   if (!selectedTipoId.value) return
   saving.value = true
   try {
-    const dto = { descripcion: descripcion.value, idTipo: selectedTipoId.value, valor: valor.value }
+    const dto = { descripcion: descripcion.value.trim(), idTipo: selectedTipoId.value, valor: valor.value }
     const saved = isNew.value
       ? await valoresFijosService.create(dto)
       : await valoresFijosService.update(editingId.value!, dto)
