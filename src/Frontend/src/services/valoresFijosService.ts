@@ -17,10 +17,10 @@ export const valoresFijosService = {
     return data
   }
 
-  async updateTipo(id: number, dto: CatalogItem): Promise<CatalogItem> {
+  async updateTipo(id: number, dto: { descripcion: string }): Promise<CatalogItem> {
     const { data } = await apiClient.put<CatalogItem>(`/valores-fijos/tipos/${id}`, dto)
     return data
-  },
+  }
 
   async deleteTipo(id: number): Promise<void> {
     await apiClient.delete(`/valores-fijos/tipos/${id}`)
