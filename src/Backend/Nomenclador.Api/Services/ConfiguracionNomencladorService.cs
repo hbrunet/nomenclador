@@ -50,9 +50,6 @@ public sealed class ConfiguracionNomencladorService(
     {
         await EnsureValidAsync(request, null);
 
-        // ToNewEntity solo asigna los campos escalares. El callback le pasa entity ya con el
-        // Id asignado por la secuencia a ApplyChildren, de modo que parent e hijos se insertan
-        // dentro de la misma transacción (atomicidad: si falla cualquier hijo, nada persiste).
         var entity = mapper.ToNewEntity(request);
         await configuracionRepository.AddAsync(entity, e => mapper.ApplyChildren(e, request));
 

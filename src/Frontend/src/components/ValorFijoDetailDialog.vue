@@ -83,7 +83,7 @@ defineExpose({ open })
           autofocus
           :disabled="loading"
         />
-         <Message v-if="!isValidDescripcion" severity="error" size="small" variant="simple">La descripción debe tener entre 1 y 40 caracteres.</Message>
+         <Message v-if="!isValidDescripcion" severity="error" size="small" variant="simple">La descripción es obligatoria y debe tener como máximo 40 caracteres.</Message>
             
       </div>
       

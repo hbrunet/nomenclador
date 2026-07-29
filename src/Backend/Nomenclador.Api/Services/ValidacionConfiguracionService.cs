@@ -37,45 +37,9 @@ public sealed class ValidacionConfiguracionService(
         {
             errores.Add(new ValidationMessageDto
             {
-                Codigo = "FECHA_INVALIDA",
+                Codigo = "FECHA_FIN_INVALIDA",
                 Mensaje = "La fecha fin no puede ser menor a la fecha inicio.",
                 Campo = "fechaFin"
-            });
-        }
-
-        if (!request.Conceptos.Any())
-        {
-            warnings.Add(new ValidationMessageDto
-            {
-                Codigo = "SIN_CONCEPTOS",
-                Mensaje = "La configuración todavía no tiene conceptos asociados."
-            });
-        }
-
-        if (request.Conceptos.GroupBy(item => item.IdConcepto).Any(group => group.Count() > 1))
-        {
-            warnings.Add(new ValidationMessageDto
-            {
-                Codigo = "CONCEPTOS_DUPLICADOS",
-                Mensaje = "Hay conceptos repetidos en la configuración."
-            });
-        }
-
-        if (request.ValoresFijos.GroupBy(item => item.IdValorFijo).Any(group => group.Count() > 1))
-        {
-            warnings.Add(new ValidationMessageDto
-            {
-                Codigo = "VALORES_FIJOS_DUPLICADOS",
-                Mensaje = "Hay valores fijos repetidos en la configuración."
-            });
-        }
-
-        if (request.ValoresCategorias.GroupBy(item => item.IdValorCategoria).Any(group => group.Count() > 1))
-        {
-            warnings.Add(new ValidationMessageDto
-            {
-                Codigo = "CATEGORIAS_DUPLICADAS",
-                Mensaje = "Hay categorías repetidas en la grilla de valores."
             });
         }
 
