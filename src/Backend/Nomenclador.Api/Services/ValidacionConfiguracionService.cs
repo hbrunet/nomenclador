@@ -33,17 +33,17 @@ public sealed class ValidacionConfiguracionService(
             });
         }
 
-if (request.FechaFin.HasValue && request.FechaFin.Value < request.FechaInicio)
-{
-    errores.Add(new ValidationMessageDto
-    {
-        Codigo = "FECHA_FIN_INVALIDA",
-        Mensaje = "La fecha fin no puede ser menor a la fecha inicio.",
-        Campo = "fechaFin"
-    });
-}
+        if (request.FechaFin.HasValue && request.FechaFin.Value < request.FechaInicio)
+        {
+            errores.Add(new ValidationMessageDto
+            {
+                Codigo = "FECHA_FIN_INVALIDA",
+                Mensaje = "La fecha fin no puede ser menor a la fecha inicio.",
+                Campo = "fechaFin"
+            });
+        }
 
-var entity = mapper.ToNewEntity(request);
+        var entity = mapper.ToNewEntity(request);
         if (await configuracionRepository.HasOverlapAsync(entity, excludedId))
         {
             errores.Add(new ValidationMessageDto
