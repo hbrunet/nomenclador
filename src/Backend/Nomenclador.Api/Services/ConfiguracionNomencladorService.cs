@@ -51,8 +51,7 @@ public sealed class ConfiguracionNomencladorService(
         await EnsureValidAsync(request, null);
 
         var entity = mapper.ToNewEntity(request);
-        //await configuracionRepository.AddAsync(entity, e => mapper.ApplyChildren(e, request));
-        await configuracionRepository.AddAsync(entity);
+        await configuracionRepository.AddAsync(entity, e => mapper.ApplyChildren(e, request));
 
         var createdEntity = await configuracionRepository.GetByIdAsync(entity.Id)
             ?? throw new KeyNotFoundException("No se pudo recuperar la configuración creada.");
