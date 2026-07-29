@@ -50,13 +50,6 @@ export function validateDraft(
     })
   }
 
-  if (!draft.conceptos.length) {
-    warnings.push({
-      codigo: 'SIN_CONCEPTOS',
-      mensaje: 'Todavía no se agregaron conceptos.',
-    })
-  }
-
   return {
     valida: errores.length === 0,
     errores,

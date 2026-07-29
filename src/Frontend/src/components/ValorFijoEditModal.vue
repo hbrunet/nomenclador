@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import Message from 'primevue/message'
 import Dialog from 'primevue/dialog'
 import RadioButton from 'primevue/radiobutton'
 import InputText from 'primevue/inputtext'
@@ -28,6 +29,7 @@ const newDescripcion = ref('')
 const usagesCount = ref<number | null>(null)
 const loadingUsages = ref(false)
 const saving = ref(false)
+const isValidDescripcion = computed(() => newDescripcion.value.trim().length > 0 && newDescripcion.value.trim().length <= 40)
 
 async function open(valorFijo: ValorFijoCatalogItem) {
   item.value = valorFijo
@@ -97,7 +99,6 @@ defineExpose({ open })
             <div class="flex flex-column gap-1">
               <strong>Actualizar para todas las configuraciones</strong>
               <p class="muted m-0">
-                Modifica el registro del catálogo.
                 <template v-if="loadingUsages"> Calculando usos...</template>
                 <template v-else-if="usagesCount !== null">
                   Afecta a <strong>{{ usagesCount }}</strong>
@@ -115,7 +116,7 @@ defineExpose({ open })
             <div class="flex flex-column gap-1">
               <strong>Usar un valor diferente solo aquí</strong>
               <p class="muted m-0">
-                Crea un nuevo registro en el catálogo exclusivo para esta configuración.
+                Crea un nuevo valor fijo exclusivo para esta configuración.
               </p>
             </div>
           </label>
@@ -136,8 +137,12 @@ defineExpose({ open })
           </div>
 
           <div v-if="mode === 'create-new'" class="flex flex-column gap-1">
-            <label class="field-label" for="new-descripcion">Descripción del nuevo registro</label>
+            <label class="field-label" for="new-descripcion">Descripción</label>
             <InputText id="new-descripcion" v-model="newDescripcion" fluid />
+            <Message
+              v-if="!isValidDescripcion"
+              severity="error">
+              La descripción es obligatoria y debe tener como máximo 40 caracteres.</Message>
           </div>
         </div>
       </div>
@@ -146,9 +151,9 @@ defineExpose({ open })
     <template #footer>
       <Button label="Cancelar" severity="secondary" :disabled="saving" @click="close" />
       <Button
-        label="Aplicar cambio"
+        label="Guardar"
         icon="pi pi-check"
-        :disabled="saving"
+        :disabled="saving || (mode === 'create-new' && !isValidDescripcion)"
         :loading="saving"
         @click="handleSave"
       />

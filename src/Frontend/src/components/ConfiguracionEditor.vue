@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import Select from 'primevue/select'
-import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
@@ -44,7 +43,6 @@ const emit = defineEmits<{
   (event: 'detail-updated', detail: ConfiguracionNomencladorDetailDto): void
 }>()
 
-// Convert 0 ↔ null for PrimeVue Select (0 = not selected in the store)
 const nomencladorId = computed({
   get: () => draft.value.idNomenclador || null,
   set: (val: number | null) => { draft.value.idNomenclador = val ?? 0 },
@@ -60,6 +58,8 @@ const zonaId = computed({
 
 const hasErrors = computed(() => (props.validation?.errores?.length ?? 0) > 0)
 const hasWarnings = computed(() => (props.validation?.warnings?.length ?? 0) > 0)
+
+const isNew = computed(() => !props.configuracionId)
 
 const activeTab = ref('datos-generales')
 </script>
@@ -95,10 +95,10 @@ const activeTab = ref('datos-generales')
     <Tabs v-model:value="activeTab">
       <TabList>
         <Tab value="datos-generales">Datos generales</Tab>
-        <Tab value="conceptos">Conceptos</Tab>
-        <Tab value="valores-fijos">Valores fijos</Tab>
-        <Tab value="valores-categorias">Valores por categoría</Tab>
-        <Tab value="categorias">Categorías escala</Tab>
+        <Tab value="conceptos" :disabled="isNew">Conceptos</Tab>
+        <Tab value="valores-fijos" :disabled="isNew">Valores fijos</Tab>
+        <Tab value="valores-categorias" :disabled="isNew">Valores por categoría</Tab>
+        <Tab value="categorias" :disabled="isNew">Categorías escala</Tab>
       </TabList>
 
       <TabPanels>
