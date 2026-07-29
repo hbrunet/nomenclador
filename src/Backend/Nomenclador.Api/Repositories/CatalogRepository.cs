@@ -408,7 +408,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         new()
         {
             Id = item.Id,
-            Descripcion = item.Descripcion,
+            Descripcion = item.Descripcion ?? string.Empty,
             IdTipo = item.Tipo?.Id ?? 0,
             Tipo = item.Tipo?.Descripcion ?? string.Empty,
             Valor = item.Valor
@@ -655,6 +655,109 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             NumeroCategoria = item.Numero,
             Importe = item.Importe,
         }).ToList();
+    }
+
+    public async Task<IReadOnlyCollection<CatalogItemDto>> GetValorFijoTiposAsync()
+    {
+        var items = await session.Query<ValorFijoTipoCatalogEntity>()
+            .OrderBy(x => x.Descripcion)
+            .ToListAsync();
+
+        return items.Select(item => new CatalogItemDto
+        {
+            Id = item.Id,
+            Descripcion = item.Descripcion
+        }).ToList();
+    }
+
+    public async Task<CatalogItemDto> CreateValorFijoTipoAsync(CatalogItemDto dto)
+    {
+        var entity = new ValorFijoTipoCatalogEntity
+        {
+            Descripcion = dto.Descripcion
+        };
+        using var tx = session.BeginTransaction();
+        await session.SaveAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return new CatalogItemDto { Id = entity.Id, Descripcion = entity.Descripcion };
+    }
+
+    public async Task<CatalogItemDto?> UpdateValorFijoTipoAsync(int id, CatalogItemDto dto)
+    {
+        var entity = await session.GetAsync<ValorFijoTipoCatalogEntity>(id);
+        if (entity is null) return null;
+        entity.Descripcion = dto.Descripcion;
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return new CatalogItemDto { Id = entity.Id, Descripcion = entity.Descripcion };
+    }
+
+    public async Task<bool> DeleteValorFijoTipoAsync(int id)
+    {
+        var inUse = await session.Query<ValorFijoCatalogEntity>()
+            .Where(x => x.Tipo != null && x.Tipo.Id == id)
+            .CountAsync() > 0;
+        if (inUse) return false;
+
+        var entity = await session.GetAsync<ValorFijoTipoCatalogEntity>(id);
+        if (entity is null) return true;
+        using var tx = session.BeginTransaction();
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return true;
+    }
+
+    public Task<IReadOnlyCollection<ValorFijoCatalogDto>> GetAllValoresFijosListAsync()
+        => GetValoresFijosAsync();
+
+    public async Task<ValorFijoCatalogDto?> GetValorFijoDetailAsync(int id)
+    {
+        var valor = await session.Query<ValorFijoCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .FirstOrDefaultAsync(x => x.Id == id);
+        if (valor is null) return null;
+
+        return ToValorFijoCatalogDto(valor);
+    }
+
+    public async Task<bool> DeleteValorFijoAsync(int id)
+    {
+        var inUse = await session.Query<ValorFijoConfiguradoEntity>()
+            .Where(x => x.ValorFijoId == id)
+            .CountAsync() > 0;
+        if (inUse) return false;
+
+        var entity = await session.GetAsync<ValorFijoCatalogEntity>(id);
+        if (entity is null) return true;
+
+        using var tx = session.BeginTransaction();
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return true;    
+    }
+
+    public async Task<ValorFijoCatalogDto?> UpdateValorFijoAsync(int id, ValorFijoCreateDto dto)
+    {
+        var entity = await session.Query<ValorFijoCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        if (entity is null) return null;
+
+        entity.Descripcion = dto.Descripcion;
+        entity.Tipo = session.Load<ValorFijoTipoCatalogEntity>(dto.IdTipo);
+        entity.Valor = dto.Valor;
+
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return ToValorFijoCatalogDto(entity);
     }
 }
 

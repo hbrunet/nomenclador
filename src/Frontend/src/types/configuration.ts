@@ -72,6 +72,12 @@ export interface ValorFijoCatalogItem extends CatalogItem {
   valor: number
 }
 
+export interface ValorFijoCreateUpdateDto {
+  descripcion: string
+  idTipo: number
+  valor: number
+}
+
 export interface ValorCategoriaCatalogItem extends CatalogItem {
   tipo: string
 }
