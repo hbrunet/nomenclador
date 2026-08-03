@@ -74,7 +74,7 @@ export const configurationService = {
     const { data } = await apiClient.post<ValidacionConfiguracionResponse>(
       '/configuraciones-nomenclador/validar',
       toApiPayload(payload),
-      { params: excludedId ? { excludedId } : undefined },
+      { params: excludedId !== undefined ? { excludedId } : undefined },
     )
     return data
   },
