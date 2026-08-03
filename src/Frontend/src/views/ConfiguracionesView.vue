@@ -25,7 +25,18 @@ function searchNomenclador(event: AutoCompleteCompleteEvent) {
     .slice(0, 20)
 }
 
+const selectedEscala = ref<CatalogItem | null>(null)
+const escalaSuggestions = ref<CatalogItem[]>([])
+
+function searchEscala(event: AutoCompleteCompleteEvent) {
+  const q = event.query.toLowerCase().trim()
+  escalaSuggestions.value = catalogs.value.escalas
+    .filter((e: CatalogItem) => !q || e.descripcion.toLowerCase().includes(q))
+    .slice(0, 100)
+}
+
 const filters = reactive({
+  zonaId: null as number | null,
   vigenteEn: null as Date | null,
   estado: null as string | null,
 })
@@ -37,6 +48,8 @@ const PAGE_SIZE = ref(20)
 function buildParams(page: number) {
   return {
     nomencladorId: selectedNomenclador.value?.id ?? undefined,
+    escalaSalarialId: selectedEscala.value?.id ?? undefined,
+    zonaId: filters.zonaId ?? undefined,
     vigenteEn: filters.vigenteEn ? filters.vigenteEn.toISOString().substring(0, 7) : undefined,
     estado: filters.estado ?? undefined,
     page,
@@ -77,6 +90,33 @@ onMounted(async () => {
           show-clear
           fluid
           @complete="searchNomenclador"
+        />
+      </div>
+
+      <div class="flex flex-column gap-1" style="flex: 2">
+        <label class="field-label">Escala salarial</label>
+        <AutoComplete
+          v-model="selectedEscala"
+          :suggestions="escalaSuggestions"
+          option-label="descripcion"
+          placeholder="Escribir para buscar..."
+          force-selection
+          show-clear
+          fluid
+          @complete="searchEscala"
+        />
+      </div>
+
+      <div class="flex flex-column gap-1" style="flex: 1">
+        <label class="field-label">Zona</label>
+        <Select
+          v-model="filters.zonaId"
+          :options="catalogs.zonas"
+          option-label="descripcion"
+          option-value="id"
+          placeholder="Todas"
+          show-clear
+          class="w-full"
         />
       </div>
 

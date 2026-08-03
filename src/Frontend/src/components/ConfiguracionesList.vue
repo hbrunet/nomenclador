@@ -100,15 +100,14 @@ function openCloneConfigDialog(source: ConfiguracionNomencladorListItemDto) {
       :value="items"
       :loading="loading"
       striped-rows
-      :sort-field="'nomencladorDescripcion'" :sort-order="1"
     >
       <template #empty>
         <span class="muted">No hay configuraciones para los filtros seleccionados.</span>
       </template>
 
-      <Column field="nomencladorDescripcion" header="Nomenclador" sortable />
-      <Column field="escalaDescripcion" header="Escala" sortable />
-      <Column field="zonaDescripcion" header="Zona" sortable />
+      <Column field="nomencladorDescripcion" header="Nomenclador" />
+      <Column field="escalaDescripcion" header="Escala" />
+      <Column field="zonaDescripcion" header="Zona" />
 
       <Column header="Vigencia">
         <template #body="{ data }">

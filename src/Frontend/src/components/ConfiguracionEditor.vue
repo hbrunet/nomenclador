@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import Select from 'primevue/select'
+import AutoComplete from 'primevue/autocomplete'
+import type { AutoCompleteCompleteEvent } from 'primevue/autocomplete'
 import Button from 'primevue/button'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
@@ -14,6 +16,7 @@ import ValoresFijosList from './ValoresFijosList.vue'
 import ValoresCategoriasGrid from './ValoresCategoriasGrid.vue'
 import CategoriasList from './CategoriasList.vue'
 import type {
+  CatalogItem,
   CatalogsState,
   CategoriaCatalogItem,
   ConceptoConfiguradoViewModel,
@@ -47,10 +50,22 @@ const nomencladorId = computed({
   get: () => draft.value.idNomenclador || null,
   set: (val: number | null) => { draft.value.idNomenclador = val ?? 0 },
 })
-const escalaSalarialId = computed({
-  get: () => draft.value.idEscalaSalarial || null,
-  set: (val: number | null) => { draft.value.idEscalaSalarial = val ?? 0 },
+const selectedEscala = computed<CatalogItem | null>({
+  get: () => {
+    const id = draft.value.idEscalaSalarial
+    return id ? props.catalogs.escalas.find((e) => e.id === id) ?? null : null
+  },
+  set: (val: CatalogItem | null) => { draft.value.idEscalaSalarial = val?.id ?? 0 },
 })
+const escalaSuggestions = ref<CatalogItem[]>([])
+
+function searchEscala(event: AutoCompleteCompleteEvent) {
+  const q = event.query.toLowerCase().trim()
+  escalaSuggestions.value = props.catalogs.escalas
+    .filter((e) => !q || e.descripcion.toLowerCase().includes(q))
+    .slice(0, 100)
+}
+
 const zonaId = computed({
   get: () => draft.value.idZona,
   set: (val: number | null) => { draft.value.idZona = val },
@@ -119,13 +134,16 @@ const activeTab = ref('datos-generales')
 
               <div class="col-6 flex flex-column gap-1">
                 <label class="field-label">Escala salarial</label>
-                <Select
-                  v-model="escalaSalarialId"
-                  :options="catalogs.escalas"
+                <AutoComplete
+                  v-model="selectedEscala"
+                  :suggestions="escalaSuggestions"
                   option-label="descripcion"
-                  option-value="id"
-                  placeholder="Seleccione una escala"
+                  placeholder="Escribir para buscar..."
+                  force-selection
+                  show-clear
+                  fluid
                   class="w-full"
+                  @complete="searchEscala"
                 />
               </div>
 
