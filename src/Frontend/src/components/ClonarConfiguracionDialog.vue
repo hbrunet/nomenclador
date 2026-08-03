@@ -20,6 +20,7 @@ function open(source: ConfiguracionNomencladorListItemDto) {
   configSource = source
   isVisible.value = true
   fechaInicio.value = new Date()
+  fechaFin.value = null
 }
 
 function handleClone() {
