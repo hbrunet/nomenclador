@@ -7,6 +7,7 @@ import Aura from '@primevue/themes/aura'
 import 'primeicons/primeicons.css'
 import 'primeflex/primeflex.css'
 import './style.css'
+import ToastService from 'primevue/toastservice';
 
 createApp(App)
   .use(createPinia())
@@ -32,4 +33,5 @@ createApp(App)
       weekHeader: 'Sem',
     },
   })
+  .use(ToastService)
   .mount('#app')

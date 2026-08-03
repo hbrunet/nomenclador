@@ -33,7 +33,7 @@ public sealed class ConfiguracionNomencladorMapper
         entity.EscalaSalarialId = dto.IdEscalaSalarial;
         entity.ZonaId = dto.IdZona;
         entity.FechaInicio = dto.FechaInicio;
-        entity.FechaFin = dto.FechaFin;
+        entity.FechaFin = dto.FechaFin ?? DateOnly.MaxValue;
 
         return entity;
     }

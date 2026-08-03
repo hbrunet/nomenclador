@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import axios from 'axios'
+import { computed, ref } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
-import type { ConfiguracionNomencladorListItemDto } from '../types/configuration'
-import { parseLocalDate } from '../utils/date'
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+import type { ConfiguracionNomencladorListItemDto, ValidacionConfiguracionResponse } from '../types/configuration'
+import { parseLocalDate, formatLocalDate } from '../utils/date'
+import ClonarConfiguracionDialog from '../components/ClonarConfiguracionDialog.vue'
+import { configurationService } from '../services/configurationService'
 
 function formatearFecha(fecha: string): string {
   const date = parseLocalDate(fecha)
   return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
 }
+
+const toast = useToast()
 
 const props = defineProps<{
   items: ConfiguracionNomencladorListItemDto[]
@@ -25,6 +32,7 @@ const emit = defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: number): void
   (event: 'page-change', page: number, pageSize: number): void
+  (event: 'clone', sourceId: number, dto: any): void
 }>()
 
 const paginatorFirst = computed(() => (props.page - 1) * props.pageSize)
@@ -38,6 +46,41 @@ function estadoSeverity(estado: string) {
 
 function onPageChange(event: { page: number; rows: number }) {
   emit('page-change', event.page + 1, event.rows)
+}
+
+const clonarDialogRef = ref<InstanceType<typeof ClonarConfiguracionDialog> | null>(null)
+
+async function handleCloneConfig(sourceId: number, dto: any) {
+  try {
+    await configurationService.clone(
+      sourceId,
+      {
+        fechaInicio: formatLocalDate(dto.fechaInicio),
+        fechaFin: dto.fechaFin ? formatLocalDate(dto.fechaFin) : null,
+        copiarConceptos: dto.copiarConceptos,
+        copiarValoresFijos: dto.copiarValoresFijos,
+        copiarValoresCategoria: dto.copiarValoresCategoria
+      }
+    )
+    toast.add({ severity: 'success', summary: 'Configuración clonada', detail: 'La configuración se ha clonado correctamente.', life: 5000 })
+  } catch (error) {
+    if (axios.isAxiosError<ValidacionConfiguracionResponse>(error)) {
+      const validation = error.response?.data
+      console.error('Error al clonar la configuración:', validation ?? error)
+
+      const mensajes = validation?.errores.map(({ mensaje }) => mensaje).join('\n')
+    
+      toast.add({ severity: 'error', summary: 'Error al clonar la configuración', detail: mensajes || `Ocurrió un error al clonar la configuración. ${error.message}`, life: 5000 })
+    } else {
+      toast.add({ severity: 'error', summary: 'Error al clonar la configuración', detail: `Ocurrió un error inesperado al clonar la configuración. ${error}`, life: 5000 })
+    }
+  } finally {
+    emit('page-change', props.page, props.pageSize)
+  }
+}
+
+function openCloneConfigDialog(source: ConfiguracionNomencladorListItemDto) {
+  clonarDialogRef.value?.open(source)
 }
 </script>
 
@@ -95,11 +138,12 @@ function onPageChange(event: { page: number; rows: number }) {
             icon="pi pi-copy" 
             size="small"
             text
+            @click="openCloneConfigDialog(data)"
           />
         </template>
       </Column>
     </DataTable>
-
+    <ClonarConfiguracionDialog ref="clonarDialogRef" @clone="handleCloneConfig"  />
     <Paginator
       v-if="total > 0"
       :rows="pageSize"
@@ -108,5 +152,6 @@ function onPageChange(event: { page: number; rows: number }) {
       :rows-per-page-options="[10, 20, 50, 100]"
       @page="onPageChange"
     />
+    <Toast />
   </section>
 </template>

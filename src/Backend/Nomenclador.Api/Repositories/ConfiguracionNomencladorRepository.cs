@@ -331,20 +331,7 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         // de fechas se verifica en memoria (los registros por combinación son pocos).
         ConfiguracionNomencladorEntity alias = null!;
         var query = session.QueryOver(() => alias)
-            .Where(() => alias.NomencladorId == entity.NomencladorId)
-            .Where(() => alias.EscalaSalarialId == entity.EscalaSalarialId);
-
-        // ZonaId es opcional (nullable). Se usa Restrictions.IsNull/IsNotNull para
-        // garantizar una traducción Oracle correcta sin depender del traductor LINQ.
-        if (entity.ZonaId.HasValue)
-        {
-            var zonaId = entity.ZonaId.Value;
-            query.Where(() => alias.ZonaId == zonaId);
-        }
-        else
-        {
-            query.Where(Restrictions.IsNull(Projections.Property(() => alias.ZonaId)));
-        }
+            .Where(() => alias.NomencladorId == entity.NomencladorId);
 
         if (excludedId.HasValue)
         {
@@ -365,5 +352,7 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         var normalizedSecondEnd = secondEnd ?? DateOnly.MaxValue;
         return firstStart <= normalizedSecondEnd && secondStart <= normalizedFirstEnd;
     }
+
+
 }
 
