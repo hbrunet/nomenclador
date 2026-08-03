@@ -31,13 +31,11 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         if (vigenteEn.HasValue)
         {
             var fecha = vigenteEn.Value;
-            // Usar Restrictions para que la comparación de DateOnly? se traduzca
-            // correctamente a SQL en Oracle 11g sin pasar por el filtro en memoria.
+
             query.Where(Restrictions.Le(
                 Projections.Property(() => alias.FechaInicio), fecha));
-            query.Where(Restrictions.Or(
-                Restrictions.IsNull(Projections.Property(() => alias.FechaFin)),
-                Restrictions.Ge(Projections.Property(() => alias.FechaFin), fecha)));
+            query.Where(Restrictions.Ge(
+                Projections.Property(() => alias.FechaFin), fecha));
         }
 
         if (!string.IsNullOrWhiteSpace(estado))
@@ -57,9 +55,8 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
                 case "ACTIVA":
                     query.Where(Restrictions.Le(
                         Projections.Property(() => alias.FechaInicio), today));
-                    query.Where(Restrictions.Or(
-                        Restrictions.IsNull(Projections.Property(() => alias.FechaFin)),
-                        Restrictions.Ge(Projections.Property(() => alias.FechaFin), today)));
+                    query.Where(Restrictions.Ge(
+                        Projections.Property(() => alias.FechaFin), today));
                     break;
             }
         }
