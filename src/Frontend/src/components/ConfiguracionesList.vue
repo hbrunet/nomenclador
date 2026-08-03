@@ -32,7 +32,6 @@ const emit = defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: number): void
   (event: 'page-change', page: number, pageSize: number): void
-  (event: 'clone', sourceId: number, dto: any): void
 }>()
 
 const paginatorFirst = computed(() => (props.page - 1) * props.pageSize)
