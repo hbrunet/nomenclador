@@ -17,7 +17,9 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         int pageSize)
     {
         ConfiguracionNomencladorEntity alias = null!;
-        var query = session.QueryOver(() => alias);
+        NomencladorCatalogEntity nomencladorAlias = null!;
+        var query = session.QueryOver(() => alias)
+            .JoinAlias(() => alias.Nomenclador, () => nomencladorAlias);
 
         if (nomencladorId.HasValue)
             query.Where(() => alias.NomencladorId == nomencladorId.Value);
@@ -65,6 +67,7 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         var rawItems = await query
             .OrderBy(() => alias.FechaInicio).Desc
+            .ThenBy(() => nomencladorAlias.Descripcion).Asc
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ListAsync();

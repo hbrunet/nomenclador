@@ -14,6 +14,8 @@ public class ConfiguracionNomencladorEntity
 
     public virtual DateOnly FechaFin { get; set; } = DateOnly.MaxValue;
 
+    public virtual NomencladorCatalogEntity Nomenclador { get; set; } = new NomencladorCatalogEntity();
+
     public virtual IList<ConceptoConfiguradoEntity> Conceptos { get; set; } = [];
 
     public virtual IList<ValorFijoConfiguradoEntity> ValoresFijos { get; set; } = [];

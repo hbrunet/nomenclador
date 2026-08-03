@@ -27,6 +27,11 @@ public sealed class ConfiguracionNomencladorMap : ClassMap<ConfiguracionNomencla
             .CustomType<DateOnlyUserType>()
             .Not.Nullable();
 
+        References(x => x.Nomenclador)
+            .Column("IDNOM")
+            .Not.Nullable()
+            .ReadOnly();
+
         HasMany(x => x.Conceptos)
             .Table("USUARIO.HISTNOM_CONCEPTO")
             .KeyColumn("IDHISTORIAL")

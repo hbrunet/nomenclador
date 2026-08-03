@@ -86,8 +86,8 @@ public sealed class ConfiguracionNomencladorMapper
         return new ConfiguracionNomencladorListItemDto
         {
             Id = entity.Id,
-            NomencladorDescripcion = MapCatalogDescription(catalogs.Nomencladores, entity.NomencladorId),
-            EscalaDescripcion = MapCatalogDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId),
+            NomencladorDescripcion = MapCatalogDescription(catalogs.Nomencladores, entity.NomencladorId, "Nomenclador"),
+            EscalaDescripcion = MapCatalogDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId, "Escala"),
             ZonaDescripcion = MapZonaDescription(catalogs.Zonas, entity.ZonaId),
             FechaInicio = entity.FechaInicio,
             FechaFin = entity.FechaFin,
@@ -101,9 +101,9 @@ public sealed class ConfiguracionNomencladorMapper
         {
             Id = entity.Id,
             IdNomenclador = entity.NomencladorId,
-            NomencladorDescripcion = MapCatalogDescription(catalogs.Nomencladores, entity.NomencladorId),
+            NomencladorDescripcion = MapCatalogDescription(catalogs.Nomencladores, entity.NomencladorId, "Nomenclador"),
             IdEscalaSalarial = entity.EscalaSalarialId,
-            EscalaDescripcion = MapCatalogDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId),
+            EscalaDescripcion = MapCatalogDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId, "Escala"),
             IdZona = entity.ZonaId,
             ZonaDescripcion = MapZonaDescription(catalogs.Zonas, entity.ZonaId),
             FechaInicio = entity.FechaInicio,
@@ -207,10 +207,10 @@ public sealed class ConfiguracionNomencladorMapper
         };
     }
 
-    private static string MapCatalogDescription<TCatalog>(IReadOnlyDictionary<int, TCatalog> catalog, int id)
+    private static string MapCatalogDescription<TCatalog>(IReadOnlyDictionary<int, TCatalog> catalog, int id, string entityName)
         where TCatalog : CatalogEntityBase
     {
-        return catalog.TryGetValue(id, out var item) ? item.Descripcion : "Sin catálogo";
+        return catalog.TryGetValue(id, out var item) ? item.Descripcion : $"{entityName} no encontrado en el catálogo";
     }
 
     // La zona es opcional: a diferencia de MapCatalogDescription (que indica un dato roto,
@@ -218,7 +218,7 @@ public sealed class ConfiguracionNomencladorMapper
     private static string MapZonaDescription<TCatalog>(IReadOnlyDictionary<int, TCatalog> catalog, int? id)
         where TCatalog : CatalogEntityBase
     {
-        return id.HasValue ? MapCatalogDescription(catalog, id.Value) : "Sin zona";
+        return id.HasValue ? MapCatalogDescription(catalog, id.Value, "Zona") : "Sin zona";
     }
 
     private static string ResolveEstado(DateOnly fechaInicio, DateOnly? fechaFin)
