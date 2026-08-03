@@ -327,8 +327,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
     public async Task<bool> HasOverlapAsync(ConfiguracionNomencladorEntity entity, int? excludedId)
     {
-        // Se cargan los candidatos por nomenclador/escala/zona y el solapamiento
-        // de fechas se verifica en memoria (los registros por combinación son pocos).
         ConfiguracionNomencladorEntity alias = null!;
         var query = session.QueryOver(() => alias)
             .Where(() => alias.NomencladorId == entity.NomencladorId);
