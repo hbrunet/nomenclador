@@ -24,8 +24,8 @@ public sealed class ConfiguracionNomencladorMap : ClassMap<ConfiguracionNomencla
 
         Map(x => x.FechaFin)
             .Column("FECHAFINAL")
-            .CustomType<NullableDateOnlyUserType>()
-            .Nullable();
+            .CustomType<DateOnlyUserType>()
+            .Not.Nullable();
 
         HasMany(x => x.Conceptos)
             .Table("USUARIO.HISTNOM_CONCEPTO")

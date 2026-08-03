@@ -169,8 +169,8 @@ export const useConfigurationStore = defineStore('configuration', {
 
     async validateCurrent() {
       const localValidation = validateDraft(this.draft)
-      //const serverValidation = await configurationService.validate(this.draft)
-      this.validation = mergeValidationResults(localValidation)
+      const serverValidation = await configurationService.validate(this.draft, this.current?.id)
+      this.validation = mergeValidationResults(localValidation, serverValidation)
       return this.validation
     },
 

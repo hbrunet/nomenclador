@@ -31,13 +31,11 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         if (vigenteEn.HasValue)
         {
             var fecha = vigenteEn.Value;
-            // Usar Restrictions para que la comparación de DateOnly? se traduzca
-            // correctamente a SQL en Oracle 11g sin pasar por el filtro en memoria.
+
             query.Where(Restrictions.Le(
                 Projections.Property(() => alias.FechaInicio), fecha));
-            query.Where(Restrictions.Or(
-                Restrictions.IsNull(Projections.Property(() => alias.FechaFin)),
-                Restrictions.Ge(Projections.Property(() => alias.FechaFin), fecha)));
+            query.Where(Restrictions.Ge(
+                Projections.Property(() => alias.FechaFin), fecha));
         }
 
         if (!string.IsNullOrWhiteSpace(estado))
@@ -57,9 +55,8 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
                 case "ACTIVA":
                     query.Where(Restrictions.Le(
                         Projections.Property(() => alias.FechaInicio), today));
-                    query.Where(Restrictions.Or(
-                        Restrictions.IsNull(Projections.Property(() => alias.FechaFin)),
-                        Restrictions.Ge(Projections.Property(() => alias.FechaFin), today)));
+                    query.Where(Restrictions.Ge(
+                        Projections.Property(() => alias.FechaFin), today));
                     break;
             }
         }
@@ -327,24 +324,9 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
     public async Task<bool> HasOverlapAsync(ConfiguracionNomencladorEntity entity, int? excludedId)
     {
-        // Se cargan los candidatos por nomenclador/escala/zona y el solapamiento
-        // de fechas se verifica en memoria (los registros por combinación son pocos).
         ConfiguracionNomencladorEntity alias = null!;
         var query = session.QueryOver(() => alias)
-            .Where(() => alias.NomencladorId == entity.NomencladorId)
-            .Where(() => alias.EscalaSalarialId == entity.EscalaSalarialId);
-
-        // ZonaId es opcional (nullable). Se usa Restrictions.IsNull/IsNotNull para
-        // garantizar una traducción Oracle correcta sin depender del traductor LINQ.
-        if (entity.ZonaId.HasValue)
-        {
-            var zonaId = entity.ZonaId.Value;
-            query.Where(() => alias.ZonaId == zonaId);
-        }
-        else
-        {
-            query.Where(Restrictions.IsNull(Projections.Property(() => alias.ZonaId)));
-        }
+            .Where(() => alias.NomencladorId == entity.NomencladorId);
 
         if (excludedId.HasValue)
         {
@@ -365,5 +347,7 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         var normalizedSecondEnd = secondEnd ?? DateOnly.MaxValue;
         return firstStart <= normalizedSecondEnd && secondStart <= normalizedFirstEnd;
     }
+
+
 }
 

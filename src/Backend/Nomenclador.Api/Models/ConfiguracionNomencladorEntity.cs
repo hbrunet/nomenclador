@@ -12,7 +12,7 @@ public class ConfiguracionNomencladorEntity
 
     public virtual DateOnly FechaInicio { get; set; }
 
-    public virtual DateOnly? FechaFin { get; set; }
+    public virtual DateOnly FechaFin { get; set; } = DateOnly.MaxValue;
 
     public virtual IList<ConceptoConfiguradoEntity> Conceptos { get; set; } = [];
 

@@ -70,10 +70,11 @@ export const configurationService = {
     return data
   },
 
-  async validate(payload: ConfiguracionNomencladorCreateUpdateDto) {
+  async validate(payload: ConfiguracionNomencladorCreateUpdateDto, excludedId?: number) {
     const { data } = await apiClient.post<ValidacionConfiguracionResponse>(
       '/configuraciones-nomenclador/validar',
       toApiPayload(payload),
+      { params: excludedId !== undefined ? { excludedId } : undefined },
     )
     return data
   },

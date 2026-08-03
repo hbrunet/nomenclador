@@ -49,7 +49,7 @@ public sealed class ValidacionConfiguracionService(
             errores.Add(new ValidationMessageDto
             {
                 Codigo = "VIGENCIA_SUPERPUESTA",
-                Mensaje = "Ya existe una configuración activa para el mismo nomenclador, escala y zona en ese rango de fechas.",
+                Mensaje = "Ya existe una configuración para el mismo nomenclador en ese rango de fechas.",
                 Campo = "fechaInicio"
             });
         }
