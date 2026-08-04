@@ -6,6 +6,7 @@ import RadioButton from 'primevue/radiobutton'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Button from 'primevue/button'
+import { useToast } from 'primevue/usetoast'
 import { configurationService } from '../services/configurationService'
 import type { ValorFijoCatalogItem } from '../types/configuration'
 
@@ -21,6 +22,7 @@ const props = defineProps<{
   configuracionId?: number
 }>()
 
+const toast = useToast()
 const isVisible = ref(false)
 const item = ref<ValorFijoCatalogItem | null>(null)
 const mode = ref<'update-all' | 'create-new'>('update-all')
@@ -60,6 +62,12 @@ async function handleSave() {
     if (mode.value === 'update-all') {
       const updated = await configurationService.updateValorFijo(item.value.id, newValor.value)
       emit('saved', { mode: 'updated', item: updated })
+      toast.add({
+        severity: 'success',
+        summary: 'Valor fijo actualizado',
+        detail: 'El valor se actualizó para todas las configuraciones que lo usan.',
+        life: 2500,
+      })
     } else {
       const created = await configurationService.createValorFijo({
         descripcion: newDescripcion.value,
@@ -68,6 +76,12 @@ async function handleSave() {
         configuracionId: props.configuracionId,
       })
       emit('saved', { mode: 'replaced', oldId: item.value.id, newItem: created })
+      toast.add({
+        severity: 'success',
+        summary: 'Valor fijo creado',
+        detail: 'Se creó un valor fijo exclusivo para esta configuración.',
+        life: 2500,
+      })
     }
     close()
   } finally {

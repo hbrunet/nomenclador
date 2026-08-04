@@ -5,6 +5,8 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 import ValorCategoriaItemsModal from './ValorCategoriaItemsModal.vue'
 import ValorCategoriaCombobox from './ValorCategoriaCombobox.vue'
 import { configurationService } from '../services/configurationService'
@@ -25,6 +27,8 @@ const emit = defineEmits<{
   (e: 'detail-updated', detail: ConfiguracionNomencladorDetailDto): void
 }>()
 
+const confirm = useConfirm()
+const toast = useToast()
 const selectedItemIndex = ref<number | null>(null)
 const modalRef = ref<InstanceType<typeof ValorCategoriaItemsModal> | null>(null)
 const filterQuery = ref('')
@@ -115,11 +119,26 @@ async function removeValorCategoria(idValorCategoria: number) {
       items: item.items.map((i) => ({ id: i.id, numeroCategoria: i.numeroCategoria, importe: i.importe })),
     }))
     emit('detail-updated', updated)
+    toast.add({ severity: 'success', summary: 'Valor por categoría eliminado', detail: 'El valor por categoría se quitó de la configuración.', life: 2500 })
   } catch (e: any) {
     errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo eliminar el valor por categoría seleccionado.'
   } finally {
     removingIds.value.delete(idValorCategoria)
   }
+}
+
+function confirmRemoveValorCategoria(idValorCategoria: number) {
+  const descripcion = valuesById.value.get(idValorCategoria)?.descripcion ?? `#${idValorCategoria}`
+  confirm.require({
+    message: `¿Eliminar el valor por categoría "${descripcion}" de esta configuración?`,
+    header: 'Confirmar eliminación',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Eliminar',
+    acceptProps: { severity: 'danger' },
+    rejectLabel: 'Cancelar',
+    rejectProps: { severity: 'secondary', outlined: true },
+    accept: () => removeValorCategoria(idValorCategoria),
+  })
 }
 
 function verItems(idValorCategoria: number) {
@@ -181,7 +200,7 @@ function verItems(idValorCategoria: number) {
               rounded
               :loading="removingIds.has(data.idValorCategoria)"
               :disabled="removingIds.has(data.idValorCategoria)"
-              @click="removeValorCategoria(data.idValorCategoria)"
+              @click="confirmRemoveValorCategoria(data.idValorCategoria)"
             />
           </div>
         </template>

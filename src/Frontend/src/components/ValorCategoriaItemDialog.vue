@@ -40,7 +40,12 @@ defineExpose({ open })
     <div class="flex flex-column gap-3 pt-2">
       <div class="flex flex-column gap-1">
         <label class="field-label">N° de categoría</label>
-        <InputNumber v-model="form.numeroCategoria" :min="1" :use-grouping="false" fluid />
+        <InputNumber 
+          v-model="form.numeroCategoria" 
+          :min="1" 
+          :use-grouping="false" 
+          :input-style="{ textAlign: 'right'}"
+          fluid />
       </div>
       <div class="flex flex-column gap-1">
         <label class="field-label">Importe</label>
@@ -49,6 +54,7 @@ defineExpose({ open })
           :min-fraction-digits="2"
           :max-fraction-digits="2"
           :min="0"
+          :input-style="{ textAlign: 'right'}"
           fluid
         />
       </div>

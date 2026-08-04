@@ -8,6 +8,7 @@ import 'primeicons/primeicons.css'
 import 'primeflex/primeflex.css'
 import './style.css'
 import ToastService from 'primevue/toastservice';
+import ConfirmationService from 'primevue/confirmationservice';
 
 createApp(App)
   .use(createPinia())
@@ -34,4 +35,5 @@ createApp(App)
     },
   })
   .use(ToastService)
+  .use(ConfirmationService)
   .mount('#app')
