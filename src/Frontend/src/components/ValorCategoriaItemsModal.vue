@@ -6,6 +6,7 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
+import { useToast } from 'primevue/usetoast'
 import type { ValorCategoriaConfiguradoInputDto, ValorCategoriaItemInputDto } from '../types/configuration'
 import { configurationService } from '../services/configurationService'
 
@@ -15,6 +16,7 @@ const props = defineProps<{
   tipo: string
 }>()
 
+const toast = useToast()
 const isVisible = ref(false)
 const isLoading = ref(false)
 const isEditing = ref(false)
@@ -49,6 +51,12 @@ async function save() {
     )
     isEditing.value = false
     isVisible.value = false
+    toast.add({
+      severity: 'success',
+      summary: 'Importes actualizados',
+      detail: 'Los importes se guardaron para todas las configuraciones que usan este valor.',
+      life: 2500,
+    })
   } finally {
     isSaving.value = false
   }

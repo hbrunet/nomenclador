@@ -4,6 +4,8 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Message from 'primevue/message'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 import type {
   ConceptoCatalogItem,
   ConceptoConfiguradoInputDto,
@@ -12,6 +14,9 @@ import type {
 } from '../types/configuration'
 import { configurationService } from '../services/configurationService'
 import ConceptoCombobox from './ConceptoCombobox.vue'
+
+const confirm = useConfirm()
+const toast = useToast()
 
 const conceptos = defineModel<ConceptoConfiguradoInputDto[]>({ required: true })
 
@@ -107,11 +112,26 @@ async function removeConcepto(idConcepto: number) {
     const updated = await configurationService.removeConcepto(props.configuracionId, idConcepto)
     conceptos.value = updated.conceptos.map((item) => ({ idConcepto: item.idConcepto, orden: item.orden }))
     emit('detail-updated', updated)
+    toast.add({ severity: 'success', summary: 'Concepto eliminado', detail: 'El concepto se quitó de la configuración.', life: 2500 })
   } catch (e: any) {
     errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo eliminar el concepto seleccionado.'
   } finally {
     removingIds.value.delete(idConcepto)
   }
+}
+
+function confirmRemoveConcepto(idConcepto: number) {
+  const descripcion = resolvedLookup.value.get(idConcepto)?.descripcion ?? `#${idConcepto}`
+  confirm.require({
+    message: `¿Eliminar el concepto "${descripcion}" de esta configuración?`,
+    header: 'Confirmar eliminación',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Eliminar',
+    acceptProps: { severity: 'danger' },
+    rejectLabel: 'Cancelar',
+    rejectProps: { severity: 'secondary', outlined: true },
+    accept: () => removeConcepto(idConcepto),
+  })
 }
 </script>
 
@@ -149,7 +169,7 @@ async function removeConcepto(idConcepto: number) {
             size="small"
             :loading="removingIds.has(data.idConcepto)"
             :disabled="removingIds.has(data.idConcepto)"
-            @click="removeConcepto(data.idConcepto)"
+            @click="confirmRemoveConcepto(data.idConcepto)"
           />
         </template>
       </Column>

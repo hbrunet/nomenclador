@@ -3,12 +3,15 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProgressSpinner from 'primevue/progressspinner'
 import Message from 'primevue/message'
+import Toast from 'primevue/toast'
+import { useToast } from 'primevue/usetoast'
 import ConfiguracionEditor from '../components/ConfiguracionEditor.vue'
 import { useConfiguration } from '../composables/useConfiguration'
 import type { CategoriaCatalogItem, ConfiguracionNomencladorDetailDto } from '../types/configuration'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 
 const {
   catalogs,
@@ -49,9 +52,18 @@ const saveError = ref<string | null>(null)
 
 async function handleSave() {
   saveError.value = null
+  const wasNew = !currentId.value
   try {
     const saved = await saveCurrent()
     if (saved) {
+      toast.add({
+        severity: 'success',
+        summary: wasNew ? 'Configuración creada' : 'Configuración actualizada',
+        detail: wasNew
+          ? 'La configuración se ha creado correctamente.'
+          : 'Los datos generales se han guardado correctamente.',
+        life: 5000,
+      })
       await router.replace(`/configuraciones/${saved.id}`)
     }
   } catch (e: any) {
@@ -108,5 +120,6 @@ watch(() => route.fullPath, loadScreen)
       @montos-saved="handleMontosSaved"
       @detail-updated="handleDetailUpdated"
     />
+    <Toast />
   </section>
 </template>

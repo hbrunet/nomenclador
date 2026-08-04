@@ -5,8 +5,11 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
+import { useToast } from 'primevue/usetoast'
 import type { CategoriaCatalogItem, CategoriaMontoUpdateItem } from '../types/configuration'
 import { configurationService } from '../services/configurationService'
+
+const toast = useToast()
 
 const props = defineProps<{
   categorias: CategoriaCatalogItem[]
@@ -45,6 +48,12 @@ async function saveEdit() {
     editMode.value = false
     editValues.value = {}
     emit('montos-saved', updatedCategorias)
+    toast.add({
+      severity: 'success',
+      summary: 'Montos actualizados',
+      detail: 'Los montos de la escala se guardaron correctamente.',
+      life: 2500,
+    })
   } finally {
     saving.value = false
   }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-
+import ConfirmDialog from 'primevue/confirmdialog'
 </script>
 
 <template>
@@ -20,6 +20,8 @@
     <main class="app-content">
       <RouterView />
     </main>
+
+    <ConfirmDialog />
   </div>
 </template>
 

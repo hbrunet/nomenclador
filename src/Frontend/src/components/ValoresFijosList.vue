@@ -5,6 +5,8 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 import type {
   ConfiguracionNomencladorDetailDto,
   ValorFijoCatalogItem,
@@ -26,6 +28,8 @@ const emit = defineEmits<{
   (e: 'detail-updated', detail: ConfiguracionNomencladorDetailDto): void
 }>()
 
+const confirm = useConfirm()
+const toast = useToast()
 const editModalRef = ref<InstanceType<typeof ValorFijoEditModal> | null>(null)
 const filterQuery = ref('')
 const saving = ref(false)
@@ -91,6 +95,7 @@ async function removeValorFijo(idValorFijo: number) {
     const updated = await configurationService.removeValorFijo(props.configuracionId, idValorFijo)
     valoresFijos.value = updated.valoresFijos.map((item) => ({ idValorFijo: item.idValorFijo, valor: item.valor }))
     emit('detail-updated', updated)
+    toast.add({ severity: 'success', summary: 'Valor fijo eliminado', detail: 'El valor fijo se quitó de la configuración.', life: 2500 })
   } catch (e: any) {
     errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo eliminar el valor fijo seleccionado.'
   } finally {
@@ -98,12 +103,26 @@ async function removeValorFijo(idValorFijo: number) {
   }
 }
 
+function confirmRemoveValorFijo(idValorFijo: number) {
+  const descripcion = valuesById.value.get(idValorFijo)?.descripcion ?? `#${idValorFijo}`
+  confirm.require({
+    message: `¿Eliminar el valor fijo "${descripcion}" de esta configuración?`,
+    header: 'Confirmar eliminación',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Eliminar',
+    acceptProps: { severity: 'danger' },
+    rejectLabel: 'Cancelar',
+    rejectProps: { severity: 'secondary', outlined: true },
+    accept: () => removeValorFijo(idValorFijo),
+  })
+}
+
 function openEditModal(idValorFijo: number) {
   const catalogItem = valuesById.value.get(idValorFijo)
   if (catalogItem) editModalRef.value?.open(catalogItem)
 }
 
-function handleModalSaved(
+async function handleModalSaved(
   payload:
     | { mode: 'updated'; item: ValorFijoCatalogItem }
     | { mode: 'replaced'; oldId: number; newItem: ValorFijoCatalogItem },
@@ -112,6 +131,17 @@ function handleModalSaved(
     valoresFijos.value = valoresFijos.value.map((item) =>
       item.idValorFijo === payload.oldId ? { ...item, idValorFijo: payload.newItem.id } : item,
     )
+
+    if (props.configuracionId) {
+      // El nuevo valor ya quedó asociado en el backend al crearse; hay que quitar la
+      // asociación vieja explícitamente o queda huérfana en la configuración.
+      try {
+        const updated = await configurationService.removeValorFijo(props.configuracionId, payload.oldId)
+        valoresFijos.value = updated.valoresFijos.map((item) => ({ idValorFijo: item.idValorFijo, valor: item.valor }))
+        emit('detail-updated', updated)
+        errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo quitar el valor fijo anterior de la configuración.'
+      }
+    }
   }
   emit('catalog-refresh')
 }
@@ -172,7 +202,7 @@ function handleModalSaved(
               rounded
               :loading="removingIds.has(data.idValorFijo)"
               :disabled="removingIds.has(data.idValorFijo)"
-              @click="removeValorFijo(data.idValorFijo)"
+              @click="confirmRemoveValorFijo(data.idValorFijo)"
             />
           </div>
         </template>
