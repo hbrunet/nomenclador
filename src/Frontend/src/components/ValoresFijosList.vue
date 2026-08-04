@@ -137,8 +137,8 @@ async function handleModalSaved(
       // asociación vieja explícitamente o queda huérfana en la configuración.
       try {
         const updated = await configurationService.removeValorFijo(props.configuracionId, payload.oldId)
+        valoresFijos.value = updated.valoresFijos.map((item) => ({ idValorFijo: item.idValorFijo, valor: item.valor }))
         emit('detail-updated', updated)
-      } catch (e: any) {
         errorMessage.value = e.response?.data?.mensaje ?? 'No se pudo quitar el valor fijo anterior de la configuración.'
       }
     }
