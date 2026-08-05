@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 </script>
 
@@ -21,6 +22,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
       <RouterView />
     </main>
 
+    <Toast />
     <ConfirmDialog />
   </div>
 </template>

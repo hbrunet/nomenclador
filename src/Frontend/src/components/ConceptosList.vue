@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
+import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
@@ -35,6 +36,7 @@ const emit = defineEmits<{
 const saving = ref(false)
 const removingIds = ref<Set<number>>(new Set())
 const errorMessage = ref<string | null>(null)
+const filterQuery = ref('')
 
 // Cache local de conceptos agregados en esta sesión de edición, capturados directamente
 // desde los resultados de búsqueda del combobox. Evita depender del catálogo completo
@@ -56,17 +58,21 @@ const resolvedLookup = computed(() => {
 
 const conceptosExcluidos = computed(() => conceptos.value.map((item) => item.idConcepto))
 
-const tableData = computed(() =>
-  conceptos.value.map((item) => {
-    const resolved = resolvedLookup.value.get(item.idConcepto)
-    return {
-      idConcepto: item.idConcepto,
-      codigo: resolved?.codigo ?? String(item.idConcepto),
-      subcodigo: resolved && resolved.codigo !== 'N/D' ? resolved.subcodigo : 'N/D',
-      descripcion: resolved?.descripcion ?? 'N/D',
-    }
-  })
-)
+const tableData = computed(() => {
+  const q = filterQuery.value.toLowerCase().trim()
+  return conceptos.value
+    .map((item) => {
+      const resolved = resolvedLookup.value.get(item.idConcepto)
+      return {
+        idConcepto: item.idConcepto,
+        codigo: resolved?.codigo ?? String(item.idConcepto),
+        subcodigo: resolved && resolved.codigo !== 'N/D' ? resolved.subcodigo : 'N/D',
+        descripcionBreve: resolved?.descripcionBreve ?? 'N/D',
+        descripcion: resolved?.descripcion ?? 'N/D',
+      }
+    })
+    .filter((item) => !q || item.descripcion.toLowerCase().includes(q))
+})
 
 async function addConcepto(item: ConceptoCatalogItem) {
   const idConcepto = item.id
@@ -145,6 +151,10 @@ function confirmRemoveConcepto(idConcepto: number) {
       @add="addConcepto"
     />
 
+    <div class="flex flex-column gap-1" style="max-width: 400px">
+      <InputText v-model="filterQuery" placeholder="Buscar por descripción..." class="w-full" />
+    </div>
+
     <DataTable
       :value="tableData"
       striped-rows
@@ -153,7 +163,9 @@ function confirmRemoveConcepto(idConcepto: number) {
       :virtual-scroller-options="{ itemSize: 46 }"
     >
       <template #empty>
-        <span class="muted">Agregue conceptos desde el catálogo.</span>
+        <span class="muted">
+          {{ conceptos.length ? 'Sin resultados para el filtro aplicado.' : 'Agregue conceptos desde el catálogo.' }}
+        </span>
       </template>
       <Column field="codigo" header="Código" style="text-align: right" />
       <Column field="subcodigo" header="Subcódigo" style="text-align: right" />

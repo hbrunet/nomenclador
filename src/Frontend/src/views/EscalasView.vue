@@ -6,10 +6,12 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
+import { useConfirm } from 'primevue/useconfirm'
 import { escalasService } from '../services/escalasService'
 import type { EscalaListItemDto } from '../types/configuration'
 
 const router = useRouter()
+const confirm = useConfirm()
 const escalas = ref<EscalaListItemDto[]>([])
 const loading = ref(false)
 const filterQuery = ref('')
@@ -40,6 +42,19 @@ async function handleDelete(id: number) {
       e.response?.data?.message ??
       'La escala está siendo utilizada por una o más configuraciones y no puede eliminarse.'
   }
+}
+
+function confirmDelete(escala: EscalaListItemDto) {
+  confirm.require({
+    message: `¿Eliminar la escala "${escala.descripcion}"?`,
+    header: 'Confirmar eliminación',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Eliminar',
+    acceptProps: { severity: 'danger' },
+    rejectLabel: 'Cancelar',
+    rejectProps: { severity: 'secondary', outlined: true },
+    accept: () => handleDelete(escala.id),
+  })
 }
 
 onMounted(load)
@@ -109,7 +124,7 @@ onMounted(load)
               severity="danger"
               text
               rounded
-              @click="handleDelete(data.id)"
+              @click="confirmDelete(data)"
             />
           </div>
         </template>

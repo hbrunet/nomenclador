@@ -7,6 +7,7 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import ProgressSpinner from 'primevue/progressspinner'
+import { useToast } from 'primevue/usetoast'
 import ValorCategoriaItemDialog from '../components/ValorCategoriaItemDialog.vue'
 import { valoresCategoriaService } from '../services/valoresCategoriaService'
 import type {
@@ -17,6 +18,7 @@ import type {
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 
 const valorId = computed(() => {
   const id = Number(route.params.id)
@@ -62,8 +64,10 @@ async function handleSave() {
     if (isNew.value) {
       const created = await valoresCategoriaService.create(dto)
       await router.replace(`/valores-categoria/${created.id}`)
+      toast.add({ severity: 'success', summary: 'Valor creado', detail: 'El valor por categoría se creó correctamente.', life: 2500 })
     } else {
       await valoresCategoriaService.update(valorId.value!, dto)
+      toast.add({ severity: 'success', summary: 'Valor actualizado', detail: 'Los cambios se guardaron correctamente.', life: 2500 })
     }
   } finally {
     saving.value = false
@@ -87,9 +91,11 @@ async function handleItemSave(dto: ValorCategoriaItemCreateUpdateDto) {
     const updated = await valoresCategoriaService.updateItem(valorId.value, editingItemId.value, dto)
     const idx = items.value.findIndex((i) => i.id === editingItemId.value)
     if (idx !== -1) items.value[idx] = updated
+    toast.add({ severity: 'success', summary: 'Item actualizado', detail: 'El item se guardó correctamente.', life: 2500 })
   } else {
     const created = await valoresCategoriaService.createItem(valorId.value, dto)
     items.value = [...items.value, created].sort((a, b) => a.numeroCategoria - b.numeroCategoria)
+    toast.add({ severity: 'success', summary: 'Item agregado', detail: 'El item se agregó correctamente.', life: 2500 })
   }
 }
 

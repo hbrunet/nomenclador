@@ -6,12 +6,14 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import ProgressSpinner from 'primevue/progressspinner'
+import { useToast } from 'primevue/usetoast'
 import CategoriaEditDialog from '../components/CategoriaEditDialog.vue'
 import { escalasService } from '../services/escalasService'
 import type { CategoriaCatalogItem, CategoriaCreateUpdateDto } from '../types/configuration'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 
 const escalaId = computed(() => {
   const id = Number(route.params.id)
@@ -45,8 +47,10 @@ async function handleSaveEscala() {
     if (isNew.value) {
       const created = await escalasService.create({ descripcion: descripcion.value })
       await router.replace(`/escalas/${created.id}`)
+      toast.add({ severity: 'success', summary: 'Escala creada', detail: 'La escala salarial se creó correctamente.', life: 2500 })
     } else {
       await escalasService.update(escalaId.value!, { descripcion: descripcion.value })
+      toast.add({ severity: 'success', summary: 'Escala actualizada', detail: 'Los cambios se guardaron correctamente.', life: 2500 })
     }
   } finally {
     saving.value = false
@@ -70,9 +74,11 @@ async function handleDialogSave(dto: CategoriaCreateUpdateDto) {
     const updated = await escalasService.updateCategoria(escalaId.value, editingCatId.value, dto)
     const idx = categorias.value.findIndex((c) => c.id === editingCatId.value)
     if (idx !== -1) categorias.value[idx] = updated
+    toast.add({ severity: 'success', summary: 'Categoría actualizada', detail: 'La categoría se guardó correctamente.', life: 2500 })
   } else {
     const created = await escalasService.createCategoria(escalaId.value, dto)
     categorias.value = [...categorias.value, created].sort((a, b) => a.numero - b.numero)
+    toast.add({ severity: 'success', summary: 'Categoría agregada', detail: 'La categoría se agregó correctamente.', life: 2500 })
   }
 }
 

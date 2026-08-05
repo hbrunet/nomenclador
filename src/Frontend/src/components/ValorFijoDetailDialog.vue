@@ -6,6 +6,7 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import { useToast } from 'primevue/usetoast'
 import { valoresFijosService } from '../services/valoresFijosService'
 import type { CatalogItem, ValorFijoCatalogItem } from '../types/configuration'
 
@@ -17,6 +18,7 @@ const emit = defineEmits<{
   (e: 'saved', item: ValorFijoCatalogItem): void
 }>()
 
+const toast = useToast()
 const isVisible = ref(false)
 const loading = ref(false)
 const saving = ref(false)
@@ -57,6 +59,12 @@ async function handleSave() {
       ? await valoresFijosService.create(dto)
       : await valoresFijosService.update(editingId.value!, dto)
     emit('saved', saved)
+    toast.add({
+      severity: 'success',
+      summary: isNew.value ? 'Valor fijo creado' : 'Valor fijo actualizado',
+      detail: isNew.value ? 'El valor fijo se creó correctamente.' : 'Los cambios se guardaron correctamente.',
+      life: 2500,
+    })
     isVisible.value = false
   } finally {
     saving.value = false

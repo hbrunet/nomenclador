@@ -6,7 +6,6 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
-import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import type { ConfiguracionNomencladorListItemDto, ValidacionConfiguracionResponse } from '../types/configuration'
 import { parseLocalDate, formatLocalDate } from '../utils/date'
@@ -150,6 +149,5 @@ function openCloneConfigDialog(source: ConfiguracionNomencladorListItemDto) {
       :rows-per-page-options="[10, 20, 50, 100]"
       @page="onPageChange"
     />
-    <Toast />
   </section>
 </template>
