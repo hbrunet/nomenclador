@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProgressSpinner from 'primevue/progressspinner'
 import Message from 'primevue/message'
-import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import ConfiguracionEditor from '../components/ConfiguracionEditor.vue'
 import { useConfiguration } from '../composables/useConfiguration'
@@ -120,6 +119,5 @@ watch(() => route.fullPath, loadScreen)
       @montos-saved="handleMontosSaved"
       @detail-updated="handleDetailUpdated"
     />
-    <Toast />
   </section>
 </template>

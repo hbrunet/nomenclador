@@ -10,11 +10,15 @@ import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 import ValorFijoTipoDialog from '../components/ValorFijoTipoDialog.vue'
 import ValorFijoDetailDialog from '../components/ValorFijoDetailDialog.vue'
 import { valoresFijosService } from '../services/valoresFijosService'
 import type { CatalogItem, ValorFijoCatalogItem } from '../types/configuration'
 
+const confirm = useConfirm()
+const toast = useToast()
 const activeTab = ref('valores')
 
 // ── Valores ─────────────────────────────────────────────────────────────────
@@ -54,6 +58,19 @@ async function handleDeleteValor(id: number) {
       e.response?.data?.message ??
       'El valor está siendo utilizado por una o más configuraciones y no puede eliminarse.'
   }
+}
+
+function confirmDeleteValor(valor: ValorFijoCatalogItem) {
+  confirm.require({
+    message: `¿Eliminar el valor fijo "${valor.descripcion}"?`,
+    header: 'Confirmar eliminación',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Eliminar',
+    acceptProps: { severity: 'danger' },
+    rejectLabel: 'Cancelar',
+    rejectProps: { severity: 'secondary', outlined: true },
+    accept: () => handleDeleteValor(valor.id),
+  })
 }
 
 function openCreateValor() {
@@ -104,9 +121,11 @@ async function handleTipoSave(dto: { descripcion: string }) {
     const updated = await valoresFijosService.updateTipo(editingTipoId, dto)
     const idx = tipos.value.findIndex((t) => t.id === editingTipoId)
     if (idx !== -1) tipos.value[idx] = updated
+    toast.add({ severity: 'success', summary: 'Tipo actualizado', detail: 'El tipo se guardó correctamente.', life: 2500 })
   } else {
     const created = await valoresFijosService.createTipo(dto)
     tipos.value = [...tipos.value, created].sort((a, b) => a.descripcion.localeCompare(b.descripcion))
+    toast.add({ severity: 'success', summary: 'Tipo creado', detail: 'El tipo se creó correctamente.', life: 2500 })
   }
 }
 
@@ -120,6 +139,19 @@ async function handleDeleteTipo(id: number) {
       e.response?.data?.message ??
       'El tipo está siendo utilizado por uno o más valores y no puede eliminarse.'
   }
+}
+
+function confirmDeleteTipo(tipo: CatalogItem) {
+  confirm.require({
+    message: `¿Eliminar el tipo "${tipo.descripcion}"?`,
+    header: 'Confirmar eliminación',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Eliminar',
+    acceptProps: { severity: 'danger' },
+    rejectLabel: 'Cancelar',
+    rejectProps: { severity: 'secondary', outlined: true },
+    accept: () => handleDeleteTipo(tipo.id),
+  })
 }
 
 onMounted(async () => {
@@ -203,7 +235,7 @@ onMounted(async () => {
                     severity="danger"
                     text
                     rounded
-                    @click="handleDeleteValor(data.id)"
+                    @click="confirmDeleteValor(data)"
                   />
                 </div>
               </template>
@@ -258,7 +290,7 @@ onMounted(async () => {
                     severity="danger"
                     text
                     rounded
-                    @click="handleDeleteTipo(data.id)"
+                    @click="confirmDeleteTipo(data)"
                   />
                 </div>
               </template>
