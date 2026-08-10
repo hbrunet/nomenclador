@@ -275,7 +275,7 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         {
             foreach (var valorFijoId in valorFijoIds)
             {
-                if (existentesSet.Contains((configuracionId, valorFijoId))) continue;
+                if (!existentesSet.Add((configuracionId, valorFijoId))) continue;
 
                 await session.SaveAsync(new ValorFijoConfiguradoEntity
                 {
