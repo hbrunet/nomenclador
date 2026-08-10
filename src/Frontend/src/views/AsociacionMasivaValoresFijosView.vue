@@ -126,15 +126,20 @@ async function selectAllFiltered() {
   loadingConfiguraciones.value = true
   try {
     // Tope de seguridad: no traer resultados ilimitados de un filtro demasiado amplio.
-    const capped = Math.min(pagination.total, 2000)
+    const cap = 2000
+    const capped = Math.min(pagination.total, cap)
     const result = await configurationService.list(buildParams(1, capped))
     const existingIds = new Set(selectedConfiguraciones.value.map((c) => c.id))
     const nuevos = result.items.filter((item) => !existingIds.has(item.id))
     selectedConfiguraciones.value = [...selectedConfiguraciones.value, ...nuevos]
+
+    const truncated = pagination.total > cap
     toast.add({
       severity: 'success',
       summary: 'Selección actualizada',
-      detail: `Se agregaron ${nuevos.length} configuraciones que cumplen el filtro actual.`,
+      detail: truncated
+        ? `Se agregaron ${nuevos.length} configuraciones (primeros ${cap} resultados; total ${pagination.total}).`
+        : `Se agregaron ${nuevos.length} configuraciones que cumplen el filtro actual.`,
       life: 2500,
     })
   } finally {
