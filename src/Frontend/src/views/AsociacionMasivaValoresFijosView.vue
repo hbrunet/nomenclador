@@ -254,7 +254,7 @@ onMounted(async () => {
     </div>
   </section>
 
-  <div class="flex gap-3 flex-wrap-mobile" style="align-items: flex-start">
+  <div class="flex gap-3 flex-wrap" style="align-items: flex-start">
     <!-- Izquierda: valores fijos -->
     <section class="panel p-4 flex flex-column gap-3" style="flex: 1; min-width: 380px">
       <div class="flex justify-content-between align-items-center">
