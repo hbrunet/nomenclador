@@ -152,10 +152,13 @@ public sealed class ConfiguracionNomencladorService(
 
     public async Task<AsociacionMasivaResultDto> AsociarValoresFijosMasivoAsync(AsociacionMasivaValoresFijosDto request)
     {
-        var creadas = await configuracionRepository.AsociarValoresFijosMasivoAsync(
-            request.ConfiguracionesIds, request.ValoresFijosIds);
+        var configuracionesIds = request.ConfiguracionesIds.Distinct().ToArray();
+        var valoresFijosIds = request.ValoresFijosIds.Distinct().ToArray();
 
-        var total = request.ConfiguracionesIds.Count * request.ValoresFijosIds.Count;
+        var creadas = await configuracionRepository.AsociarValoresFijosMasivoAsync(
+            configuracionesIds, valoresFijosIds);
+
+        var total = configuracionesIds.Length * valoresFijosIds.Length;
 
         return new AsociacionMasivaResultDto
         {
