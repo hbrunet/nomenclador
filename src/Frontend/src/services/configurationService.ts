@@ -1,12 +1,15 @@
 import axios from 'axios'
 import { formatLocalDate } from '../utils/date'
 import type {
+  AsociacionMasivaResultDto,
+  AsociacionMasivaValoresFijosDto,
   CatalogItem,
   CategoriaCatalogItem,
   CategoriaMontoUpdateItem,
   ClonarConfiguracionDto,
   ConfigurationFilters,
   ConceptoConfiguradoInputDto,
+  DesasociacionMasivaResultDto,
   ConfiguracionNomencladorCreateUpdateDto,
   ConfiguracionNomencladorDetailDto,
   ConfiguracionNomencladorListItemDto,
@@ -113,6 +116,22 @@ export const configurationService = {
   async removeValorFijo(id: number, valorFijoId: number) {
     const { data } = await apiClient.delete<ConfiguracionNomencladorDetailDto>(
       `/configuraciones-nomenclador/${id}/valor-fijo/${valorFijoId}`,
+    )
+    return data
+  },
+
+  async asociarValoresFijosMasivo(payload: AsociacionMasivaValoresFijosDto) {
+    const { data } = await apiClient.post<AsociacionMasivaResultDto>(
+      '/configuraciones-nomenclador/asociacion-masiva-valores-fijos',
+      payload,
+    )
+    return data
+  },
+
+  async desasociarValoresFijosMasivo(payload: AsociacionMasivaValoresFijosDto) {
+    const { data } = await apiClient.post<DesasociacionMasivaResultDto>(
+      '/configuraciones-nomenclador/desasociacion-masiva-valores-fijos',
+      payload,
     )
     return data
   },

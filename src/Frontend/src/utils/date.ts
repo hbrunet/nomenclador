@@ -17,3 +17,8 @@ export function formatLocalDate(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+
+export function formatPeriodo(fecha: string): string {
+  const date = parseLocalDate(fecha)
+  return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`
+}

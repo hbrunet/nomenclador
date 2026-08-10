@@ -253,6 +253,68 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         await tx.CommitAsync();
     }
 
+    public async Task<int> AsociarValoresFijosMasivoAsync(
+        IReadOnlyCollection<int> configuracionIds,
+        IReadOnlyCollection<int> valorFijoIds)
+    {
+        if (configuracionIds.Count == 0 || valorFijoIds.Count == 0) return 0;
+
+        using var tx = session.BeginTransaction();
+
+        var existentes = await session.Query<ValorFijoConfiguradoEntity>()
+            .Where(v => configuracionIds.Contains(v.ConfiguracionNomencladorId) && valorFijoIds.Contains(v.ValorFijoId))
+            .Select(v => new { v.ConfiguracionNomencladorId, v.ValorFijoId })
+            .ToListAsync();
+
+        var existentesSet = existentes
+            .Select(e => (e.ConfiguracionNomencladorId, e.ValorFijoId))
+            .ToHashSet();
+
+        var creadas = 0;
+        foreach (var configuracionId in configuracionIds)
+        {
+            foreach (var valorFijoId in valorFijoIds)
+            {
+                if (!existentesSet.Add((configuracionId, valorFijoId))) continue;
+
+                await session.SaveAsync(new ValorFijoConfiguradoEntity
+                {
+                    ConfiguracionNomencladorId = configuracionId,
+                    ValorFijoId = valorFijoId,
+                });
+                creadas++;
+            }
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return creadas;
+    }
+
+    public async Task<int> DesasociarValoresFijosMasivoAsync(
+        IReadOnlyCollection<int> configuracionIds,
+        IReadOnlyCollection<int> valorFijoIds)
+    {
+        if (configuracionIds.Count == 0 || valorFijoIds.Count == 0) return 0;
+
+        using var tx = session.BeginTransaction();
+
+        var existentes = await session.Query<ValorFijoConfiguradoEntity>()
+            .Where(v => configuracionIds.Contains(v.ConfiguracionNomencladorId) && valorFijoIds.Contains(v.ValorFijoId))
+            .ToListAsync();
+
+        foreach (var entity in existentes)
+        {
+            await session.DeleteAsync(entity);
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return existentes.Count;
+    }
+
     public async Task AddValorPorCategoriaAsync(int configuracionId, Nomenclador.Api.DTOs.ValorCategoriaConfiguradoInputDto request)
     {
         using var tx = session.BeginTransaction();

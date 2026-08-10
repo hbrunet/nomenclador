@@ -8,14 +8,9 @@ import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
 import { useToast } from 'primevue/usetoast';
 import type { ConfiguracionNomencladorListItemDto, ValidacionConfiguracionResponse } from '../types/configuration'
-import { parseLocalDate, formatLocalDate } from '../utils/date'
+import { formatLocalDate, formatPeriodo } from '../utils/date'
 import ClonarConfiguracionDialog from '../components/ClonarConfiguracionDialog.vue'
 import { configurationService } from '../services/configurationService'
-
-function formatearFecha(fecha: string): string {
-  const date = parseLocalDate(fecha)
-  return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
-}
 
 const toast = useToast()
 
@@ -110,7 +105,7 @@ function openCloneConfigDialog(source: ConfiguracionNomencladorListItemDto) {
 
       <Column header="Vigencia">
         <template #body="{ data }">
-          {{ formatearFecha(data.fechaInicio) }} — {{ data.fechaFin ? formatearFecha(data.fechaFin) : 'Vigente' }}
+          {{ formatPeriodo(data.fechaInicio) }} — {{ data.fechaFin ? formatPeriodo(data.fechaFin) : 'Vigente' }}
         </template>
       </Column>
 

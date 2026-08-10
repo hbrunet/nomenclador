@@ -72,6 +72,18 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         return Ok(await configuracionService.RemoveValorFijoAsync(id, valorFijoId));
     }
 
+    [HttpPost("asociacion-masiva-valores-fijos")]
+    public async Task<IActionResult> AsociarValoresFijosMasivo([FromBody] AsociacionMasivaValoresFijosDto request)
+    {
+        return Ok(await configuracionService.AsociarValoresFijosMasivoAsync(request));
+    }
+
+    [HttpPost("desasociacion-masiva-valores-fijos")]
+    public async Task<IActionResult> DesasociarValoresFijosMasivo([FromBody] AsociacionMasivaValoresFijosDto request)
+    {
+        return Ok(await configuracionService.DesasociarValoresFijosMasivoAsync(request));
+    }
+
     [HttpPost("{id:int}/valor-categoria")]
     public async Task<IActionResult> AgregarValorPorCategoria(int id, [FromBody] ValorCategoriaConfiguradoInputDto request)
     {
