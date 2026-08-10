@@ -62,26 +62,6 @@ a {
   flex-wrap: wrap;
 }
 
-.app-nav a {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.45rem 0.9rem;
-  border-radius: 0.5rem;
-  color: #94a3b8;
-  font-size: 0.875rem;
-  transition: background 0.15s, color 0.15s;
-}
-
-.app-nav a:hover {
-  background: rgba(148, 163, 184, 0.15);
-  color: #f8fafc;
-}
-
-.app-nav a.router-link-active {
-  background: #2563eb;
-  color: #fff;
-}
-
 .app-content {
   padding: 1.5rem 2rem;
   display: flex;

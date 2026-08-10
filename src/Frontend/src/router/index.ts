@@ -6,6 +6,7 @@ import EscalaDetailView from '../views/EscalaDetailView.vue'
 import ValoresCategoriaView from '../views/ValoresCategoriaView.vue'
 import ValorCategoriaDetailView from '../views/ValorCategoriaDetailView.vue'
 import ValoresFijosView from '../views/ValoresFijosView.vue'
+import AsociacionMasivaValoresFijosView from '../views/AsociacionMasivaValoresFijosView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -19,7 +20,13 @@ const router = createRouter({
     { path: '/valores-categoria', name: 'valores-categoria', component: ValoresCategoriaView },
     { path: '/valores-categoria/nuevo', name: 'valor-categoria-nuevo', component: ValorCategoriaDetailView },
     { path: '/valores-categoria/:id', name: 'valor-categoria-detalle', component: ValorCategoriaDetailView },
-    { path: '/valores-fijos', name: 'valores-fijos', component: ValoresFijosView }
+    { path: '/valores-fijos', name: 'valores-fijos', component: ValoresFijosView },
+    { path: '/asociacion-masiva', redirect: '/asociacion-masiva/valores-fijos' },
+    {
+      path: '/asociacion-masiva/valores-fijos',
+      name: 'asociacion-masiva-valores-fijos',
+      component: AsociacionMasivaValoresFijosView,
+    },
   ],
 })
 

@@ -217,6 +217,21 @@ export interface ConfigurationFilters {
   pageSize?: number
 }
 
+export interface AsociacionMasivaValoresFijosDto {
+  valoresFijosIds: number[]
+  configuracionesIds: number[]
+}
+
+export interface AsociacionMasivaResultDto {
+  asociacionesCreadas: number
+  asociacionesExistentes: number
+}
+
+export interface DesasociacionMasivaResultDto {
+  asociacionesEliminadas: number
+  asociacionesInexistentes: number
+}
+
 export interface CatalogsState {
   nomencladores: CatalogItem[]
   escalas: CatalogItem[]
