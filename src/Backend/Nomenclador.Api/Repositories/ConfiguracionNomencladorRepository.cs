@@ -7,6 +7,8 @@ namespace Nomenclador.Api.Repositories;
 
 public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession session)
 {
+    private const int OracleInClauseChunkSize = 900;
+
     public async Task<(IReadOnlyCollection<ConfiguracionNomencladorEntity> Items, int Total)> GetAllAsync(
         int? nomencladorId,
         int? escalaSalarialId,
@@ -413,6 +415,88 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         return firstStart <= normalizedSecondEnd && secondStart <= normalizedFirstEnd;
     }
 
+    public async Task<int> AsociarValoresCategoriasMasivoAsync(
+        IReadOnlyCollection<int> configuracionIds,
+        IReadOnlyCollection<int> valoresCategoriasIds)
+    {
+        if (configuracionIds.Count == 0 || valoresCategoriasIds.Count == 0) return 0;
 
+        using var tx = session.BeginTransaction();
+
+        var existentesSet = new HashSet<(int ConfiguracionNomencladorId, int ValorCategoriaId)>();
+        foreach (var configuracionesChunk in GetChunks(configuracionIds))
+        {
+            foreach (var valoresCategoriasChunk in GetChunks(valoresCategoriasIds))
+            {
+                var existentesChunk = await session.Query<ValorCategoriaConfiguradoEntity>()
+                    .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasChunk.Contains(v.ValorCategoriaId))
+                    .Select(v => new { v.ConfiguracionNomencladorId, v.ValorCategoriaId })
+                    .ToListAsync();
+
+                foreach (var existente in existentesChunk)
+                {
+                    existentesSet.Add((existente.ConfiguracionNomencladorId, existente.ValorCategoriaId));
+                }
+            }
+        }
+
+        var creadas = 0;
+        foreach (var configuracionId in configuracionIds)
+        {
+            foreach (var valorCategoriaId in valoresCategoriasIds)
+            {
+                if (!existentesSet.Add((configuracionId, valorCategoriaId))) continue;
+
+                await session.SaveAsync(new ValorCategoriaConfiguradoEntity
+                {
+                    ConfiguracionNomencladorId = configuracionId,
+                    ValorCategoriaId = valorCategoriaId,
+                });
+                creadas++;
+            }
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return creadas;
+    }
+
+    public async Task<int> DesasociarValoresCategoriasMasivoAsync(IReadOnlyCollection<int> configuracionesIds, IReadOnlyCollection<int> valoresCategoriasIds)
+    {
+        if (configuracionesIds.Count == 0 || valoresCategoriasIds.Count == 0) return 0;
+
+        using var tx = session.BeginTransaction();
+
+        var eliminadas = 0;
+        foreach (var configuracionesChunk in GetChunks(configuracionesIds))
+        {
+            foreach (var valoresCategoriasChunk in GetChunks(valoresCategoriasIds))
+            {
+                var existentesChunk = await session.Query<ValorCategoriaConfiguradoEntity>()
+                    .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasChunk.Contains(v.ValorCategoriaId))
+                    .ToListAsync();
+
+                foreach (var entity in existentesChunk)
+                {
+                    await session.DeleteAsync(entity);
+                    eliminadas++;
+                }
+            }
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return eliminadas;
+    }
+
+    private static IEnumerable<int[]> GetChunks(IReadOnlyCollection<int> ids)
+    {
+        var distinctIds = ids.Distinct().ToArray();
+        for (var i = 0; i < distinctIds.Length; i += OracleInClauseChunkSize)
+        {
+            yield return distinctIds.Skip(i).Take(OracleInClauseChunkSize).ToArray();
+        }
+    }
 }
-

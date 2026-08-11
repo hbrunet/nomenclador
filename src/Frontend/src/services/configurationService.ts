@@ -2,6 +2,7 @@ import axios from 'axios'
 import { formatLocalDate } from '../utils/date'
 import type {
   AsociacionMasivaResultDto,
+  AsociacionMasivaValoresCategoriasDto,
   AsociacionMasivaValoresFijosDto,
   CatalogItem,
   CategoriaCatalogItem,
@@ -212,5 +213,21 @@ export const configurationService = {
       `/catalogs/valor-categoria-configurado-items/${valorCategoriaId}`,
       items,
     )
+  },
+
+  async asociarValoresCategoriasMasivo(payload: AsociacionMasivaValoresCategoriasDto) {
+    const { data } = await apiClient.post<AsociacionMasivaResultDto>(
+      '/configuraciones-nomenclador/asociacion-masiva-valores-categorias',
+      payload,
+    )
+    return data
+  },
+
+  async desasociarValoresCategoriasMasivo(payload: AsociacionMasivaValoresCategoriasDto) {
+    const { data } = await apiClient.post<DesasociacionMasivaResultDto>(
+      '/configuraciones-nomenclador/desasociacion-masiva-valores-categorias',
+      payload,
+    )
+    return data
   },
 }
