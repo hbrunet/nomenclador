@@ -7,6 +7,8 @@ namespace Nomenclador.Api.Repositories;
 
 public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession session)
 {
+    private const int OracleInClauseChunkSize = 900;
+
     public async Task<(IReadOnlyCollection<ConfiguracionNomencladorEntity> Items, int Total)> GetAllAsync(
         int? nomencladorId,
         int? escalaSalarialId,
@@ -421,14 +423,22 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         using var tx = session.BeginTransaction();
 
-        var existentes = await session.Query<ValorCategoriaConfiguradoEntity>()
-            .Where(v => configuracionIds.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasIds.Contains(v.ValorCategoriaId))
-            .Select(v => new { v.ConfiguracionNomencladorId, v.ValorCategoriaId })
-            .ToListAsync();
+        var existentesSet = new HashSet<(int ConfiguracionNomencladorId, int ValorCategoriaId)>();
+        foreach (var configuracionesChunk in GetChunks(configuracionIds))
+        {
+            foreach (var valoresCategoriasChunk in GetChunks(valoresCategoriasIds))
+            {
+                var existentesChunk = await session.Query<ValorCategoriaConfiguradoEntity>()
+                    .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasChunk.Contains(v.ValorCategoriaId))
+                    .Select(v => new { v.ConfiguracionNomencladorId, v.ValorCategoriaId })
+                    .ToListAsync();
 
-        var existentesSet = existentes
-            .Select(e => (e.ConfiguracionNomencladorId, e.ValorCategoriaId))
-            .ToHashSet();
+                foreach (var existente in existentesChunk)
+                {
+                    existentesSet.Add((existente.ConfiguracionNomencladorId, existente.ValorCategoriaId));
+                }
+            }
+        }
 
         var creadas = 0;
         foreach (var configuracionId in configuracionIds)
@@ -458,19 +468,35 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         using var tx = session.BeginTransaction();
 
-        var existentes = await session.Query<ValorCategoriaConfiguradoEntity>()
-            .Where(v => configuracionesIds.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasIds.Contains(v.ValorCategoriaId))
-            .ToListAsync();
-
-        foreach (var entity in existentes)
+        var eliminadas = 0;
+        foreach (var configuracionesChunk in GetChunks(configuracionesIds))
         {
-            await session.DeleteAsync(entity);
+            foreach (var valoresCategoriasChunk in GetChunks(valoresCategoriasIds))
+            {
+                var existentesChunk = await session.Query<ValorCategoriaConfiguradoEntity>()
+                    .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasChunk.Contains(v.ValorCategoriaId))
+                    .ToListAsync();
+
+                foreach (var entity in existentesChunk)
+                {
+                    await session.DeleteAsync(entity);
+                    eliminadas++;
+                }
+            }
         }
 
         await session.FlushAsync();
         await tx.CommitAsync();
 
-        return existentes.Count;
+        return eliminadas;
+    }
+
+    private static IEnumerable<int[]> GetChunks(IReadOnlyCollection<int> ids)
+    {
+        var distinctIds = ids.Distinct().ToArray();
+        for (var i = 0; i < distinctIds.Length; i += OracleInClauseChunkSize)
+        {
+            yield return distinctIds.Skip(i).Take(OracleInClauseChunkSize).ToArray();
+        }
     }
 }
-
