@@ -413,6 +413,64 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         return firstStart <= normalizedSecondEnd && secondStart <= normalizedFirstEnd;
     }
 
+    public async Task<int> AsociarValoresCategoriasMasivoAsync(
+        IReadOnlyCollection<int> configuracionIds,
+        IReadOnlyCollection<int> valoresCategoriasIds)
+    {
+        if (configuracionIds.Count == 0 || valoresCategoriasIds.Count == 0) return 0;
 
+        using var tx = session.BeginTransaction();
+
+        var existentes = await session.Query<ValorCategoriaConfiguradoEntity>()
+            .Where(v => configuracionIds.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasIds.Contains(v.ValorCategoriaId))
+            .Select(v => new { v.ConfiguracionNomencladorId, v.ValorCategoriaId })
+            .ToListAsync();
+
+        var existentesSet = existentes
+            .Select(e => (e.ConfiguracionNomencladorId, e.ValorCategoriaId))
+            .ToHashSet();
+
+        var creadas = 0;
+        foreach (var configuracionId in configuracionIds)
+        {
+            foreach (var valorCategoriaId in valoresCategoriasIds)
+            {
+                if (!existentesSet.Add((configuracionId, valorCategoriaId))) continue;
+
+                await session.SaveAsync(new ValorCategoriaConfiguradoEntity
+                {
+                    ConfiguracionNomencladorId = configuracionId,
+                    ValorCategoriaId = valorCategoriaId,
+                });
+                creadas++;
+            }
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return creadas;
+    }
+
+    public async Task<int> DesasociarValoresCategoriasMasivoAsync(IReadOnlyCollection<int> configuracionesIds, IReadOnlyCollection<int> valoresCategoriasIds)
+    {
+        if (configuracionesIds.Count == 0 || valoresCategoriasIds.Count == 0) return 0;
+
+        using var tx = session.BeginTransaction();
+
+        var existentes = await session.Query<ValorCategoriaConfiguradoEntity>()
+            .Where(v => configuracionesIds.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasIds.Contains(v.ValorCategoriaId))
+            .ToListAsync();
+
+        foreach (var entity in existentes)
+        {
+            await session.DeleteAsync(entity);
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return existentes.Count;
+    }
 }
 

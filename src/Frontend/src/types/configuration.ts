@@ -222,6 +222,11 @@ export interface AsociacionMasivaValoresFijosDto {
   configuracionesIds: number[]
 }
 
+export interface AsociacionMasivaValoresCategoriasDto {
+  valoresCategoriasIds: number[]
+  configuracionesIds: number[]
+}
+
 export interface AsociacionMasivaResultDto {
   asociacionesCreadas: number
   asociacionesExistentes: number

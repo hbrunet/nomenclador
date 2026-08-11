@@ -103,4 +103,15 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         return CreatedAtAction(nameof(GetConfiguracion), new { id = created.Id }, created);
     }
 
+    [HttpPost("asociacion-masiva-valores-categorias")]
+    public async Task<IActionResult> AsociarValoresCategoriasMasivo([FromBody] AsociacionMasivaValoresCategoriasDto request)
+    {
+        return Ok(await configuracionService.AsociarValoresCategoriasMasivoAsync(request));
+    }
+
+    [HttpPost("desasociacion-masiva-valores-categorias")]
+    public async Task<IActionResult> DesasociarValoresCategoriasMasivo([FromBody] AsociacionMasivaValoresCategoriasDto request)
+    {
+        return Ok(await configuracionService.DesasociarValoresCategoriasMasivoAsync(request));
+    }
 }

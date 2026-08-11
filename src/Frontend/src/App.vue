@@ -13,7 +13,10 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: 'Asociación masiva',
     // Agrupa las variantes de asociación masiva; agregar futuras opciones acá.
-    items: [{ label: 'Valores fijos', route: '/asociacion-masiva/valores-fijos' }],
+    items: [
+      { label: 'Valores fijos', route: '/asociacion-masiva/valores-fijos' },
+      { label: 'Valores por categoría', route: '/asociacion-masiva/valores-categoria' },
+    ],
   },
 ])
 </script>

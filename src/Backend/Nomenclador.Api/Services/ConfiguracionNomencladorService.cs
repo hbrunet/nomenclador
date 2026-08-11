@@ -205,4 +205,35 @@ public sealed class ConfiguracionNomencladorService(
 
         return await BuildDetailAsync(updatedEntity);
     }
+
+    public async Task<AsociacionMasivaResultDto> AsociarValoresCategoriasMasivoAsync(AsociacionMasivaValoresCategoriasDto request)
+    {
+        var configuracionesIds = request.ConfiguracionesIds.Distinct().ToArray();
+        var valoresCategoriasIds = request.ValoresCategoriasIds.Distinct().ToArray();
+
+        var creadas = await configuracionRepository.AsociarValoresCategoriasMasivoAsync(
+            configuracionesIds, valoresCategoriasIds);
+
+        var total = configuracionesIds.Length * valoresCategoriasIds.Length;
+
+        return new AsociacionMasivaResultDto
+        {
+            AsociacionesCreadas = creadas,
+            AsociacionesExistentes = total - creadas,
+        };
+    }
+
+    public async Task<DesasociacionMasivaResultDto> DesasociarValoresCategoriasMasivoAsync(AsociacionMasivaValoresCategoriasDto request)
+    {
+        var eliminadas = await configuracionRepository.DesasociarValoresCategoriasMasivoAsync(
+            request.ConfiguracionesIds, request.ValoresCategoriasIds);
+
+        var total = request.ConfiguracionesIds.Count * request.ValoresCategoriasIds.Count;
+
+        return new DesasociacionMasivaResultDto
+        {
+            AsociacionesEliminadas = eliminadas,
+            AsociacionesInexistentes = total - eliminadas,
+        };
+    }
 }
