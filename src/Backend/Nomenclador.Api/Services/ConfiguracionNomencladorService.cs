@@ -225,10 +225,13 @@ public sealed class ConfiguracionNomencladorService(
 
     public async Task<DesasociacionMasivaResultDto> DesasociarValoresCategoriasMasivoAsync(AsociacionMasivaValoresCategoriasDto request)
     {
-        var eliminadas = await configuracionRepository.DesasociarValoresCategoriasMasivoAsync(
-            request.ConfiguracionesIds, request.ValoresCategoriasIds);
+        var configuracionesIds = request.ConfiguracionesIds.Distinct().ToArray();
+        var valoresCategoriasIds = request.ValoresCategoriasIds.Distinct().ToArray();
 
-        var total = request.ConfiguracionesIds.Count * request.ValoresCategoriasIds.Count;
+        var eliminadas = await configuracionRepository.DesasociarValoresCategoriasMasivoAsync(
+            configuracionesIds, valoresCategoriasIds);
+
+        var total = configuracionesIds.Length * valoresCategoriasIds.Length;
 
         return new DesasociacionMasivaResultDto
         {
