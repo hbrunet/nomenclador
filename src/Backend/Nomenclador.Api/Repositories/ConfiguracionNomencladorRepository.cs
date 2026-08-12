@@ -506,15 +506,22 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         using var tx = session.BeginTransaction();
 
-        var existentes = await session.Query<ConceptoConfiguradoEntity>()
-            .Where(v => configuracionesIds.Contains(v.ConfiguracionNomencladorId) && conceptosIds.Contains(v.ConceptoId))
-            .Select(v => new { v.ConfiguracionNomencladorId, v.ConceptoId })
-            .ToListAsync();
+        var existentesSet = new HashSet<(int ConfiguracionNomencladorId, int ConceptoId)>();
+        foreach (var configuracionesChunk in GetChunks(configuracionesIds))
+        {
+            foreach (var conceptosChunk in GetChunks(conceptosIds))
+            {
+                var existentesChunk = await session.Query<ConceptoConfiguradoEntity>()
+                    .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId) && conceptosChunk.Contains(v.ConceptoId))
+                    .Select(v => new { v.ConfiguracionNomencladorId, v.ConceptoId })
+                    .ToListAsync();
 
-        var existentesSet = existentes
-            .Select(e => (e.ConfiguracionNomencladorId, e.ConceptoId))
-            .ToHashSet();
-
+                foreach (var e in existentesChunk)
+                {
+                    existentesSet.Add((e.ConfiguracionNomencladorId, e.ConceptoId));
+                }
+            }
+        }
         var creadas = 0;
         foreach (var configuracionId in configuracionesIds)
         {
