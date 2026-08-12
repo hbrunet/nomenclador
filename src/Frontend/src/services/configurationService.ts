@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { formatLocalDate } from '../utils/date'
 import type {
+  AsociacionMasivaConceptosDto,
   AsociacionMasivaResultDto,
   AsociacionMasivaValoresCategoriasDto,
   AsociacionMasivaValoresFijosDto,
@@ -226,6 +227,22 @@ export const configurationService = {
   async desasociarValoresCategoriasMasivo(payload: AsociacionMasivaValoresCategoriasDto) {
     const { data } = await apiClient.post<DesasociacionMasivaResultDto>(
       '/configuraciones-nomenclador/desasociacion-masiva-valores-categorias',
+      payload,
+    )
+    return data
+  },
+
+  async asociarConceptosMasivo(payload: AsociacionMasivaConceptosDto) {
+    const { data } = await apiClient.post<AsociacionMasivaResultDto>(
+      '/configuraciones-nomenclador/asociacion-masiva-conceptos',
+      payload,
+    )
+    return data
+  },
+
+  async desasociarConceptosMasivo(payload: AsociacionMasivaConceptosDto) {
+    const { data } = await apiClient.post<DesasociacionMasivaResultDto>(
+      '/configuraciones-nomenclador/desasociacion-masiva-conceptos',
       payload,
     )
     return data

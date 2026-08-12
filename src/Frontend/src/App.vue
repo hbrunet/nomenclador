@@ -16,6 +16,7 @@ const menuItems = computed<MenuItem[]>(() => [
     items: [
       { label: 'Valores fijos', route: '/asociacion-masiva/valores-fijos' },
       { label: 'Valores por categoría', route: '/asociacion-masiva/valores-categoria' },
+      { label: 'Conceptos', route: '/asociacion-masiva/conceptos' },
     ],
   },
 ])
