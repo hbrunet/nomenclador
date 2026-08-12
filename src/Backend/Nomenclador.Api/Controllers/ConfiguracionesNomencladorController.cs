@@ -114,4 +114,16 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
     {
         return Ok(await configuracionService.DesasociarValoresCategoriasMasivoAsync(request));
     }
+
+    [HttpPost("asociacion-masiva-conceptos")]
+    public async Task<IActionResult> AsociarConceptosMasivo([FromBody] AsociacionMasivaConceptosDto request)
+    {
+        return Ok(await configuracionService.AsociarConceptosMasivoAsync(request));
+    }
+
+    [HttpPost("desasociacion-masiva-conceptos")]
+    public async Task<IActionResult> DesasociarConceptosMasivo([FromBody] AsociacionMasivaConceptosDto request)
+    {
+        return Ok(await configuracionService.DesasociarConceptosMasivoAsync(request));
+    }
 }

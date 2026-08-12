@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Button from 'primevue/button'
 import Paginator from 'primevue/paginator'
@@ -11,11 +10,14 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
+import { conceptosService } from '../services/conceptosService'
 import { formatPeriodo } from '../utils/date'
-import type { ConfiguracionNomencladorListItemDto, ValorCategoriaCatalogItem } from '../types/configuration'
+import type { ConceptoCatalogItem, ConfiguracionNomencladorListItemDto } from '../types/configuration'
 
 const toast = useToast()
 const confirm = useConfirm()
+
+const DEBOUNCE_MS = 300
 
 function estadoSeverity(estado: string) {
   if (estado === 'Activa') return 'success'
@@ -24,41 +26,56 @@ function estadoSeverity(estado: string) {
   return 'secondary'
 }
 
-// ── Valores por categoría (izquierda) ────────────────────────────────────────
-const valoresCategorias = ref<ValorCategoriaCatalogItem[]>([])
-const loadingValores = ref(false)
-const tipoFilter = ref<string | null>(null)
-const valorQuery = ref('')
-const selectedValores = ref<ValorCategoriaCatalogItem[]>([])
+// ── Conceptos (izquierda) ─────────────────────────────────────────────────────
+const conceptos = ref<ConceptoCatalogItem[]>([])
+const loadingConceptos = ref(false)
+const conceptoQuery = ref('')
+const selectedConceptos = ref<ConceptoCatalogItem[]>([])
 
-const tiposDisponibles = computed<string[]>(() => {
-  const set = new Set<string>()
-  for (const v of valoresCategorias.value) set.add(v.tipo)
-  return [...set].sort((a, b) => a.localeCompare(b))
-})
+const conceptosPagination = reactive({ total: 0, page: 1, pageSize: 100 })
+const conceptosPaginatorFirst = computed(
+  () => (conceptosPagination.page - 1) * conceptosPagination.pageSize,
+)
 
-const valoresFiltrados = computed(() => {
-  const q = valorQuery.value.toLowerCase().trim()
-  return valoresCategorias.value
-    .filter((v) => !tipoFilter.value || v.tipo === tipoFilter.value)
-    .filter((v) => !q || v.descripcion.toLowerCase().includes(q) || v.tipo.toLowerCase().includes(q))
-})
-
-async function loadValoresCategorias() {
-  loadingValores.value = true
+async function loadConceptos(page = 1) {
+  loadingConceptos.value = true
   try {
-    valoresCategorias.value = await configurationService.getValoresCategorias()
+    const result = await conceptosService.listPaged(
+      conceptoQuery.value.trim(), page, conceptosPagination.pageSize,
+    )
+    conceptos.value = result.items
+    conceptosPagination.total = result.total
+    conceptosPagination.page = result.page
+    conceptosPagination.pageSize = result.pageSize
   } finally {
-    loadingValores.value = false
+    loadingConceptos.value = false
   }
 }
 
-function clearValoresSelection() {
-  selectedValores.value = []
+function onConceptosPageChange(event: { page: number; rows: number }) {
+  conceptosPagination.pageSize = event.rows
+  loadConceptos(event.page + 1)
 }
 
-function handleValoresSelectionChange(newSelection: ValorCategoriaCatalogItem[]) {
-  selectedValores.value = newSelection
+// Búsqueda server-side con debounce: evita traer todo el catálogo de conceptos
+// al cliente (puede ser muy grande) y reinicia siempre a la primera página.
+let conceptoQueryDebounce: ReturnType<typeof setTimeout> | undefined
+watch(conceptoQuery, () => {
+  if (conceptoQueryDebounce) clearTimeout(conceptoQueryDebounce)
+  conceptoQueryDebounce = setTimeout(() => {
+    loadConceptos(1)
+  }, DEBOUNCE_MS)
+})
+onUnmounted(() => {
+  if (conceptoQueryDebounce) clearTimeout(conceptoQueryDebounce)
+})
+
+function clearConceptosSelection() {
+  selectedConceptos.value = []
+}
+
+function handleConceptosSelectionChange(newSelection: ConceptoCatalogItem[]) {
+  selectedConceptos.value = newSelection
 }
 
 // ── Configuraciones (derecha) ─────────────────────────────────────────────────
@@ -135,15 +152,15 @@ function clearConfigSelection() {
 
 // ── Asociación masiva ─────────────────────────────────────────────────────────
 const submitting = ref(false)
-const totalAsociaciones = computed(() => selectedValores.value.length * selectedConfiguraciones.value.length)
+const totalAsociaciones = computed(() => selectedConceptos.value.length * selectedConfiguraciones.value.length)
 
 async function handleAsociar() {
-  if (selectedValores.value.length === 0 || selectedConfiguraciones.value.length === 0) return
+  if (selectedConceptos.value.length === 0 || selectedConfiguraciones.value.length === 0) return
 
   submitting.value = true
   try {
-    const result = await configurationService.asociarValoresCategoriasMasivo({
-      valoresCategoriasIds: selectedValores.value.map((v) => v.id),
+    const result = await configurationService.asociarConceptosMasivo({
+      conceptosIds: selectedConceptos.value.map((c) => c.id),
       configuracionesIds: selectedConfiguraciones.value.map((c) => c.id),
     })
     toast.add({
@@ -152,13 +169,13 @@ async function handleAsociar() {
       detail: `Se crearon ${result.asociacionesCreadas} asociaciones nuevas. ${result.asociacionesExistentes} ya existían y no se duplicaron.`,
       life: 6000,
     })
-    clearValoresSelection()
+    clearConceptosSelection()
     clearConfigSelection()
   } catch (e: any) {
     toast.add({
       severity: 'error',
       summary: 'Error al asociar',
-      detail: e.response?.data?.mensaje ?? 'Ocurrió un error al asociar los valores por categoría seleccionados.',
+      detail: e.response?.data?.mensaje ?? 'Ocurrió un error al asociar los conceptos seleccionados.',
       life: 5000,
     })
   } finally {
@@ -171,7 +188,7 @@ const desasociando = ref(false)
 function confirmDesasociar() {
   if (totalAsociaciones.value === 0) return
   confirm.require({
-    message: `¿Desasociar ${selectedValores.value.length} valor(es) por categoría de ${selectedConfiguraciones.value.length} configuración(es)? Esta acción no se puede deshacer.`,
+    message: `¿Desasociar ${selectedConceptos.value.length} concepto(s) de ${selectedConfiguraciones.value.length} configuración(es)? Esta acción no se puede deshacer.`,
     header: 'Confirmar desasociación masiva',
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Desasociar',
@@ -183,12 +200,12 @@ function confirmDesasociar() {
 }
 
 async function handleDesasociar() {
-  if (selectedValores.value.length === 0 || selectedConfiguraciones.value.length === 0) return
+  if (selectedConceptos.value.length === 0 || selectedConfiguraciones.value.length === 0) return
 
   desasociando.value = true
   try {
-    const result = await configurationService.desasociarValoresCategoriasMasivo({
-      valoresCategoriasIds: selectedValores.value.map((v) => v.id),
+    const result = await configurationService.desasociarConceptosMasivo({
+      conceptosIds: selectedConceptos.value.map((c) => c.id),
       configuracionesIds: selectedConfiguraciones.value.map((c) => c.id),
     })
     toast.add({
@@ -197,13 +214,13 @@ async function handleDesasociar() {
       detail: `Se eliminaron ${result.asociacionesEliminadas} asociaciones. ${result.asociacionesInexistentes} no existían.`,
       life: 6000,
     })
-    clearValoresSelection()
+    clearConceptosSelection()
     clearConfigSelection()
   } catch (e: any) {
     toast.add({
       severity: 'error',
       summary: 'Error al desasociar',
-      detail: e.response?.data?.mensaje ?? 'Ocurrió un error al desasociar los valores por categoría seleccionados.',
+      detail: e.response?.data?.mensaje ?? 'Ocurrió un error al desasociar los conceptos seleccionados.',
       life: 5000,
     })
   } finally {
@@ -213,7 +230,7 @@ async function handleDesasociar() {
 
 onMounted(async () => {
   await Promise.all([
-    loadValoresCategorias()
+    loadConceptos()
   ])
   await loadConfiguraciones()
 })
@@ -222,9 +239,9 @@ onMounted(async () => {
 <template>
  <div>
   <section class="panel p-4 mt-3 flex justify-content-between align-items-center flex-wrap gap-3">
-    <h2 class="text-xl mt-0 mb-0 font-semibold">Asociación masiva de valores por categoría</h2>
+    <h2 class="text-xl mt-0 mb-0 font-semibold">Asociación masiva de conceptos</h2>
     <p class="m-0">
-      <strong>{{ selectedValores.length }}</strong> valor(es) por categoría ×
+      <strong>{{ selectedConceptos.length }}</strong> concepto(s) ×
       <strong>{{ selectedConfiguraciones.length }}</strong> configuración(es) =
       <strong>{{ totalAsociaciones }}</strong> combinación(es) seleccionada(s).
     </p>
@@ -237,38 +254,40 @@ onMounted(async () => {
   </section>
 
   <div class="flex gap-3 flex-wrap" style="align-items: flex-start">
-    <!-- Izquierda: valores por categoría -->
+    <!-- Izquierda: conceptos -->
     <section class="panel p-4 flex flex-column gap-3" style="flex: 1; min-width: 380px">
       <div class="flex justify-content-between align-items-center">
-        <h3 class="text-lg m-0 font-semibold">Valores por categoría</h3>
-        <Tag :value="`${selectedValores.length} seleccionados`" severity="info" />
+        <h3 class="text-lg m-0 font-semibold">Conceptos</h3>
+        <Tag :value="`${selectedConceptos.length} seleccionados`" severity="info" />
       </div>
 
-      <div class="flex gap-2 flex-wrap">
-        <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
-          <label class="field-label">Tipo</label>
-          <Select v-model="tipoFilter" :options="tiposDisponibles" placeholder="Todos" show-clear filter
-            filter-placeholder="Buscar tipo..." class="w-full" />
-        </div>
-        <div class="flex flex-column gap-1" style="flex: 2; min-width: 200px">
-          <label class="field-label">Buscar</label>
-          <InputText v-model="valorQuery" placeholder="Buscar por descripción..." class="w-full" />
-        </div>
+      <div class="flex flex-column gap-1">
+        <label class="field-label">Buscar</label>
+        <InputText v-model="conceptoQuery" placeholder="Código, código/subcódigo (25/100) o d:descripción..."
+          class="w-full" />
+        <span class="muted text-sm">
+          Por defecto busca por código. Usá "código/subcódigo" para buscar por ambos (ej. 25/100),
+          o el prefijo "d:" para buscar por descripción (ej. d:decreto).
+        </span>
       </div>
 
-      <Button v-if="selectedValores.length" label="Limpiar selección" icon="pi pi-times" severity="secondary" text
-        size="small" class="align-self-start" @click="clearValoresSelection" />
+      <Button v-if="selectedConceptos.length" label="Limpiar selección" icon="pi pi-times" severity="secondary" text
+        size="small" class="align-self-start" @click="clearConceptosSelection" />
 
-      <DataTable :selection="selectedValores" @update:selection="handleValoresSelectionChange" :value="valoresFiltrados"
-        :loading="loadingValores" data-key="id" striped-rows sort-field="tipo" :sort-order="1" scrollable
-        scroll-height="520px" :virtual-scroller-options="{ itemSize: 46 }">
+      <DataTable :selection="selectedConceptos" @update:selection="handleConceptosSelectionChange"
+        :value="conceptos" :loading="loadingConceptos" data-key="id" striped-rows scrollable scroll-height="1000px">
         <template #empty>
-          <span class="muted">No hay valores por categoría para el filtro aplicado.</span>
+          <span class="muted">No hay conceptos para el filtro aplicado.</span>
         </template>
         <Column selection-mode="multiple" header-style="width: 3rem" />
-        <Column field="descripcion" header="Descripción" sortable />
-        <Column field="tipo" header="Tipo" sortable style="width: 10rem" />
+        <Column field="codigo" header="Código" style="width: 8rem" />
+        <Column field="subcodigo" header="Subcódigo" />
+        <Column field="descripcion" header="Descripción" />
       </DataTable>
+
+      <Paginator v-if="conceptosPagination.total > 0" :rows="conceptosPagination.pageSize"
+        :total-records="conceptosPagination.total" :first="conceptosPaginatorFirst"
+        :rows-per-page-options="[50, 100, 200]" @page="onConceptosPageChange" />
     </section>
 
     <!-- Derecha: configuraciones -->

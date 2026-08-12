@@ -499,4 +499,70 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
             yield return distinctIds.Skip(i).Take(OracleInClauseChunkSize).ToArray();
         }
     }
+
+    public async Task<int> AsociarConceptosMasivoAsync(IReadOnlyCollection<int> configuracionesIds, IReadOnlyCollection<int> conceptosIds)
+    {
+        if (configuracionesIds.Count == 0 || conceptosIds.Count == 0) return 0;
+
+        using var tx = session.BeginTransaction();
+
+        var existentes = await session.Query<ConceptoConfiguradoEntity>()
+            .Where(v => configuracionesIds.Contains(v.ConfiguracionNomencladorId) && conceptosIds.Contains(v.ConceptoId))
+            .Select(v => new { v.ConfiguracionNomencladorId, v.ConceptoId })
+            .ToListAsync();
+
+        var existentesSet = existentes
+            .Select(e => (e.ConfiguracionNomencladorId, e.ConceptoId))
+            .ToHashSet();
+
+        var creadas = 0;
+        foreach (var configuracionId in configuracionesIds)
+        {
+            foreach (var conceptoId in conceptosIds)
+            {
+                if (!existentesSet.Add((configuracionId, conceptoId))) continue;
+
+                await session.SaveAsync(new ConceptoConfiguradoEntity
+                {
+                    ConfiguracionNomencladorId = configuracionId,
+                    ConceptoId = conceptoId,
+                });
+                creadas++;
+            }
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return creadas;
+    }
+
+    public async Task<int> DesasociarConceptosMasivoAsync(IReadOnlyCollection<int> configuracionesIds, IReadOnlyCollection<int> conceptosIds)
+    {
+        if (configuracionesIds.Count == 0 || conceptosIds.Count == 0) return 0;
+
+        using var tx = session.BeginTransaction();
+
+        var eliminadas = 0;
+        foreach (var configuracionesChunk in GetChunks(configuracionesIds))
+        {
+            foreach (var conceptosChunk in GetChunks(conceptosIds))
+            {
+                var existentesChunk = await session.Query<ConceptoConfiguradoEntity>()
+                    .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId) && conceptosChunk.Contains(v.ConceptoId))
+                    .ToListAsync();
+
+                foreach (var entity in existentesChunk)
+                {
+                    await session.DeleteAsync(entity);
+                    eliminadas++;
+                }
+            }
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return eliminadas;
+    }
 }

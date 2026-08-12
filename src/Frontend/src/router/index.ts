@@ -8,6 +8,7 @@ import ValorCategoriaDetailView from '../views/ValorCategoriaDetailView.vue'
 import ValoresFijosView from '../views/ValoresFijosView.vue'
 import AsociacionMasivaValoresFijosView from '../views/AsociacionMasivaValoresFijosView.vue'
 import AsociacionMasivaValoresCategoriasView from '../views/AsociacionMasivaValoresCategoriasView.vue'
+import AsociacionMasivaConceptosView from '../views/AsociacionMasivaConceptosView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -32,6 +33,11 @@ const router = createRouter({
       path: '/asociacion-masiva/valores-categoria',
       name: 'asociacion-masiva-valores-categoria',
       component: AsociacionMasivaValoresCategoriasView,
+    },
+    {
+      path: '/asociacion-masiva/conceptos',
+      name: 'asociacion-masiva-conceptos',
+      component: AsociacionMasivaConceptosView,
     }
   ],
 })

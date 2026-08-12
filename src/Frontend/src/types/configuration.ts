@@ -227,6 +227,11 @@ export interface AsociacionMasivaValoresCategoriasDto {
   configuracionesIds: number[]
 }
 
+export interface AsociacionMasivaConceptosDto {
+  conceptosIds: number[]
+  configuracionesIds: number[]
+}
+
 export interface AsociacionMasivaResultDto {
   asociacionesCreadas: number
   asociacionesExistentes: number
