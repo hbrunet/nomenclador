@@ -78,6 +78,11 @@ export interface ValorFijoCreateUpdateDto {
   valor: number
 }
 
+export interface ValorFijoCloneDto {
+  descripcion: string
+  coeficienteAjuste: number
+}
+
 export interface ValorCategoriaCatalogItem extends CatalogItem {
   tipo: string
 }

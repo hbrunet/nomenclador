@@ -9,6 +9,18 @@ import type {
   ValorCategoriaTipoCreateUpdateDto,
 } from '../types/configuration'
 
+let valoresCache: ValorCategoriaListItemDto[] | null = null
+
+function toListItem(detail: ValorCategoriaDetailDto): ValorCategoriaListItemDto {
+  return {
+    id: detail.id,
+    descripcion: detail.descripcion,
+    idTipo: detail.idTipo,
+    tipo: detail.tipo,
+    cantidadItems: detail.items.length,
+  }
+}
+
 export const valoresCategoriaService = {
   // ── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -32,10 +44,18 @@ export const valoresCategoriaService = {
   },
 
   // ── Valores ────────────────────────────────────────────────────────────────
+  // Caché simple en memoria, igual que valoresFijosService: se pide una sola vez
+  // por sesión de la SPA y las mutaciones la actualizan in-place.
 
-  async getAll(): Promise<ValorCategoriaListItemDto[]> {
+  hasCachedValores(): boolean {
+    return valoresCache !== null
+  },
+
+  async getAll(forceRefresh = false): Promise<ValorCategoriaListItemDto[]> {
+    if (valoresCache && !forceRefresh) return valoresCache
     const { data } = await apiClient.get<ValorCategoriaListItemDto[]>('/valores-categoria')
-    return data
+    valoresCache = data
+    return valoresCache
   },
 
   async getById(id: number): Promise<ValorCategoriaDetailDto> {
@@ -45,16 +65,19 @@ export const valoresCategoriaService = {
 
   async create(dto: ValorCategoriaCreateUpdateDto): Promise<ValorCategoriaDetailDto> {
     const { data } = await apiClient.post<ValorCategoriaDetailDto>('/valores-categoria', dto)
+    if (valoresCache) valoresCache = [...valoresCache, toListItem(data)]
     return data
   },
 
   async update(id: number, dto: ValorCategoriaCreateUpdateDto): Promise<ValorCategoriaDetailDto> {
     const { data } = await apiClient.put<ValorCategoriaDetailDto>(`/valores-categoria/${id}`, dto)
+    if (valoresCache) valoresCache = valoresCache.map((v) => (v.id === id ? toListItem(data) : v))
     return data
   },
 
   async delete(id: number): Promise<void> {
     await apiClient.delete(`/valores-categoria/${id}`)
+    if (valoresCache) valoresCache = valoresCache.filter((v) => v.id !== id)
   },
 
   // ── Items ──────────────────────────────────────────────────────────────────
@@ -67,6 +90,11 @@ export const valoresCategoriaService = {
       `/valores-categoria/${valorCategoriaId}/items`,
       dto,
     )
+    if (valoresCache) {
+      valoresCache = valoresCache.map((v) =>
+        v.id === valorCategoriaId ? { ...v, cantidadItems: v.cantidadItems + 1 } : v,
+      )
+    }
     return data
   },
 
@@ -84,5 +112,10 @@ export const valoresCategoriaService = {
 
   async deleteItem(valorCategoriaId: number, itemId: number): Promise<void> {
     await apiClient.delete(`/valores-categoria/${valorCategoriaId}/items/${itemId}`)
+    if (valoresCache) {
+      valoresCache = valoresCache.map((v) =>
+        v.id === valorCategoriaId ? { ...v, cantidadItems: v.cantidadItems - 1 } : v,
+      )
+    }
   },
 }
