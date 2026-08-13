@@ -759,5 +759,28 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
         return ToValorFijoCatalogDto(entity);
     }
+
+    public async Task<ValorFijoCatalogDto?> CloneValorFijoAsync(int id, ValorFijoCloneDto dto)
+    {
+        var entity = await session.Query<ValorFijoCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        if (entity is null) return null;
+
+        var clone = new ValorFijoCatalogEntity
+        {
+            Descripcion = dto.Descripcion.Trim(),
+            Tipo = entity.Tipo,
+            Valor = Math.Round(entity.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero)
+        };
+
+        using var tx = session.BeginTransaction();
+        await session.SaveAsync(clone);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return ToValorFijoCatalogDto(clone);
+    }
 }
 

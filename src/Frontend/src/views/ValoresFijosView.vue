@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, shallowRef } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -14,6 +14,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import ValorFijoTipoDialog from '../components/ValorFijoTipoDialog.vue'
 import ValorFijoDetailDialog from '../components/ValorFijoDetailDialog.vue'
+import ValorFijoCloneDialog from '../components/ValorFijoCloneDialog.vue'
 import { valoresFijosService } from '../services/valoresFijosService'
 import type { CatalogItem, ValorFijoCatalogItem } from '../types/configuration'
 
@@ -22,12 +23,17 @@ const toast = useToast()
 const activeTab = ref('valores')
 
 // ── Valores ─────────────────────────────────────────────────────────────────
-const valores = ref<ValorFijoCatalogItem[]>([])
+// shallowRef: el catálogo trae miles de filas; con ref() normal Vue hace cada
+// objeto reactivo (proxy profundo) y eso es lo que hace lenta la carga inicial.
+// Solo reemplazamos el array completo (o filas puntuales), no mutamos propiedades
+// anidadas, así que no necesitamos reactividad profunda.
+const valores = shallowRef<ValorFijoCatalogItem[]>([])
 const loadingValores = ref(false)
 const filterValores = ref('')
 const filterTipo = ref('')
 const deleteValorError = ref<string | null>(null)
 const valorDialogRef = ref<InstanceType<typeof ValorFijoDetailDialog> | null>(null)
+const cloneDialogRef = ref<InstanceType<typeof ValorFijoCloneDialog> | null>(null)
 
 const filteredValores = computed(() => {
   const q = filterValores.value.toLowerCase().trim()
@@ -39,10 +45,12 @@ const filteredValores = computed(() => {
   )
 })
 
-async function loadValores() {
-  loadingValores.value = true
+async function loadValores(forceRefresh = false) {
+  // Evita el parpadeo del spinner cuando el dato ya está en caché.
+  const showSpinner = forceRefresh || !valoresFijosService.hasCachedValores()
+  if (showSpinner) loadingValores.value = true
   try {
-    valores.value = await valoresFijosService.getAll()
+    valores.value = await valoresFijosService.getAll(forceRefresh)
   } finally {
     loadingValores.value = false
   }
@@ -84,10 +92,18 @@ function openEditValor(id: number) {
 function handleValorSaved(item: ValorFijoCatalogItem) {
   const idx = valores.value.findIndex((v) => v.id === item.id)
   if (idx !== -1) {
-    valores.value[idx] = item
+    valores.value = valores.value.map((v) => (v.id === item.id ? item : v))
   } else {
     valores.value = [...valores.value, item]
   }
+}
+
+function openCloneValor(id: number) {
+  cloneDialogRef.value?.open(id)
+}
+
+function handleValorCloned(item: ValorFijoCatalogItem) {
+  valores.value = [...valores.value, item]
 }
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -178,11 +194,21 @@ onMounted(async () => {
               <InputText v-model="filterValores" placeholder="Buscar por descripción..." style="width: 240px" />
               <InputText v-model="filterTipo" placeholder="Filtrar por tipo..." style="width: 180px" />
             </div>
-            <Button
-              label="Nuevo valor"
-              icon="pi pi-plus"
-              @click="openCreateValor"
-            />
+            <div class="flex gap-2">
+              <Button
+                label="Actualizar"
+                icon="pi pi-refresh"
+                severity="secondary"
+                outlined
+                :loading="loadingValores"
+                @click="loadValores(true)"
+              />
+              <Button
+                label="Nuevo valor"
+                icon="pi pi-plus"
+                @click="openCreateValor"
+              />
+            </div>
           </div>
 
           <Message
@@ -230,6 +256,14 @@ onMounted(async () => {
                     @click="openEditValor(data.id)"
                   />
                   <Button
+                    label="Clonar"
+                    icon="pi pi-clone"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    @click="openCloneValor(data.id)">
+                  </Button>
+                  <Button
                     icon="pi pi-trash"
                     size="small"
                     severity="danger"
@@ -243,6 +277,7 @@ onMounted(async () => {
           </DataTable>
 
           <ValorFijoDetailDialog ref="valorDialogRef" :tipos="tipos" @saved="handleValorSaved" />
+          <ValorFijoCloneDialog ref="cloneDialogRef" @cloned="handleValorCloned" />
         </TabPanel>
 
         <!-- ── Tipos ──────────────────────────────────────────────────────── -->

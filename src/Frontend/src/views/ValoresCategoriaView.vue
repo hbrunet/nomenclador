@@ -39,10 +39,12 @@ const filteredValores = computed(() => {
   )
 })
 
-async function loadValores() {
-  loadingValores.value = true
+async function loadValores(forceRefresh = false) {
+  // Evita el parpadeo del spinner cuando el dato ya está en caché.
+  const showSpinner = forceRefresh || !valoresCategoriaService.hasCachedValores()
+  if (showSpinner) loadingValores.value = true
   try {
-    valores.value = await valoresCategoriaService.getAll()
+    valores.value = await valoresCategoriaService.getAll(forceRefresh)
   } finally {
     loadingValores.value = false
   }
@@ -162,11 +164,21 @@ onMounted(async () => {
               <InputText v-model="filterValores" placeholder="Buscar por descripción..." style="width: 240px" />
               <InputText v-model="filterTipo" placeholder="Filtrar por tipo..." style="width: 180px" />
             </div>
-            <Button
-              label="Nuevo valor"
-              icon="pi pi-plus"
-              @click="router.push('/valores-categoria/nuevo')"
-            />
+            <div class="flex gap-2">
+              <Button
+                label="Actualizar"
+                icon="pi pi-refresh"
+                severity="secondary"
+                outlined
+                :loading="loadingValores"
+                @click="loadValores(true)"
+              />
+              <Button
+                label="Nuevo valor"
+                icon="pi pi-plus"
+                @click="router.push('/valores-categoria/nuevo')"
+              />
+            </div>
           </div>
 
           <Message

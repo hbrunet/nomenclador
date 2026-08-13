@@ -105,6 +105,7 @@ defineExpose({ open })
           placeholder="Seleccionar tipo..."
           class="w-full"
           :disabled="loading"
+          show-clear filter filter-placeholder="Buscar..."
         />
       </div>
       <div class="field">

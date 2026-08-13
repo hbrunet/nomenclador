@@ -70,5 +70,18 @@ public sealed class ValoresFijosController(CatalogRepository catalogRepository) 
             ? NoContent()
             : Conflict(new { message = "El valor está siendo utilizado por una o más configuraciones y no puede eliminarse." });
     }
+
+    [HttpPost("{id:int}/clonar")]
+    public async Task<IActionResult> Clone(int id, [FromBody] ValorFijoCloneDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Descripcion))
+            return BadRequest(new { message = "La descripción es obligatoria." });
+
+        if (dto.CoeficienteAjuste <= 0)
+            return BadRequest(new { message = "El coeficiente de ajuste debe ser mayor a cero." });
+
+        var result = await catalogRepository.CloneValorFijoAsync(id, dto);
+        return result is null ? NotFound() : Ok(result);
+    }
 }
 
