@@ -49,9 +49,21 @@ async function open(id: number) {
 
 async function handleClone() {
   if (!sourceId.value) return
+
+  const coef = coeficienteAjuste.value ?? 0
+  if (coef <= 0) {
+    toast.add({
+      severity: 'error',
+      summary: 'Coeficiente inválido',
+      detail: 'El coeficiente de ajuste debe ser mayor a cero.',
+      life: 2500,
+    })
+    return
+  }
+
   saving.value = true
   try {
-    const dto = { descripcion: descripcion.value.trim(), coeficienteAjuste: coeficienteAjuste.value ?? 0 }
+    const dto = { descripcion: descripcion.value.trim(), coeficienteAjuste: coef }
     const cloned = await valoresFijosService.clone(sourceId.value, dto)
     emit('cloned', cloned)
     toast.add({
