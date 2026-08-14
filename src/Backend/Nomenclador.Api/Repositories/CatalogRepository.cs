@@ -795,11 +795,24 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
     public async Task<List<ValorFijoCatalogDto>?> CloneValoresFijosMasivoAsync(ClonacionMasivaValoresFijosDto dto)
     {
-        var ids = dto.ValoresFijosIds.ToList();
-        var valores = await session.Query<ValorFijoCatalogEntity>()
-            .Fetch(x => x.Tipo)
-            .Where(x => ids.Contains(x.Id))
-            .ToListAsync();
+        var ids = dto.ValoresFijosIds.Distinct().ToList();
+
+        if (ids.Count == 0) return null;
+
+        const int oracleInLimit = 1000;
+        var valores = new List<ValorFijoCatalogEntity>(ids.Count);
+
+        for (var i = 0; i < ids.Count; i += oracleInLimit)
+        {
+            var batch = ids.Skip(i).Take(oracleInLimit).ToList();
+            var batchValores = await session.Query<ValorFijoCatalogEntity>()
+                .Fetch(x => x.Tipo)
+                .Where(x => batch.Contains(x.Id))
+                .ToListAsync();
+            valores.AddRange(batchValores);
+        }
+
+        if (valores.Count != ids.Count) return null;
 
         if (valores.Count == 0) return null;
 
