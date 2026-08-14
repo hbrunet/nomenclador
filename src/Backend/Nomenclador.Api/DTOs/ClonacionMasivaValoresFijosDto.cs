@@ -2,7 +2,7 @@ namespace Nomenclador.Api.DTOs;
 
 public sealed class ClonacionMasivaValoresFijosDto
 {
-    public int[] ValoresFijosIds { get; set; } = Array.Empty<int>();
-    public DateOnly NuevoPeriodo { get; set; }
-    public decimal CoeficienteAjuste { get; set; }
+    public IReadOnlyCollection<int> ValoresFijosIds { get; init; } = [];
+    public DateOnly NuevoPeriodo { get; init; }
+    public decimal CoeficienteAjuste { get; init; }
 }
