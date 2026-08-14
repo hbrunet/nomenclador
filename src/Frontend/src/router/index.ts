@@ -9,6 +9,7 @@ import ValoresFijosView from '../views/ValoresFijosView.vue'
 import AsociacionMasivaValoresFijosView from '../views/AsociacionMasivaValoresFijosView.vue'
 import AsociacionMasivaValoresCategoriasView from '../views/AsociacionMasivaValoresCategoriasView.vue'
 import AsociacionMasivaConceptosView from '../views/AsociacionMasivaConceptosView.vue'
+import ClonacionMasivaValoresFijosView from '../views/ClonacionMasivaValoresFijosView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -38,6 +39,11 @@ const router = createRouter({
       path: '/asociacion-masiva/conceptos',
       name: 'asociacion-masiva-conceptos',
       component: AsociacionMasivaConceptosView,
+    },
+    {
+      path: '/clonacion-masiva/valores-fijos',
+      name: 'clonacion-masiva-valores-fijos',
+      component: ClonacionMasivaValoresFijosView,
     }
   ],
 })

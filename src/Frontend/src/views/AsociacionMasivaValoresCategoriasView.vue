@@ -12,7 +12,7 @@ import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
 import { formatPeriodo } from '../utils/date'
-import type { ConfiguracionNomencladorListItemDto, ValorCategoriaCatalogItem } from '../types/configuration'
+import type { CatalogItem, ConfiguracionNomencladorListItemDto, ValorCategoriaCatalogItem } from '../types/configuration'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -27,20 +27,24 @@ function estadoSeverity(estado: string) {
 // ── Valores por categoría (izquierda) ────────────────────────────────────────
 const valoresCategorias = ref<ValorCategoriaCatalogItem[]>([])
 const loadingValores = ref(false)
-const tipoFilter = ref<string | null>(null)
+const tipoFilter = ref<number | null>(null)
 const valorQuery = ref('')
 const selectedValores = ref<ValorCategoriaCatalogItem[]>([])
 
-const tiposDisponibles = computed<string[]>(() => {
-  const set = new Set<string>()
-  for (const v of valoresCategorias.value) set.add(v.tipo)
-  return [...set].sort((a, b) => a.localeCompare(b))
+const tiposDisponibles = computed<CatalogItem[]>(() => {
+  const map = new Map<number, string>()
+  for (const v of valoresCategorias.value) {
+    if (v.idTipo) map.set(v.idTipo, v.tipo)
+  }
+  return [...map.entries()]
+    .map(([id, descripcion]) => ({ id, descripcion }))
+    .sort((a, b) => a.descripcion.localeCompare(b.descripcion))
 })
 
 const valoresFiltrados = computed(() => {
   const q = valorQuery.value.toLowerCase().trim()
   return valoresCategorias.value
-    .filter((v) => !tipoFilter.value || v.tipo === tipoFilter.value)
+    .filter((v) => !tipoFilter.value || v.idTipo === tipoFilter.value)
     .filter((v) => !q || v.descripcion.toLowerCase().includes(q) || v.tipo.toLowerCase().includes(q))
 })
 
@@ -247,8 +251,14 @@ onMounted(async () => {
       <div class="flex gap-2 flex-wrap">
         <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
           <label class="field-label">Tipo</label>
-          <Select v-model="tipoFilter" :options="tiposDisponibles" placeholder="Todos" show-clear filter
-            filter-placeholder="Buscar tipo..." class="w-full" />
+          <Select v-model="tipoFilter" 
+            :options="tiposDisponibles" 
+            :option-label="option => `${option.id} - ${option.descripcion}`"
+            option-value="id"
+            placeholder="Todos" 
+            show-clear 
+            filter filter-placeholder="Buscar..." 
+            class="w-full" />
         </div>
         <div class="flex flex-column gap-1" style="flex: 2; min-width: 200px">
           <label class="field-label">Buscar</label>
@@ -260,14 +270,18 @@ onMounted(async () => {
         size="small" class="align-self-start" @click="clearValoresSelection" />
 
       <DataTable :selection="selectedValores" @update:selection="handleValoresSelectionChange" :value="valoresFiltrados"
-        :loading="loadingValores" data-key="id" striped-rows sort-field="tipo" :sort-order="1" scrollable
+        :loading="loadingValores" data-key="id" striped-rows sort-field="descripcion" :sort-order="1" scrollable
         scroll-height="520px" :virtual-scroller-options="{ itemSize: 46 }">
         <template #empty>
           <span class="muted">No hay valores por categoría para el filtro aplicado.</span>
         </template>
-        <Column selection-mode="multiple" header-style="width: 3rem" />
+        <Column selection-mode="multiple" />
         <Column field="descripcion" header="Descripción" sortable />
-        <Column field="tipo" header="Tipo" sortable style="width: 10rem" />
+        <Column field="tipo" header="Tipo" sortable>
+          <template #body="{ data }">
+            {{ data.idTipo }} - {{ data.tipo }}
+          </template>
+        </Column>
       </DataTable>
     </section>
 

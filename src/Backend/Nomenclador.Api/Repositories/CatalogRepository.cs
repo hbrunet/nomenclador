@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using NHibernate;
 using NHibernate.Linq;
 using Nomenclador.Api.DTOs;
@@ -7,6 +8,14 @@ namespace Nomenclador.Api.Repositories;
 
 public sealed class CatalogRepository(NHibernate.ISession session)
 {
+    // HACK legacy: ValorFijoCatalogEntity no tiene columna Periodo (agregarla arriesga
+    // romper la app legacy que comparte la tabla), así que el período viaja como texto
+    // libre "MM/YYYY" dentro de Descripcion; acá se reemplaza cualquier ocurrencia por el nuevo.
+    private static readonly Regex PeriodoEnDescripcionRegex = new(@"\d{2}/\d{4}", RegexOptions.Compiled);
+
+    private static string ReemplazarPeriodoEnDescripcion(string descripcion, DateOnly nuevoPeriodo) =>
+        PeriodoEnDescripcionRegex.Replace(descripcion, nuevoPeriodo.ToString("MM/yyyy"));
+
     public async Task<CatalogSnapshot> GetSnapshotAsync()
     {
         var nomencladores = await session.Query<NomencladorCatalogEntity>().ToListAsync();
@@ -439,6 +448,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         {
             Id = item.Id,
             Descripcion = item.Descripcion,
+            IdTipo = item.Tipo?.Id ?? 0,
             Tipo = item.Tipo?.Descripcion ?? string.Empty
         }).ToList();
     }
@@ -781,6 +791,45 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         await tx.CommitAsync();
 
         return ToValorFijoCatalogDto(clone);
+    }
+
+    public async Task<List<ValorFijoCatalogDto>?> CloneValoresFijosMasivoAsync(ClonacionMasivaValoresFijosDto dto)
+    {
+        var ids = dto.ValoresFijosIds.Distinct().ToList();
+
+        if (ids.Count == 0) return null;
+
+        const int oracleInLimit = 1000;
+        var valores = new List<ValorFijoCatalogEntity>(ids.Count);
+
+        for (var i = 0; i < ids.Count; i += oracleInLimit)
+        {
+            var batch = ids.Skip(i).Take(oracleInLimit).ToList();
+            var batchValores = await session.Query<ValorFijoCatalogEntity>()
+                .Fetch(x => x.Tipo)
+                .Where(x => batch.Contains(x.Id))
+                .ToListAsync();
+            valores.AddRange(batchValores);
+        }
+
+        if (valores.Count != ids.Count) return null;
+
+        if (valores.Count == 0) return null;
+
+        var clones = valores.Select(v => new ValorFijoCatalogEntity
+        {
+            Descripcion = ReemplazarPeriodoEnDescripcion(v.Descripcion, dto.NuevoPeriodo),
+            Tipo = v.Tipo,
+            Valor = Math.Round(v.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero)
+        }).ToList();
+
+        using var tx = session.BeginTransaction();
+        foreach (var clone in clones)
+            await session.SaveAsync(clone);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return clones.Select(ToValorFijoCatalogDto).ToList();
     }
 }
 

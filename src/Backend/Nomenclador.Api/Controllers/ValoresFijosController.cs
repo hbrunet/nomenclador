@@ -83,5 +83,21 @@ public sealed class ValoresFijosController(CatalogRepository catalogRepository) 
         var result = await catalogRepository.CloneValorFijoAsync(id, dto);
         return result is null ? NotFound() : Ok(result);
     }
+
+    [HttpPost("clonacion-masiva")]
+    public async Task<IActionResult> CloneMasivo([FromBody] ClonacionMasivaValoresFijosDto dto)
+    {
+        if (dto.NuevoPeriodo == default)
+            return BadRequest(new { message = "El nuevo período es obligatorio." });
+
+        if (dto.CoeficienteAjuste <= 0)
+            return BadRequest(new { message = "El coeficiente de ajuste debe ser mayor a cero." });
+        
+        if (dto.ValoresFijosIds.Length == 0)
+            return BadRequest(new { message = "Debe seleccionar al menos un valor fijo para clonar." });
+
+        var result = await catalogRepository.CloneValoresFijosMasivoAsync(dto);
+        return result is null ? NotFound() : Ok(result);
+    }
 }
 

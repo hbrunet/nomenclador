@@ -8,5 +8,7 @@ public sealed class ValorCategoriaConfiguradoDto
 
     public string Tipo { get; init; } = string.Empty;
 
+    public int IdTipo { get; init; }
+
     public List<ValorCategoriaConfiguradoItemDto> Items { get; init; } = new();
 }

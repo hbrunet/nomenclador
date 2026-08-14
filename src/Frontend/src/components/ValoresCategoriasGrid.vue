@@ -47,13 +47,15 @@ const tableData = computed(() => {
       const matchesQuery =
         !q ||
         (cat?.descripcion ?? '').toLowerCase().includes(q) ||
-        (cat?.tipo ?? '').toLowerCase().includes(q)
+        (cat?.tipo ?? '').toLowerCase().includes(q) ||
+        (cat?.idTipo.toString() ?? '').toLowerCase().includes(q)
       return matchesQuery
     })
     .map((item) => ({
       idValorCategoria: item.idValorCategoria,
       tipo: valuesById.value.get(item.idValorCategoria)?.tipo ?? 'N/D',
       descripcion: valuesById.value.get(item.idValorCategoria)?.descripcion ?? 'Valor sin catálogo',
+      idTipo: valuesById.value.get(item.idValorCategoria)?.idTipo ?? 0,
     }))
 })
 
@@ -180,7 +182,11 @@ function verItems(idValorCategoria: number) {
       </template>
       <Column field="idValorCategoria" header="ID" sortable style="text-align: right" />
       <Column field="descripcion" header="Descripción" sortable />
-      <Column field="tipo" header="Tipo" sortable />
+      <Column field="tipo" header="Tipo" sortable >
+        <template #body="{ data }">
+          {{ data.idTipo }} - {{ data.tipo }}
+        </template>
+      </Column>
       <Column>
         <template #body="{ data }">
           <div class="flex gap-1 align-items-center">

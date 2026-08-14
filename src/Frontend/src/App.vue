@@ -19,6 +19,11 @@ const menuItems = computed<MenuItem[]>(() => [
       { label: 'Conceptos', route: '/asociacion-masiva/conceptos' },
     ],
   },
+  {
+    label: 'Clonación masiva',
+    // Agrupa las variantes de clonación masiva; agregar futuras opciones acá.
+    items: [{ label: 'Valores fijos', route: '/clonacion-masiva/valores-fijos' }],
+  },
 ])
 </script>
 

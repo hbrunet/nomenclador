@@ -7,6 +7,7 @@ public sealed class ValorFijoConfiguradoDto
     public string Descripcion { get; init; } = string.Empty;
 
     public string Tipo { get; init; } = string.Empty;
+    public int IdTipo { get; init; }
 
     public decimal Valor { get; init; }
 }
