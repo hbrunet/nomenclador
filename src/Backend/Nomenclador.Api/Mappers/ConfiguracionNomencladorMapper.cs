@@ -149,6 +149,7 @@ public sealed class ConfiguracionNomencladorMapper
                             Descripcion = "Valor fijo no encontrado en el catálogo",
                             Tipo = string.Empty,
                             Valor = 0,
+                            IdTipo = 0
                         };
                     }
 
@@ -158,6 +159,7 @@ public sealed class ConfiguracionNomencladorMapper
                         Descripcion = valorFijo.Descripcion,
                         Tipo = valorFijo.Tipo?.Descripcion ?? string.Empty,
                         Valor = valorFijo.Valor,
+                        IdTipo = valorFijo.Tipo?.Id ?? 0
                     };
                 })
                 .ToList(),
@@ -180,7 +182,8 @@ public sealed class ConfiguracionNomencladorMapper
                             IdValorCategoria = item.ValorCategoriaId,
                             Descripcion = "Valor por categoría no encontrado en el catálogo",
                             Tipo = string.Empty,
-                            Items = items
+                            Items = items,
+                            IdTipo = 0
                         };
                     }
 
@@ -189,7 +192,8 @@ public sealed class ConfiguracionNomencladorMapper
                         IdValorCategoria = valorCategoria.Id,
                         Descripcion = valorCategoria.Descripcion,
                         Tipo = valorCategoria.Tipo?.Descripcion ?? string.Empty,
-                        Items = items
+                        Items = items,
+                        IdTipo = valorCategoria.Tipo?.Id ?? 0
                     };
                 })
                 .ToList(),

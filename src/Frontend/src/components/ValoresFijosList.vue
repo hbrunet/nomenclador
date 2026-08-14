@@ -47,11 +47,13 @@ const tableData = computed(() => {
       const matchesQuery =
         !q ||
         (cat?.descripcion ?? '').toLowerCase().includes(q) ||
-        (cat?.tipo ?? '').toLowerCase().includes(q)
+        (cat?.tipo ?? '').toLowerCase().includes(q) || 
+        (cat?.idTipo.toString() ?? '').toLowerCase().includes(q)
       return matchesQuery
     })
     .map((item) => ({
       idValorFijo: item.idValorFijo,
+      idTipo: valuesById.value.get(item.idValorFijo)?.idTipo,
       tipo: valuesById.value.get(item.idValorFijo)?.tipo ?? 'N/D',
       descripcion: valuesById.value.get(item.idValorFijo)?.descripcion ?? 'Valor fijo',
       valor: valuesById.value.get(item.idValorFijo)?.valor,
@@ -178,7 +180,11 @@ async function handleModalSaved(
       </template>
       <Column field="idValorFijo" header="ID" sortable style="text-align: right"/>
        <Column field="descripcion" header="Descripción" sortable />
-      <Column field="tipo" header="Tipo" sortable />
+      <Column field="tipo" header="Tipo" sortable >
+        <template #body="{ data }">
+          {{ data.idTipo }} - {{ data.tipo }}
+        </template>
+      </Column>
       <Column header="Valor" style="text-align: right">
         <template #body="{ data }">
           {{ data.valor?.toLocaleString('es-AR', { minimumFractionDigits: 2 }) ?? '—' }}

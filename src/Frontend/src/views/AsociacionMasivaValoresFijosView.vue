@@ -33,7 +33,9 @@ const selectedValores = ref<ValorFijoCatalogItem[]>([])
 
 const tiposDisponibles = computed<CatalogItem[]>(() => {
   const map = new Map<number, string>()
-  for (const v of valoresFijos.value) map.set(v.idTipo, v.tipo)
+  for (const v of valoresFijos.value) {
+    if (v.idTipo) map.set(v.idTipo, v.tipo)
+  }
   return [...map.entries()]
     .map(([id, descripcion]) => ({ id, descripcion }))
     .sort((a, b) => a.descripcion.localeCompare(b.descripcion))
@@ -265,8 +267,14 @@ onMounted(async () => {
       <div class="flex gap-2 flex-wrap">
         <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
           <label class="field-label">Tipo</label>
-          <Select v-model="tipoFilter" :options="tiposDisponibles" option-label="descripcion" option-value="id"
-            placeholder="Todos" show-clear filter filter-placeholder="Buscar tipo..." class="w-full" />
+          <Select v-model="tipoFilter" 
+            :options="tiposDisponibles" 
+            :option-label="option => `${option.id} - ${option.descripcion}`"
+            option-value="id"
+            placeholder="Todos" 
+            show-clear 
+            filter filter-placeholder="Buscar..." 
+            class="w-full" />
         </div>
         <div class="flex flex-column gap-1" style="flex: 2; min-width: 200px">
           <label class="field-label">Buscar</label>
@@ -278,15 +286,19 @@ onMounted(async () => {
         size="small" class="align-self-start" @click="clearValoresSelection" />
 
       <DataTable :selection="selectedValores" @update:selection="handleValoresSelectionChange" :value="valoresFiltrados"
-        :loading="loadingValores" data-key="id" striped-rows sort-field="tipo" :sort-order="1" scrollable
+        :loading="loadingValores" data-key="id" striped-rows sort-field="descripcion" :sort-order="1" scrollable
         scroll-height="520px" :virtual-scroller-options="{ itemSize: 46 }">
         <template #empty>
           <span class="muted">No hay valores fijos para el filtro aplicado.</span>
         </template>
-        <Column selection-mode="multiple" header-style="width: 3rem" />
+        <Column selection-mode="multiple" />
         <Column field="descripcion" header="Descripción" sortable />
-        <Column field="tipo" header="Tipo" sortable style="width: 10rem" />
-        <Column header="Valor" sortable sort-field="valor" style="width: 8rem; text-align: right">
+        <Column field="tipo" header="Tipo" sortable  >
+          <template #body="{ data }">
+              {{ data.idTipo }} - {{ data.tipo }}
+          </template>
+        </Column>
+        <Column header="Valor" sortable sort-field="valor" style="text-align: right">
           <template #body="{ data }">
             {{ data.valor?.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
           </template>

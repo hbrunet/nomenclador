@@ -238,7 +238,11 @@ onMounted(async () => {
             </template>
             <Column field="id" header="ID" style="width: 5rem; text-align: right" />
             <Column field="descripcion" header="Descripción" sortable />
-            <Column field="tipo" header="Tipo" sortable style="width: 12rem" />
+            <Column field="tipo" header="Tipo" sortable >
+              <template #body="{ data }">
+                {{ data.idTipo }} - {{ data.tipo }}
+              </template>
+            </Column>
             <Column header="Valor" style="text-align: right">
               <template #body="{ data }">
                 {{ data.valor?.toLocaleString('es-AR', { minimumFractionDigits: 2 }) ?? '—' }}
@@ -306,7 +310,7 @@ onMounted(async () => {
             <template #empty>
               <span class="muted">No hay tipos cargados.</span>
             </template>
-            <Column field="id" header="ID" style="width: 5rem; text-align: right" />
+            <Column field="id" header="ID" style="width: 5rem; text-align: right" sortable />
             <Column field="descripcion" header="Descripción" sortable />
             <Column style="width: 10rem">
               <template #body="{ data }">

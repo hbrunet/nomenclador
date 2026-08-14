@@ -83,7 +83,14 @@ export interface ValorFijoCloneDto {
   coeficienteAjuste: number
 }
 
+export interface ClonacionMasivaValoresFijosDto {
+  valoresFijosIds: number[]
+  nuevoPeriodo: string
+  coeficienteAjuste: number
+}
+
 export interface ValorCategoriaCatalogItem extends CatalogItem {
+  idTipo: number
   tipo: string
 }
 
@@ -109,6 +116,7 @@ export interface ValorFijoConfiguradoViewModel {
   descripcion: string
   tipo: string
   valor: number
+  idTipo: number
 }
 
 export interface ValorCategoriaItemViewModel {
@@ -122,6 +130,7 @@ export interface ValorCategoriaConfiguradoViewModel {
   descripcion: string
   tipo: string
   items: ValorCategoriaItemViewModel[]
+  idTipo: number
 }
 
 export interface ConfiguracionNomencladorListItemDto {
