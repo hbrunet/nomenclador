@@ -93,7 +93,7 @@ public sealed class ValoresFijosController(CatalogRepository catalogRepository) 
         if (dto.CoeficienteAjuste <= 0)
             return BadRequest(new { message = "El coeficiente de ajuste debe ser mayor a cero." });
         
-        if (dto.ValoresFijosIds.Length == 0)
+        if (dto.ValoresFijosIds.Count == 0)
             return BadRequest(new { message = "Debe seleccionar al menos un valor fijo para clonar." });
 
         var result = await catalogRepository.CloneValoresFijosMasivoAsync(dto);

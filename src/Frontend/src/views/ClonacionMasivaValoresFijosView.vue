@@ -12,8 +12,9 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { valoresFijosService } from '../services/valoresFijosService'
+import { gruposValorFijoService } from '../services/gruposValorFijoService'
 import { formatLocalDate } from '../utils/date'
-import type { CatalogItem, ValorFijoCatalogItem } from '../types/configuration'
+import type { CatalogItem, GrupoValorFijoDto, ValorFijoCatalogItem } from '../types/configuration'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -22,6 +23,7 @@ const confirm = useConfirm()
 const valoresFijos = ref<ValorFijoCatalogItem[]>([])
 const loadingValores = ref(false)
 const tipoFilter = ref<number | null>(null)
+const grupoFilter = ref<number | null>(null)
 const valorQuery = ref('')
 const selectedValores = ref<ValorFijoCatalogItem[]>([])
 
@@ -35,10 +37,19 @@ const tiposDisponibles = computed<CatalogItem[]>(() => {
     .sort((a, b) => a.descripcion.localeCompare(b.descripcion))
 })
 
+// Ids de tipo del grupo seleccionado: el grupo es un filtro más, no selecciona
+// nada solo — el usuario igual debe buscar por descripción (ej. el período
+// "06/2026") para elegir los valores puntuales que quiere clonar.
+const tiposDelGrupo = computed(() => {
+  const grupo = grupos.value.find((g) => g.id === grupoFilter.value)
+  return grupo ? new Set(grupo.tipos.map((t) => t.id)) : null
+})
+
 const valoresFiltrados = computed(() => {
   const q = valorQuery.value.toLowerCase().trim()
   return valoresFijos.value
     .filter((v) => !tipoFilter.value || v.idTipo === tipoFilter.value)
+    .filter((v) => !tiposDelGrupo.value || tiposDelGrupo.value.has(v.idTipo))
     .filter((v) => !q || v.descripcion.toLowerCase().includes(q) || v.tipo.toLowerCase().includes(q))
 })
 
@@ -49,6 +60,13 @@ async function loadValoresFijos(forceRefresh = false) {
   } finally {
     loadingValores.value = false
   }
+}
+
+// ── Grupos (filtro por tipos guardados) ───────────────────────────────────────
+const grupos = ref<GrupoValorFijoDto[]>([])
+
+async function loadGrupos() {
+  grupos.value = await gruposValorFijoService.getAll()
 }
 
 function clearSelection() {
@@ -121,7 +139,10 @@ async function handleClonar() {
   }
 }
 
-onMounted(() => loadValoresFijos())
+onMounted(() => {
+  loadValoresFijos()
+  loadGrupos()
+})
 </script>
 
 <template>
@@ -143,6 +164,19 @@ onMounted(() => loadValoresFijos())
         </div>
 
         <div class="flex gap-2 flex-wrap">
+          <div class="flex flex-column gap-1" style="flex: 1; min-width: 200px">
+            <label class="field-label">Grupo</label>
+            <Select
+              v-model="grupoFilter"
+              :options="grupos"
+              option-label="descripcion"
+              option-value="id"
+              placeholder="Todos"
+              show-clear
+              filter
+              class="w-full"
+            />
+          </div>
           <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
             <label class="field-label">Tipo</label>
             <Select
@@ -159,7 +193,7 @@ onMounted(() => loadValoresFijos())
           </div>
           <div class="flex flex-column gap-1" style="flex: 2; min-width: 200px">
             <label class="field-label">Buscar</label>
-            <InputText v-model="valorQuery" placeholder="Buscar por descripción..." class="w-full" />
+            <InputText v-model="valorQuery" placeholder="Buscar por descripción o período (ej. 06/2026)..." class="w-full" />
           </div>
         </div>
 
@@ -176,7 +210,7 @@ onMounted(() => loadValoresFijos())
 
         <DataTable
           :selection="selectedValores"
-          @update:selection="(value) => (selectedValores.value = value)"
+          @update:selection="(value) => (selectedValores = value)"
           :value="valoresFiltrados"
           :loading="loadingValores"
           data-key="id"

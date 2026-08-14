@@ -308,7 +308,7 @@ onMounted(async () => {
           text size="small" @click="clearConfigSelection" />
       </div>
 
-      <DataTable :selection="selectedConfiguraciones" @update:selection="(value) => (selectedConfiguraciones.value = value)"
+      <DataTable :selection="selectedConfiguraciones" @update:selection="(value) => (selectedConfiguraciones = value)"
         :value="configuraciones" :loading="loadingConfiguraciones" data-key="id" striped-rows>
         <template #empty>
           <span class="muted">No hay configuraciones para los filtros seleccionados.</span>
