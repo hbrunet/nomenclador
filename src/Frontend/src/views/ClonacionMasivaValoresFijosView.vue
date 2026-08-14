@@ -176,7 +176,7 @@ onMounted(() => loadValoresFijos())
 
         <DataTable
           :selection="selectedValores"
-          @update:selection="(value) => (selectedValores = value)"
+          @update:selection="(value) => (selectedValores.value = value)"
           :value="valoresFiltrados"
           :loading="loadingValores"
           data-key="id"
