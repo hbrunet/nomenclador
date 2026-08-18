@@ -694,6 +694,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             var batch = ids.Skip(i).Take(oracleInLimit).ToList();
             var batchItems = await session.Query<ValorCategoriaConfiguradoItemEntity>()
                 .Where(x => batch.Contains(x.ValorCategoriaId))
+                .OrderBy(x => x.ValorCategoriaId)
+                .ThenBy(x => x.Numero)
                 .ToListAsync();
             items.AddRange(batchItems);
         }
