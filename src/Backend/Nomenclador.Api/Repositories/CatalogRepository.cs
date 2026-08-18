@@ -727,9 +727,11 @@ public sealed class CatalogRepository(NHibernate.ISession session)
     public async Task<IReadOnlyCollection<GrupoValorFijoDto>> GetGruposValorFijoAsync()
     {
         var items = await session.Query<GrupoValorFijoEntity>()
-            .Fetch(x => x.Tipos)
             .OrderBy(x => x.Descripcion)
             .ToListAsync();
+
+        foreach (var item in items)
+            await NHibernateUtil.InitializeAsync(item.Tipos);
 
         return items.Select(ToGrupoValorFijoDto).ToList();
     }
