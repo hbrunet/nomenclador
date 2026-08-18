@@ -25,6 +25,9 @@ public sealed class GruposValorFijoController(CatalogRepository catalogRepositor
         if (string.IsNullOrWhiteSpace(dto.Descripcion))
             return BadRequest(new { message = "La descripción es obligatoria." });
 
+        if (dto.TiposIds.Count == 0)
+            return BadRequest(new { message = "Debe seleccionar al menos un tipo de valor fijo." });
+
         var result = await catalogRepository.CreateGrupoValorFijoAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
