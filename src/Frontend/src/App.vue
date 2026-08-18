@@ -10,6 +10,7 @@ const menuItems = computed<MenuItem[]>(() => [
   { label: 'Escalas', route: '/escalas' },
   { label: 'Valores por categoría', route: '/valores-categoria' },
   { label: 'Valores fijos', route: '/valores-fijos' },
+  { label: 'Grupos de valores fijos', route: '/grupos-valor-fijo' },
   {
     label: 'Asociación masiva',
     // Agrupa las variantes de asociación masiva; agregar futuras opciones acá.

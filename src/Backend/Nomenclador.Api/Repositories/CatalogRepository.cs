@@ -720,6 +720,90 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         return true;
     }
 
+    // ── Grupos de tipos de valor fijo ───────────────────────────────────────────
+    // Agrupan tipos (no valores puntuales) para que la clonación masiva mensual
+    // no requiera re-seleccionar los mismos tipos cada vez.
+
+    public async Task<IReadOnlyCollection<GrupoValorFijoDto>> GetGruposValorFijoAsync()
+    {
+        var items = await session.Query<GrupoValorFijoEntity>()
+            .OrderBy(x => x.Descripcion)
+            .ToListAsync();
+
+        foreach (var item in items)
+            await NHibernateUtil.InitializeAsync(item.Tipos);
+
+        return items.Select(ToGrupoValorFijoDto).ToList();
+    }
+
+    public async Task<GrupoValorFijoDto?> GetGrupoValorFijoByIdAsync(int id)
+    {
+        var entity = await session.Query<GrupoValorFijoEntity>()
+            .Fetch(x => x.Tipos)
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        return entity is null ? null : ToGrupoValorFijoDto(entity);
+    }
+
+    public async Task<GrupoValorFijoDto> CreateGrupoValorFijoAsync(GrupoValorFijoCreateUpdateDto dto)
+    {
+        var entity = new GrupoValorFijoEntity { Descripcion = dto.Descripcion };
+        foreach (var tipoId in dto.TiposIds.Distinct())
+            entity.Tipos.Add(session.Load<ValorFijoTipoCatalogEntity>(tipoId));
+
+        using var tx = session.BeginTransaction();
+        await session.SaveAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        await NHibernateUtil.InitializeAsync(entity.Tipos);
+        return ToGrupoValorFijoDto(entity);
+    }
+
+    public async Task<GrupoValorFijoDto?> UpdateGrupoValorFijoAsync(int id, GrupoValorFijoCreateUpdateDto dto)
+    {
+        var entity = await session.Query<GrupoValorFijoEntity>()
+            .Fetch(x => x.Tipos)
+            .FirstOrDefaultAsync(x => x.Id == id);
+        if (entity is null) return null;
+
+        entity.Descripcion = dto.Descripcion;
+
+        // Los Tipos ya son entidades persistentes cargadas por Load: reemplazar la
+        // colección así solo reescribe filas de la tabla de unión, no las entidades.
+        entity.Tipos.Clear();
+        foreach (var tipoId in dto.TiposIds.Distinct())
+            entity.Tipos.Add(session.Load<ValorFijoTipoCatalogEntity>(tipoId));
+
+        using var tx = session.BeginTransaction();
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return ToGrupoValorFijoDto(entity);
+    }
+
+    public async Task<bool> DeleteGrupoValorFijoAsync(int id)
+    {
+        var entity = await session.GetAsync<GrupoValorFijoEntity>(id);
+        if (entity is null) return true;
+
+        using var tx = session.BeginTransaction();
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
+        return true;
+    }
+
+    private static GrupoValorFijoDto ToGrupoValorFijoDto(GrupoValorFijoEntity entity) => new()
+    {
+        Id = entity.Id,
+        Descripcion = entity.Descripcion,
+        Tipos = entity.Tipos
+            .Select(t => new CatalogItemDto { Id = t.Id, Descripcion = t.Descripcion })
+            .OrderBy(t => t.Descripcion)
+            .ToList(),
+    };
+
     public Task<IReadOnlyCollection<ValorFijoCatalogDto>> GetAllValoresFijosListAsync()
         => GetValoresFijosAsync();
 
