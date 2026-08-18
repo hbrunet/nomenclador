@@ -1,6 +1,7 @@
 import { apiClient } from './configurationService'
 import type {
   CatalogItem,
+  ClonacionMasivaValoresCategoriaDto,
   ValorCategoriaCreateUpdateDto,
   ValorCategoriaDetailDto,
   ValorCategoriaItemCreateUpdateDto,
@@ -117,5 +118,11 @@ export const valoresCategoriaService = {
         v.id === valorCategoriaId ? { ...v, cantidadItems: v.cantidadItems - 1 } : v,
       )
     }
+  },
+
+  async cloneMasivo(dto: ClonacionMasivaValoresCategoriaDto): Promise<ValorCategoriaDetailDto[]> {
+    const { data } = await apiClient.post<ValorCategoriaDetailDto[]>('/valores-categoria/clonacion-masiva', dto)
+    if (valoresCache) valoresCache = [...valoresCache, ...data.map(toListItem)]
+    return data
   },
 }

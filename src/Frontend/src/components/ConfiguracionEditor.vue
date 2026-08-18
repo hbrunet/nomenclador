@@ -125,7 +125,7 @@ const activeTab = ref('datos-generales')
                 <Select
                   v-model="nomencladorId"
                   :options="catalogs.nomencladores"
-                  option-label="descripcion"
+                  :option-label="n => `${n.id} - ${n.descripcion}`"
                   option-value="id"
                   placeholder="Seleccione un nomenclador"
                   class="w-full"
@@ -137,7 +137,7 @@ const activeTab = ref('datos-generales')
                 <AutoComplete
                   v-model="selectedEscala"
                   :suggestions="escalaSuggestions"
-                  option-label="descripcion"
+                  :option-label="n => `${n.id} - ${n.descripcion}`"
                   placeholder="Escribir para buscar..."
                   force-selection
                   show-clear
@@ -152,7 +152,7 @@ const activeTab = ref('datos-generales')
                 <Select
                   v-model="zonaId"
                   :options="catalogs.zonas"
-                  option-label="descripcion"
+                  :option-label="z => `${z.id} - ${z.descripcion}`"
                   option-value="id"
                   placeholder="Seleccione una zona"
                   show-clear

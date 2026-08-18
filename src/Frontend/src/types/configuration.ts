@@ -89,6 +89,12 @@ export interface ClonacionMasivaValoresFijosDto {
   coeficienteAjuste: number
 }
 
+export interface ClonacionMasivaValoresCategoriaDto {
+  valoresCategoriaIds: number[]
+  nuevoPeriodo: string
+  coeficienteAjuste: number
+}
+
 export interface GrupoValorFijoDto {
   id: number
   descripcion: string
@@ -96,6 +102,17 @@ export interface GrupoValorFijoDto {
 }
 
 export interface GrupoValorFijoCreateUpdateDto {
+  descripcion: string
+  tiposIds: number[]
+}
+
+export interface GrupoValorCategoriaDto {
+  id: number
+  descripcion: string
+  tipos: CatalogItem[]
+}
+
+export interface GrupoValorCategoriaCreateUpdateDto {
   descripcion: string
   tiposIds: number[]
 }

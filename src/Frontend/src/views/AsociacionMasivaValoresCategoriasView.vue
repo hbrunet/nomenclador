@@ -11,8 +11,9 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
+import { gruposValorCategoriaService } from '../services/gruposValorCategoriaService'
 import { formatPeriodo } from '../utils/date'
-import type { CatalogItem, ConfiguracionNomencladorListItemDto, ValorCategoriaCatalogItem } from '../types/configuration'
+import type { CatalogItem, ConfiguracionNomencladorListItemDto, GrupoValorCategoriaDto, ValorCategoriaCatalogItem } from '../types/configuration'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -28,6 +29,7 @@ function estadoSeverity(estado: string) {
 const valoresCategorias = ref<ValorCategoriaCatalogItem[]>([])
 const loadingValores = ref(false)
 const tipoFilter = ref<number | null>(null)
+const grupoFilter = ref<number | null>(null)
 const valorQuery = ref('')
 const selectedValores = ref<ValorCategoriaCatalogItem[]>([])
 
@@ -41,10 +43,18 @@ const tiposDisponibles = computed<CatalogItem[]>(() => {
     .sort((a, b) => a.descripcion.localeCompare(b.descripcion))
 })
 
+// El grupo es un filtro más (junto a Tipo y Buscar), acota rápido la lista a
+// los tipos de interés antes de tildar manualmente los valores a asociar.
+const tiposDelGrupo = computed(() => {
+  const grupo = grupos.value.find((g) => g.id === grupoFilter.value)
+  return grupo ? new Set(grupo.tipos.map((t) => t.id)) : null
+})
+
 const valoresFiltrados = computed(() => {
   const q = valorQuery.value.toLowerCase().trim()
   return valoresCategorias.value
     .filter((v) => !tipoFilter.value || v.idTipo === tipoFilter.value)
+    .filter((v) => !tiposDelGrupo.value || tiposDelGrupo.value.has(v.idTipo))
     .filter((v) => !q || v.descripcion.toLowerCase().includes(q) || v.tipo.toLowerCase().includes(q))
 })
 
@@ -219,9 +229,17 @@ const virtualScrollerOptions = computed(() =>
   valoresFiltrados.value.length > 150 ? { itemSize: 46 } : undefined,
 )
 
+// ── Grupos (filtro por tipos guardados) ───────────────────────────────────────
+const grupos = ref<GrupoValorCategoriaDto[]>([])
+
+async function loadGrupos() {
+  grupos.value = await gruposValorCategoriaService.getAll()
+}
+
 onMounted(async () => {
   await Promise.all([
-    loadValoresCategorias()
+    loadValoresCategorias(),
+    loadGrupos(),
   ])
   await loadConfiguraciones()
 })
@@ -253,6 +271,17 @@ onMounted(async () => {
       </div>
 
       <div class="flex gap-2 flex-wrap">
+        <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
+          <label class="field-label">Grupo</label>
+          <Select v-model="grupoFilter"
+            :options="grupos"
+            option-label="descripcion"
+            option-value="id"
+            placeholder="Todos"
+            show-clear
+            filter
+            class="w-full" />
+        </div>
         <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
           <label class="field-label">Tipo</label>
           <Select v-model="tipoFilter" 
