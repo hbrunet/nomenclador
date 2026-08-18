@@ -21,8 +21,10 @@ const nomencladorSuggestions = ref<CatalogItem[]>([])
 function searchNomenclador(event: AutoCompleteCompleteEvent) {
   const q = event.query.toLowerCase().trim()
   nomencladorSuggestions.value = catalogs.value.nomencladores
-    .filter((n: CatalogItem) => !q || n.descripcion.toLowerCase().includes(q))
-    .slice(0, 20)
+    .filter((n: CatalogItem) => !q 
+      || n.descripcion.toLowerCase().includes(q) 
+      || n.id.toString().includes(q))
+    .slice(0, 100)
 }
 
 const selectedEscala = ref<CatalogItem | null>(null)
@@ -31,7 +33,9 @@ const escalaSuggestions = ref<CatalogItem[]>([])
 function searchEscala(event: AutoCompleteCompleteEvent) {
   const q = event.query.toLowerCase().trim()
   escalaSuggestions.value = catalogs.value.escalas
-    .filter((e: CatalogItem) => !q || e.descripcion.toLowerCase().includes(q))
+    .filter((e: CatalogItem) => !q 
+      || e.descripcion.toLowerCase().includes(q) 
+      || e.id.toString().includes(q))
     .slice(0, 100)
 }
 
@@ -84,7 +88,7 @@ onMounted(async () => {
         <AutoComplete
           v-model="selectedNomenclador"
           :suggestions="nomencladorSuggestions"
-          option-label="descripcion"
+          :option-label="n => `${n.id} - ${n.descripcion}`"
           placeholder="Escribir para buscar..."
           force-selection
           show-clear
@@ -98,7 +102,7 @@ onMounted(async () => {
         <AutoComplete
           v-model="selectedEscala"
           :suggestions="escalaSuggestions"
-          option-label="descripcion"
+          :option-label="n => `${n.id} - ${n.descripcion}`"
           placeholder="Escribir para buscar..."
           force-selection
           show-clear
@@ -112,7 +116,7 @@ onMounted(async () => {
         <Select
           v-model="filters.zonaId"
           :options="catalogs.zonas"
-          option-label="descripcion"
+          :option-label="z => `${z.id} - ${z.descripcion}`"
           option-value="id"
           placeholder="Todas"
           show-clear

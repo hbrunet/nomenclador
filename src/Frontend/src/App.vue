@@ -8,9 +8,23 @@ import type { MenuItem } from 'primevue/menuitem'
 const menuItems = computed<MenuItem[]>(() => [
   { label: 'Configuraciones', route: '/configuraciones' },
   { label: 'Escalas', route: '/escalas' },
-  { label: 'Valores por categoría', route: '/valores-categoria' },
-  { label: 'Valores fijos', route: '/valores-fijos' },
-  { label: 'Grupos de valores fijos', route: '/grupos-valor-fijo' },
+
+  {
+    label: 'Valores fijos',
+    items: [
+      { label: 'Valores y Tipos', route: '/valores-fijos' },
+      { label: 'Grupos', route: '/grupos-valor-fijo' },
+    ],
+  },
+
+   {
+    label: 'Valores por categoría',
+    items: [
+      { label: 'Valores y Tipos', route: '/valores-categoria' },
+      { label: 'Grupos', route: '/grupos-valor-categoria' },
+    ],
+  },
+
   {
     label: 'Asociación masiva',
     // Agrupa las variantes de asociación masiva; agregar futuras opciones acá.
@@ -23,7 +37,10 @@ const menuItems = computed<MenuItem[]>(() => [
   {
     label: 'Clonación masiva',
     // Agrupa las variantes de clonación masiva; agregar futuras opciones acá.
-    items: [{ label: 'Valores fijos', route: '/clonacion-masiva/valores-fijos' }],
+    items: [
+      { label: 'Valores fijos', route: '/clonacion-masiva/valores-fijos' },
+      { label: 'Valores por categoría', route: '/clonacion-masiva/valores-categoria' },
+    ],
   },
 ])
 </script>

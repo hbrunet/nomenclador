@@ -10,7 +10,9 @@ import AsociacionMasivaValoresFijosView from '../views/AsociacionMasivaValoresFi
 import AsociacionMasivaValoresCategoriasView from '../views/AsociacionMasivaValoresCategoriasView.vue'
 import AsociacionMasivaConceptosView from '../views/AsociacionMasivaConceptosView.vue'
 import ClonacionMasivaValoresFijosView from '../views/ClonacionMasivaValoresFijosView.vue'
+import ClonacionMasivaValoresCategoriaView from '../views/ClonacionMasivaValoresCategoriaView.vue'
 import GruposValorFijoView from '../views/GruposValorFijoView.vue'
+import GruposValorCategoriaView from '../views/GruposValorCategoriaView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -46,7 +48,13 @@ const router = createRouter({
       name: 'clonacion-masiva-valores-fijos',
       component: ClonacionMasivaValoresFijosView,
     },
+    {
+      path: '/clonacion-masiva/valores-categoria',
+      name: 'clonacion-masiva-valores-categoria',
+      component: ClonacionMasivaValoresCategoriaView,
+    },
     { path: '/grupos-valor-fijo', name: 'grupos-valor-fijo', component: GruposValorFijoView },
+    { path: '/grupos-valor-categoria', name: 'grupos-valor-categoria', component: GruposValorCategoriaView },
   ],
 })
 

@@ -89,4 +89,20 @@ public sealed class ValoresCategoriaController(CatalogRepository catalogReposito
         await catalogRepository.DeleteValorCategoriaItemAsync(itemId);
         return NoContent();
     }
+
+    [HttpPost("clonacion-masiva")]
+    public async Task<IActionResult> CloneMasivo([FromBody] ClonacionMasivaValoresCategoriaDto dto)
+    {
+        if (dto.NuevoPeriodo == default)
+            return BadRequest(new { message = "El nuevo período es obligatorio." });
+
+        if (dto.CoeficienteAjuste <= 0)
+            return BadRequest(new { message = "El coeficiente de ajuste debe ser mayor a cero." });
+
+        if (dto.ValoresCategoriaIds.Count == 0)
+            return BadRequest(new { message = "Debe seleccionar al menos un valor por categoría para clonar." });
+
+        var result = await catalogRepository.CloneValoresCategoriaMasivoAsync(dto);
+        return result is null ? NotFound() : Ok(result);
+    }
 }

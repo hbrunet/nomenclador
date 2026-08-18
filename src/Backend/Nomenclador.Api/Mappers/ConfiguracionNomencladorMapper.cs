@@ -214,7 +214,7 @@ public sealed class ConfiguracionNomencladorMapper
     private static string MapCatalogDescription<TCatalog>(IReadOnlyDictionary<int, TCatalog> catalog, int id, string entityName)
         where TCatalog : CatalogEntityBase
     {
-        return catalog.TryGetValue(id, out var item) ? item.Descripcion : $"{entityName} no encontrado en el catálogo";
+        return catalog.TryGetValue(id, out var item) ? $"{item.Id} - {item.Descripcion}" : $"{entityName} no encontrado en el catálogo";
     }
 
     // La zona es opcional: a diferencia de MapCatalogDescription (que indica un dato roto,
