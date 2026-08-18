@@ -46,7 +46,7 @@ function openEdit(grupo: GrupoValorFijoDto) {
 }
 
 async function handleSave(dto: { descripcion: string; tiposIds: number[] }) {
-  if (editingId) {
+  if (editingId !== null) {
     const updated = await gruposValorFijoService.update(editingId, dto)
     grupos.value = grupos.value.map((g) => (g.id === editingId ? updated : g))
     toast.add({ severity: 'success', summary: 'Grupo actualizado', detail: 'El grupo se guardó correctamente.', life: 2500 })
