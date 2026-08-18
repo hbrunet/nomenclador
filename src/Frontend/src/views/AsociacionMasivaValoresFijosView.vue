@@ -11,8 +11,14 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
+import { gruposValorFijoService } from '../services/gruposValorFijoService'
 import { formatPeriodo } from '../utils/date'
-import type { CatalogItem, ConfiguracionNomencladorListItemDto, ValorFijoCatalogItem } from '../types/configuration'
+import type {
+  CatalogItem,
+  ConfiguracionNomencladorListItemDto,
+  GrupoValorFijoDto,
+  ValorFijoCatalogItem,
+} from '../types/configuration'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -28,6 +34,7 @@ function estadoSeverity(estado: string) {
 const valoresFijos = ref<ValorFijoCatalogItem[]>([])
 const loadingValores = ref(false)
 const tipoFilter = ref<number | null>(null)
+const grupoFilter = ref<number | null>(null)
 const valorQuery = ref('')
 const selectedValores = ref<ValorFijoCatalogItem[]>([])
 
@@ -41,10 +48,18 @@ const tiposDisponibles = computed<CatalogItem[]>(() => {
     .sort((a, b) => a.descripcion.localeCompare(b.descripcion))
 })
 
+// El grupo es un filtro más (junto a Tipo y Buscar), habilita elegir de una un
+// valor por cada tipo del grupo para asociarlos en la misma tanda masiva.
+const tiposDelGrupo = computed(() => {
+  const grupo = grupos.value.find((g) => g.id === grupoFilter.value)
+  return grupo ? new Set(grupo.tipos.map((t) => t.id)) : null
+})
+
 const valoresFiltrados = computed(() => {
   const q = valorQuery.value.toLowerCase().trim()
   return valoresFijos.value
     .filter((v) => !tipoFilter.value || v.idTipo === tipoFilter.value)
+    .filter((v) => !tiposDelGrupo.value || tiposDelGrupo.value.has(v.idTipo))
     .filter((v) => !q || v.descripcion.toLowerCase().includes(q) || v.tipo.toLowerCase().includes(q))
 })
 
@@ -55,6 +70,13 @@ async function loadValoresFijos() {
   } finally {
     loadingValores.value = false
   }
+}
+
+// ── Grupos (filtro por tipos guardados) ───────────────────────────────────────
+const grupos = ref<GrupoValorFijoDto[]>([])
+
+async function loadGrupos() {
+  grupos.value = await gruposValorFijoService.getAll()
 }
 
 function clearValoresSelection() {
@@ -232,11 +254,13 @@ async function handleDesasociar() {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    loadValoresFijos()
-  ])
+  await Promise.all([loadValoresFijos(), loadGrupos()])
   await loadConfiguraciones()
 })
+
+const virtualScrollerOptions = computed(() =>
+  valoresFiltrados.value.length > 150 ? { itemSize: 46 } : undefined,
+)
 </script>
 
 <template>
@@ -266,6 +290,17 @@ onMounted(async () => {
 
       <div class="flex gap-2 flex-wrap">
         <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
+          <label class="field-label">Grupo</label>
+          <Select v-model="grupoFilter"
+            :options="grupos"
+            option-label="descripcion"
+            option-value="id"
+            placeholder="Todos"
+            show-clear
+            filter
+            class="w-full" />
+        </div>
+        <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
           <label class="field-label">Tipo</label>
           <Select v-model="tipoFilter" 
             :options="tiposDisponibles" 
@@ -285,9 +320,15 @@ onMounted(async () => {
       <Button v-if="selectedValores.length" label="Limpiar selección" icon="pi pi-times" severity="secondary" text
         size="small" class="align-self-start" @click="clearValoresSelection" />
 
-      <DataTable :selection="selectedValores" @update:selection="handleValoresSelectionChange" :value="valoresFiltrados"
-        :loading="loadingValores" data-key="id" striped-rows sort-field="descripcion" :sort-order="1" scrollable
-        scroll-height="520px" :virtual-scroller-options="{ itemSize: 46 }">
+      <DataTable 
+        :selection="selectedValores" 
+        @update:selection="handleValoresSelectionChange" 
+        :value="valoresFiltrados"
+        :loading="loadingValores" 
+        data-key="id" striped-rows sort-field="descripcion" 
+        :sort-order="1" scrollable
+        scroll-height="1040px"
+        :virtual-scroller-options="virtualScrollerOptions">
         <template #empty>
           <span class="muted">No hay valores fijos para el filtro aplicado.</span>
         </template>
@@ -329,8 +370,11 @@ onMounted(async () => {
           text size="small" @click="clearConfigSelection" />
       </div>
 
-      <DataTable :selection="selectedConfiguraciones" @update:selection="(value) => (selectedConfiguraciones = value)"
-        :value="configuraciones" :loading="loadingConfiguraciones" data-key="id" striped-rows>
+      <DataTable 
+        :selection="selectedConfiguraciones" 
+        @update:selection="(value) => (selectedConfiguraciones = value)"
+        :value="configuraciones" 
+        :loading="loadingConfiguraciones" data-key="id" striped-rows>
         <template #empty>
           <span class="muted">No hay configuraciones para los filtros seleccionados.</span>
         </template>

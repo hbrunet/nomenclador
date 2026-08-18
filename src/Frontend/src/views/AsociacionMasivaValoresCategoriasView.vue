@@ -215,6 +215,10 @@ async function handleDesasociar() {
   }
 }
 
+const virtualScrollerOptions = computed(() =>
+  valoresFiltrados.value.length > 150 ? { itemSize: 46 } : undefined,
+)
+
 onMounted(async () => {
   await Promise.all([
     loadValoresCategorias()
@@ -271,7 +275,7 @@ onMounted(async () => {
 
       <DataTable :selection="selectedValores" @update:selection="handleValoresSelectionChange" :value="valoresFiltrados"
         :loading="loadingValores" data-key="id" striped-rows sort-field="descripcion" :sort-order="1" scrollable
-        scroll-height="520px" :virtual-scroller-options="{ itemSize: 46 }">
+        scroll-height="1040px" :virtual-scroller-options="virtualScrollerOptions">
         <template #empty>
           <span class="muted">No hay valores por categoría para el filtro aplicado.</span>
         </template>

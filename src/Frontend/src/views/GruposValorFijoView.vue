@@ -110,7 +110,7 @@ onMounted(async () => {
       <Column header="Tipos">
         <template #body="{ data }">
           <div class="flex gap-1 flex-wrap">
-            <Tag v-for="tipo in data.tipos" :key="tipo.id" :value="tipo.descripcion" severity="info" />
+            <Tag v-for="tipo in data.tipos" :key="tipo.id" :value="`${tipo.id} - ${tipo.descripcion}`" severity="info" />
           </div>
         </template>
       </Column>
