@@ -4,5 +4,5 @@ namespace Nomenclador.Api.Models;
 // mensual: en vez de re-seleccionar tipos cada mes, se elige un grupo guardado.
 public class GrupoValorFijoEntity : CatalogEntityBase
 {
-    public virtual IList<ValorFijoTipoCatalogEntity> Tipos { get; set; } = new List<ValorFijoTipoCatalogEntity>();
+    public virtual IList<ValorFijoTipoCatalogEntity> Tipos { get; set; } = [];
 }
