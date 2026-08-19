@@ -141,8 +141,7 @@ async function handleConfirmar() {
     toast.add({
       severity: 'error',
       summary: 'Error al actualizar',
-      detail: e.response?.data?.mensaje ?? 'Ocurrió un error al actualizar la escala salarial de las configuraciones seleccionadas.',
-      life: 5000,
+      detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Ocurrió un error al actualizar la escala salarial de las configuraciones seleccionadas.',
     })
   } finally {
     submitting.value = false
