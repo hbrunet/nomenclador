@@ -151,7 +151,7 @@ async function handleClonar() {
     toast.add({
       severity: 'error',
       summary: 'Error al clonar',
-      detail: e.response?.data?.mensaje ?? 'Ocurrió un error al clonar los valores por categoría seleccionados.',
+      detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Ocurrió un error al clonar los valores por categoría seleccionados.',
       life: 5000,
     })
   } finally {
