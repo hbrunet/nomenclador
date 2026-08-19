@@ -161,13 +161,19 @@ public sealed class ConfiguracionNomencladorService(
             return new ActualizacionMasivaEscalaSalarialResultDto();
 
         var escalaIdPorConfiguracion = await configuracionRepository.GetEscalaSalarialIdsAsync(configuracionesIds);
-        var escalaIdsDistintas = escalaIdPorConfiguracion.Values.Distinct().ToList();
+        var escalaIdsDistintas = escalaIdPorConfiguracion.Values.Where(v => v > 0).Distinct().ToList();
 
         var nuevaEscalaPorOriginal = await catalogRepository.CloneEscalasMasivoAsync(
             escalaIdsDistintas, request.NuevoPeriodo, request.CoeficienteAjuste);
 
-        var nuevaEscalaPorConfiguracion = escalaIdPorConfiguracion
-            .ToDictionary(kv => kv.Key, kv => nuevaEscalaPorOriginal[kv.Value]);
+        var nuevaEscalaPorConfiguracion = new Dictionary<int, int>();
+        foreach (var (configuracionId, escalaOriginalId) in escalaIdPorConfiguracion)
+        {
+            if (escalaOriginalId <= 0) continue;
+            if (!nuevaEscalaPorOriginal.TryGetValue(escalaOriginalId, out var nuevaEscalaId)) continue;
+
+            nuevaEscalaPorConfiguracion[configuracionId] = nuevaEscalaId;
+        }
 
         var actualizadas = await configuracionRepository.ActualizarEscalaSalarialMasivoAsync(nuevaEscalaPorConfiguracion);
 
