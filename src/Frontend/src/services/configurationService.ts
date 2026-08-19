@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { formatLocalDate } from '../utils/date'
 import type {
+  ActualizacionMasivaEscalaSalarialDto,
+  ActualizacionMasivaEscalaSalarialResultDto,
   AsociacionMasivaConceptosDto,
   AsociacionMasivaResultDto,
   AsociacionMasivaValoresCategoriasDto,
@@ -103,6 +105,14 @@ export const configurationService = {
   async removeConcepto(id: number, conceptoId: number) {
     const { data } = await apiClient.delete<ConfiguracionNomencladorDetailDto>(
       `/configuraciones-nomenclador/${id}/concepto/${conceptoId}`,
+    )
+    return data
+  },
+
+  async actualizarEscalaSalarialMasivo(payload: ActualizacionMasivaEscalaSalarialDto) {
+    const { data } = await apiClient.post<ActualizacionMasivaEscalaSalarialResultDto>(
+      '/configuraciones-nomenclador/actualizacion-masiva-escala-salarial',
+      payload,
     )
     return data
   },

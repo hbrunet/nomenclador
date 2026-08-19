@@ -57,8 +57,7 @@ async function handleDeleteValor(id: number) {
     valores.value = valores.value.filter((v) => v.id !== id)
   } catch (e: any) {
     deleteValorError.value =
-      e.response?.data?.message ??
-      'El valor está siendo utilizado por una o más configuraciones y no puede eliminarse.'
+      e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Error al eliminar el valor por categoría'
   }
 }
 
@@ -121,7 +120,7 @@ async function handleDeleteTipo(id: number) {
     tipos.value = tipos.value.filter((t) => t.id !== id)
   } catch (e: any) {
     deleteTipoError.value =
-      e.response?.data?.message ??
+      e.response?.data?.mensaje ??
       'El tipo está siendo utilizado por uno o más valores y no puede eliminarse.'
   }
 }
