@@ -69,6 +69,7 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         var rawItems = await query
             .OrderBy(() => alias.FechaInicio).Desc
+            .ThenBy(() => nomencladorAlias.Id).Asc
             .ThenBy(() => nomencladorAlias.Descripcion).Asc
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

@@ -39,7 +39,7 @@ async function handleDelete(id: number) {
     escalas.value = escalas.value.filter((e) => e.id !== id)
   } catch (e: any) {
     deleteError.value =
-      e.response?.data?.mensaje ?? e.response?.data?.message ??
+      e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Error al eliminar la escala salarial'
   }
 }
 

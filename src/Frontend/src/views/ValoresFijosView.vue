@@ -63,7 +63,7 @@ async function handleDeleteValor(id: number) {
     valores.value = valores.value.filter((v) => v.id !== id)
   } catch (e: any) {
     deleteValorError.value =
-      e.response?.data?.mensaje ?? e.response?.data?.message ??
+      e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Error al eliminar el valor fijo'
   }
 }
 
