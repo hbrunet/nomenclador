@@ -57,8 +57,7 @@ async function handleDeleteValor(id: number) {
     valores.value = valores.value.filter((v) => v.id !== id)
   } catch (e: any) {
     deleteValorError.value =
-      e.response?.data?.mensaje ??
-      'El valor está siendo utilizado por una o más configuraciones y no puede eliminarse.'
+      e.response?.data?.mensaje ?? e.response?.data?.message ??
   }
 }
 
