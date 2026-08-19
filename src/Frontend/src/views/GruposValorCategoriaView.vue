@@ -63,7 +63,7 @@ async function handleDelete(id: number) {
     await gruposValorCategoriaService.delete(id)
     grupos.value = grupos.value.filter((g) => g.id !== id)
   } catch (e: any) {
-    deleteError.value = e.response?.data?.mensaje ?? 'No se pudo eliminar el grupo.'
+    deleteError.value = e.response?.data?.mensaje ?? e.response?.data?.message ?? 'No se pudo eliminar el grupo.'
   }
 }
 
