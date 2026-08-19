@@ -39,8 +39,7 @@ async function handleDelete(id: number) {
     escalas.value = escalas.value.filter((e) => e.id !== id)
   } catch (e: any) {
     deleteError.value =
-      e.response?.data?.mensaje ??
-      'La escala está siendo utilizada por una o más configuraciones y no puede eliminarse.'
+      e.response?.data?.mensaje ?? e.response?.data?.message ??
   }
 }
 
