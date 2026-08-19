@@ -95,6 +95,17 @@ export interface ClonacionMasivaValoresCategoriaDto {
   coeficienteAjuste: number
 }
 
+export interface ActualizacionMasivaEscalaSalarialDto {
+  configuracionesIds: number[]
+  nuevoPeriodo: string
+  coeficienteAjuste: number
+}
+
+export interface ActualizacionMasivaEscalaSalarialResultDto {
+  escalasClonadas: number
+  configuracionesActualizadas: number
+}
+
 export interface GrupoValorFijoDto {
   id: number
   descripcion: string

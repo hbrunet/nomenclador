@@ -11,6 +11,7 @@ import AsociacionMasivaValoresCategoriasView from '../views/AsociacionMasivaValo
 import AsociacionMasivaConceptosView from '../views/AsociacionMasivaConceptosView.vue'
 import ClonacionMasivaValoresFijosView from '../views/ClonacionMasivaValoresFijosView.vue'
 import ClonacionMasivaValoresCategoriaView from '../views/ClonacionMasivaValoresCategoriaView.vue'
+import ActualizacionMasivaEscalaSalarialView from '../views/ActualizacionMasivaEscalaSalarialView.vue'
 import GruposValorFijoView from '../views/GruposValorFijoView.vue'
 import GruposValorCategoriaView from '../views/GruposValorCategoriaView.vue'
 const router = createRouter({
@@ -52,6 +53,11 @@ const router = createRouter({
       path: '/clonacion-masiva/valores-categoria',
       name: 'clonacion-masiva-valores-categoria',
       component: ClonacionMasivaValoresCategoriaView,
+    },
+    {
+      path: '/clonacion-masiva/escala-salarial',
+      name: 'actualizacion-masiva-escala-salarial',
+      component: ActualizacionMasivaEscalaSalarialView,
     },
     { path: '/grupos-valor-fijo', name: 'grupos-valor-fijo', component: GruposValorFijoView },
     { path: '/grupos-valor-categoria', name: 'grupos-valor-categoria', component: GruposValorCategoriaView },

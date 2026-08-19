@@ -126,4 +126,10 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
     {
         return Ok(await configuracionService.DesasociarConceptosMasivoAsync(request));
     }
+
+    [HttpPost("actualizacion-masiva-escala-salarial")]
+    public async Task<IActionResult> ActualizarEscalaSalarialMasivo([FromBody] ActualizacionMasivaEscalaSalarialDto request)
+    {
+        return Ok(await configuracionService.ActualizarEscalaSalarialMasivoAsync(request));
+    }
 }

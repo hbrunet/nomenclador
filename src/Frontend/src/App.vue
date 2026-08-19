@@ -7,7 +7,13 @@ import type { MenuItem } from 'primevue/menuitem'
 
 const menuItems = computed<MenuItem[]>(() => [
   { label: 'Configuraciones', route: '/configuraciones' },
-  { label: 'Escalas', route: '/escalas' },
+  { 
+    label: 'Escalas Salariales', 
+    items:[
+      { label: 'Escalas', route: '/escalas' },
+      { label: 'Actualización masiva', route: '/clonacion-masiva/escala-salarial' },
+    ],
+  },
 
   {
     label: 'Valores fijos',

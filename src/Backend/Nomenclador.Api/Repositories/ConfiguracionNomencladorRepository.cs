@@ -491,12 +491,16 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         return eliminadas;
     }
 
-    private static IEnumerable<int[]> GetChunks(IReadOnlyCollection<int> ids)
+    // NHibernate LINQ explota con "Evaluation failure on op_Implicit(...Int32[]...)" cuando
+    // .Contains() se llama sobre un array (int[]) dentro de un .Where(); List<int> sí funciona.
+    // Por eso los chunks se devuelven como List<int>, no int[] (ver también CatalogRepository,
+    // que usa el mismo patrón .ToList() para los mismos fines).
+    private static IEnumerable<List<int>> GetChunks(IReadOnlyCollection<int> ids)
     {
-        var distinctIds = ids.Distinct().ToArray();
-        for (var i = 0; i < distinctIds.Length; i += OracleInClauseChunkSize)
+        var distinctIds = ids.Distinct().ToList();
+        for (var i = 0; i < distinctIds.Count; i += OracleInClauseChunkSize)
         {
-            yield return distinctIds.Skip(i).Take(OracleInClauseChunkSize).ToArray();
+            yield return distinctIds.Skip(i).Take(OracleInClauseChunkSize).ToList();
         }
     }
 
@@ -571,5 +575,54 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         await tx.CommitAsync();
 
         return eliminadas;
+    }
+
+    // EscalaSalarialId es un FK simple (no una colección M:N), por eso "asociar" acá es un
+    // UPDATE directo. Usado por la actualización masiva de escala salarial junto con
+    // CatalogRepository.CloneEscalasMasivoAsync (clonar la escala primero, reasignar después).
+    public async Task<Dictionary<int, int>> GetEscalaSalarialIdsAsync(IReadOnlyCollection<int> configuracionIds)
+    {
+        var ids = configuracionIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        var result = new Dictionary<int, int>();
+        foreach (var chunk in GetChunks(ids))
+        {
+            // Se carga la entidad completa en vez de proyectar a un tipo anónimo: algunas filas
+            // tienen IDESCALASAL NULL en Oracle, y el transformer de tuplas de NHibernate para
+            // proyecciones LINQ ("new { x.Id, x.EscalaSalarialId }") explota con
+            // NullReferenceException al unboxear ese NULL, mientras que la carga de entidad
+            // completa lo maneja bien (lo mapea a 0, igual que GetByIdAsync).
+            var rows = await session.Query<ConfiguracionNomencladorEntity>()
+                .Where(x => chunk.Contains(x.Id))
+                .ToListAsync();
+
+            foreach (var row in rows)
+                result[row.Id] = row.EscalaSalarialId;
+        }
+
+        return result;
+    }
+
+    public async Task<int> ActualizarEscalaSalarialMasivoAsync(IReadOnlyDictionary<int, int> nuevaEscalaPorConfiguracion)
+    {
+        if (nuevaEscalaPorConfiguracion.Count == 0) return 0;
+
+        using var tx = session.BeginTransaction();
+
+        var actualizadas = 0;
+        foreach (var (configuracionId, nuevaEscalaId) in nuevaEscalaPorConfiguracion)
+        {
+            var entity = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
+            if (entity is null) continue;
+
+            entity.EscalaSalarialId = nuevaEscalaId;
+            actualizadas++;
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return actualizadas;
     }
 }

@@ -10,11 +10,23 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 {
     // HACK legacy: ValorFijoCatalogEntity no tiene columna Periodo (agregarla arriesga
     // romper la app legacy que comparte la tabla), así que el período viaja como texto
-    // libre "MM/YYYY" dentro de Descripcion; acá se reemplaza cualquier ocurrencia por el nuevo.
-    private static readonly Regex PeriodoEnDescripcionRegex = new(@"\d{2}/\d{4}", RegexOptions.Compiled);
+    // libre dentro de Descripcion, indistintamente en formato "MM/YYYY" o "YYYY/MM"
+    // según cómo se haya cargado originalmente; acá se reemplaza cualquier ocurrencia del
+    // formato detectado por el nuevo período, preservando ese mismo formato. Si la
+    // descripción no tiene ningún período reconocible, se lo agrega como sufijo.
+    private static readonly Regex PeriodoMmYyyyRegex = new(@"\b\d{2}/\d{4}\b", RegexOptions.Compiled);
+    private static readonly Regex PeriodoYyyyMmRegex = new(@"\b\d{4}/\d{2}\b", RegexOptions.Compiled);
 
-    private static string ReemplazarPeriodoEnDescripcion(string descripcion, DateOnly nuevoPeriodo) =>
-        PeriodoEnDescripcionRegex.Replace(descripcion, nuevoPeriodo.ToString("MM/yyyy"));
+    private static string ReemplazarPeriodoEnDescripcion(string descripcion, DateOnly nuevoPeriodo)
+    {
+        if (PeriodoMmYyyyRegex.IsMatch(descripcion))
+            return PeriodoMmYyyyRegex.Replace(descripcion, nuevoPeriodo.ToString("MM/yyyy"));
+
+        if (PeriodoYyyyMmRegex.IsMatch(descripcion))
+            return PeriodoYyyyMmRegex.Replace(descripcion, nuevoPeriodo.ToString("MM/yyyy"));
+
+        return $"{descripcion.TrimEnd()} {nuevoPeriodo:MM/yyyy}";
+    }
 
     public async Task<CatalogSnapshot> GetSnapshotAsync()
     {
@@ -273,6 +285,79 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         await tx.CommitAsync();
 
         return true;
+    }
+
+    // Clona cada escala salarial distinta (Descripcion con el período reemplazado, mismo
+    // mecanismo que valores fijos/por categoría) junto con todas sus Categorias, aplicando
+    // el coeficiente de ajuste al Monto de cada una. Usado por la actualización masiva de
+    // escala salarial (clonar + reasignar a las configuraciones seleccionadas). Devuelve el
+    // mapeo escala original → escala clonada para que el llamador reasigne cada configuración.
+    public async Task<Dictionary<int, int>> CloneEscalasMasivoAsync(
+        IReadOnlyCollection<int> escalaIds, DateOnly nuevoPeriodo, decimal coeficienteAjuste)
+    {
+        var ids = escalaIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        const int oracleInLimit = 1000;
+        var escalas = new List<EscalaSalarialCatalogEntity>(ids.Count);
+        var categorias = new List<CategoriaCatalogEntity>();
+
+        for (var i = 0; i < ids.Count; i += oracleInLimit)
+        {
+            var batch = ids.Skip(i).Take(oracleInLimit).ToList();
+
+            var batchEscalas = await session.Query<EscalaSalarialCatalogEntity>()
+                .Where(x => batch.Contains(x.Id))
+                .ToListAsync();
+            escalas.AddRange(batchEscalas);
+
+            var batchCategorias = await session.Query<CategoriaCatalogEntity>()
+                .Where(x => batch.Contains(x.EscalaSalarialId))
+                .ToListAsync();
+            categorias.AddRange(batchCategorias);
+        }
+
+        var categoriasPorEscala = categorias
+            .GroupBy(x => x.EscalaSalarialId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        using var tx = session.BeginTransaction();
+
+        // Fase 1: clonar las escalas primero para obtener sus ids generados por secuencia,
+        // necesarios como EscalaSalarialId de las categorías clonadas (fase 2).
+        var clonesPorOriginal = new Dictionary<int, EscalaSalarialCatalogEntity>();
+        foreach (var escala in escalas)
+        {
+            var clone = new EscalaSalarialCatalogEntity
+            {
+                Descripcion = ReemplazarPeriodoEnDescripcion(escala.Descripcion, nuevoPeriodo),
+            };
+            await session.SaveAsync(clone);
+            clonesPorOriginal[escala.Id] = clone;
+        }
+        await session.FlushAsync();
+
+        foreach (var (escalaOriginalId, clone) in clonesPorOriginal)
+        {
+            if (!categoriasPorEscala.TryGetValue(escalaOriginalId, out var categoriasOriginales)) continue;
+
+            foreach (var categoria in categoriasOriginales)
+            {
+                await session.SaveAsync(new CategoriaCatalogEntity
+                {
+                    Descripcion = categoria.Descripcion,
+                    EscalaSalarialId = clone.Id,
+                    Numero = categoria.Numero,
+                    Monto = Math.Round(categoria.Monto * coeficienteAjuste, 2, MidpointRounding.AwayFromZero),
+                    DescLarga = categoria.DescLarga,
+                });
+            }
+        }
+
+        await session.FlushAsync();
+        await tx.CommitAsync();
+
+        return clonesPorOriginal.ToDictionary(kv => kv.Key, kv => kv.Value.Id);
     }
 
     // ── Categorias ───────────────────────────────────────────────────────────

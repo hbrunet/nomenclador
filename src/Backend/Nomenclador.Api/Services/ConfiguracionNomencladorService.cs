@@ -150,6 +150,34 @@ public sealed class ConfiguracionNomencladorService(
         return await BuildDetailAsync(updatedEntity);
     }
 
+    // Clona cada escala salarial distinta referenciada por las configuraciones seleccionadas
+    // (aplicando el coeficiente al Monto de sus categorías) y reasigna cada configuración a
+    // su propio clon. No valida solapamiento de fechas al reasignar (decisión de negocio).
+    public async Task<ActualizacionMasivaEscalaSalarialResultDto> ActualizarEscalaSalarialMasivoAsync(
+        ActualizacionMasivaEscalaSalarialDto request)
+    {
+        var configuracionesIds = request.ConfiguracionesIds.Distinct().ToList();
+        if (configuracionesIds.Count == 0)
+            return new ActualizacionMasivaEscalaSalarialResultDto();
+
+        var escalaIdPorConfiguracion = await configuracionRepository.GetEscalaSalarialIdsAsync(configuracionesIds);
+        var escalaIdsDistintas = escalaIdPorConfiguracion.Values.Distinct().ToList();
+
+        var nuevaEscalaPorOriginal = await catalogRepository.CloneEscalasMasivoAsync(
+            escalaIdsDistintas, request.NuevoPeriodo, request.CoeficienteAjuste);
+
+        var nuevaEscalaPorConfiguracion = escalaIdPorConfiguracion
+            .ToDictionary(kv => kv.Key, kv => nuevaEscalaPorOriginal[kv.Value]);
+
+        var actualizadas = await configuracionRepository.ActualizarEscalaSalarialMasivoAsync(nuevaEscalaPorConfiguracion);
+
+        return new ActualizacionMasivaEscalaSalarialResultDto
+        {
+            EscalasClonadas = nuevaEscalaPorOriginal.Count,
+            ConfiguracionesActualizadas = actualizadas,
+        };
+    }
+
     public async Task<AsociacionMasivaResultDto> AsociarValoresFijosMasivoAsync(AsociacionMasivaValoresFijosDto request)
     {
         var configuracionesIds = request.ConfiguracionesIds.Distinct().ToArray();
