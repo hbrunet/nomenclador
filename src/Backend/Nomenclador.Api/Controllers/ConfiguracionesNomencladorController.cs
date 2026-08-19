@@ -130,6 +130,15 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
     [HttpPost("actualizacion-masiva-escala-salarial")]
     public async Task<IActionResult> ActualizarEscalaSalarialMasivo([FromBody] ActualizacionMasivaEscalaSalarialDto request)
     {
+        if (request.NuevoPeriodo == default)
+            return BadRequest(new { message = "El nuevo período es obligatorio." });
+
+        if (request.CoeficienteAjuste <= 0)
+            return BadRequest(new { message = "El coeficiente de ajuste debe ser mayor a cero." });
+
+        if (request.ConfiguracionesIds.Count == 0)
+            return BadRequest(new { message = "Debe seleccionar al menos una configuración para actualizar." });
+
         return Ok(await configuracionService.ActualizarEscalaSalarialMasivoAsync(request));
     }
 }
