@@ -29,11 +29,11 @@ public sealed class SeguridadService(HttpClient httpClient, IConfiguration confi
         {
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                throw new InvalidOperationException("Usuario o contraseña incorrectos.");
+                throw new UnauthorizedException("Usuario o contraseña incorrectos.");
             }
             else if (response.StatusCode == HttpStatusCode.Forbidden)
             {
-                throw new InvalidOperationException("El usuario no tiene permisos para acceder a la aplicación.");
+                throw new ForbiddenException("El usuario no tiene permisos para acceder a la aplicación.");
             }
             else
             {
@@ -49,17 +49,17 @@ public sealed class SeguridadService(HttpClient httpClient, IConfiguration confi
 
         if (!authResponse.Success)
         {
-            throw new InvalidOperationException($"Autenticación fallida: {authResponse.Message}");
+            throw new UnauthorizedException($"Autenticación fallida: {authResponse.Message}");
         }
 
         if (authResponse.Data?.User.IsLocked is true)
         {
-            throw new InvalidOperationException("El usuario está bloqueado y no puede iniciar sesión.");
+            throw new ForbiddenException("El usuario está bloqueado y no puede iniciar sesión.");
         }
 
         if (authResponse.Data?.User.Roles is null || !authResponse.Data.User.Roles.Any(r => r.ApplicationId == applicationId))
         {
-            throw new InvalidOperationException("El usuario no tiene roles asignados para la aplicación y no puede iniciar sesión.");
+            throw new ForbiddenException("El usuario no tiene roles asignados para la aplicación y no puede iniciar sesión.");
         }
 
         // El servicio externo solo se usa para validar credenciales; la sesión contra esta API
