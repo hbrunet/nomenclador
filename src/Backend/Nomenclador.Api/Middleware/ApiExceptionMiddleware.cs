@@ -29,6 +29,24 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next)
                 mensaje = exception.Message
             }, SerializerOptions));
         }
+        catch (UnauthorizedException exception)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                mensaje = exception.Message
+            }, SerializerOptions));
+        }
+        catch (ForbiddenException exception)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                mensaje = exception.Message
+            }, SerializerOptions));
+        }
         catch (Exception exception)
         {
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;

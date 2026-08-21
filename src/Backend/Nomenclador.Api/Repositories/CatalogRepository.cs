@@ -973,7 +973,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         Descripcion = entity.Descripcion,
         Tipos = entity.Tipos
             .Select(t => new CatalogItemDto { Id = t.Id, Descripcion = t.Descripcion })
-            .OrderBy(t => t.Descripcion)
+            .OrderBy(t => t.Id).ThenBy(t => t.Descripcion)
             .ToList(),
     };
 
@@ -1057,7 +1057,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         Descripcion = entity.Descripcion,
         Tipos = entity.Tipos
             .Select(t => new CatalogItemDto { Id = t.Id, Descripcion = t.Descripcion })
-            .OrderBy(t => t.Descripcion)
+            .OrderBy(t => t.Id).ThenBy(t => t.Descripcion)
             .ToList(),
     };
 

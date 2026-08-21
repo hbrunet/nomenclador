@@ -1,4 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/authStore'
+import { tokenStorage } from '../utils/tokenStorage'
+import LoginView from '../views/LoginView.vue'
 import ConfiguracionesView from '../views/ConfiguracionesView.vue'
 import ConfiguracionDetailView from '../views/ConfiguracionDetailView.vue'
 import EscalasView from '../views/EscalasView.vue'
@@ -17,6 +20,7 @@ import GruposValorCategoriaView from '../views/GruposValorCategoriaView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: '/login', name: 'login', component: LoginView },
     { path: '/', redirect: '/configuraciones' },
     { path: '/configuraciones', name: 'configuraciones', component: ConfiguracionesView },
     { path: '/configuraciones/nueva', name: 'configuracion-nueva', component: ConfiguracionDetailView },
@@ -62,6 +66,16 @@ const router = createRouter({
     { path: '/grupos-valor-fijo', name: 'grupos-valor-fijo', component: GruposValorFijoView },
     { path: '/grupos-valor-categoria', name: 'grupos-valor-categoria', component: GruposValorCategoriaView },
   ],
+})
+
+router.beforeEach((to) => {
+  if (to.name === 'login') return true
+  const authStore = useAuthStore()
+  if (!tokenStorage.getDisplayName()) {
+    authStore.clearSession()
+    return { name: 'login' }
+  }
+  return true
 })
 
 export default router
