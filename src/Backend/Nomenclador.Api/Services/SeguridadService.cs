@@ -9,7 +9,7 @@ namespace Nomenclador.Api.Services;
 
 public sealed class SeguridadService(HttpClient httpClient, IConfiguration configuration)
 {
-    public async Task<LoginResultDto?> ValidarUsuarioAsync(LoginDto credenciales)
+    public async Task<LoginResultDto> ValidarUsuarioAsync(LoginDto credenciales)
     {
         var loginUrl = configuration["ExternalAuth:LoginUrl"]
             ?? throw new InvalidOperationException("La configuración 'ExternalAuth:LoginUrl' no está definida.");

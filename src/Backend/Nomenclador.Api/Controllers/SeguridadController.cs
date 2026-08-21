@@ -13,6 +13,6 @@ public sealed class SeguridadController(SeguridadService seguridadService) : Con
     public async Task<IActionResult> Login([FromBody] LoginDto request)
     {
         var result = await seguridadService.ValidarUsuarioAsync(request);
-        return result is not null ? Ok(result) : Unauthorized();
+        return Ok(result);
     }
 }
