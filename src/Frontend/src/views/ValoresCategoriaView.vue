@@ -35,7 +35,7 @@ const filteredValores = computed(() => {
   return valores.value.filter(
     (v) =>
       (!q || v.descripcion.toLowerCase().includes(q)) &&
-      (!t || v.tipo.toLowerCase().includes(t)),
+      (!t || v.tipo.toLowerCase().includes(t) || v.idTipo.toString().includes(t)),
   )
 })
 
@@ -260,13 +260,13 @@ onMounted(async () => {
             :value="tipos"
             :loading="loadingTipos"
             striped-rows
-            :sort-field="'descripcion'"
+            :sort-field="'id'"
             :sort-order="1"
           >
             <template #empty>
               <span class="muted">No hay tipos cargados.</span>
             </template>
-            <Column field="id" header="ID" style="width: 5rem; text-align: right" />
+            <Column field="id" header="ID" style="text-align: right" sortable />
             <Column field="descripcion" header="Descripción" sortable />
             <Column style="width: 10rem">
               <template #body="{ data }">

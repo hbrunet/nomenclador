@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { formatLocalDate } from '../utils/date'
+import { tokenStorage } from '../utils/tokenStorage'
 import type {
   ActualizacionMasivaEscalaSalarialDto,
   ActualizacionMasivaEscalaSalarialResultDto,
@@ -32,6 +33,27 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 })
+
+apiClient.interceptors.request.use((config) => {
+  const token = tokenStorage.getToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      tokenStorage.clearSession()
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  },
+)
 
 // El draft usa Date (para que los DatePicker funcionen en horario local); acá se
 // serializa a "YYYY-MM-DD" en horario local antes de mandarlo al backend. Usar

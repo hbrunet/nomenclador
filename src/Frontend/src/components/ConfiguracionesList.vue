@@ -118,20 +118,24 @@ function openCloneConfigDialog(source: ConfiguracionNomencladorListItemDto) {
 
       <Column>
         <template #body="{ data }">
-          <Button
-            label="Editar"
-            icon="pi pi-pencil"
-            size="small"
-            text
-            @click="emit('edit', data.id)"
-          />
-          <Button 
-            label="Clonar" 
-            icon="pi pi-copy" 
-            size="small"
-            text
-            @click="openCloneConfigDialog(data)"
-          />
+          <div class="flex gap-1 align-items-center">
+            <Button
+              label="Editar"
+              icon="pi pi-pencil"
+              severity="secondary"
+              size="small"
+              outlined
+              @click="emit('edit', data.id)"
+            />
+            <Button 
+              label="Clonar" 
+              icon="pi pi-copy" 
+              severity="secondary"
+              outlined
+              size="small"
+              @click="openCloneConfigDialog(data)"
+            />
+          </div>
         </template>
       </Column>
     </DataTable>

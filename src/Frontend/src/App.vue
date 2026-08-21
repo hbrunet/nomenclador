@@ -1,9 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Menubar from 'primevue/menubar'
+import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import type { MenuItem } from 'primevue/menuitem'
+import { useAuthStore } from './stores/authStore'
+
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+
+const showShell = computed(() => route.name !== 'login')
+
+function handleLogout() {
+  authStore.logout()
+  router.push('/login')
+}
 
 const menuItems = computed<MenuItem[]>(() => [
   { label: 'Configuraciones', route: '/configuraciones' },
@@ -53,7 +67,7 @@ const menuItems = computed<MenuItem[]>(() => [
 
 <template>
   <div class="app-shell">
-    <header class="app-header">
+    <header v-if="showShell" class="app-header">
       <div>
         <p class="eyebrow">Nomenclador salarial</p>
         <h1>Sistema de configuración</h1>
@@ -73,6 +87,10 @@ const menuItems = computed<MenuItem[]>(() => [
           </template>
         </Menubar>
       </nav>
+      <div class="app-user">
+        <span v-if="authStore.displayName" class="app-user-name">{{ authStore.displayName }}</span>
+        <Button label="Salir" severity="secondary" text icon="pi pi-sign-out" @click="handleLogout" />
+      </div>
     </header>
 
     <main class="app-content">

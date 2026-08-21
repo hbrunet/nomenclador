@@ -29,6 +29,15 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next)
                 mensaje = exception.Message
             }, SerializerOptions));
         }
+        catch (InvalidOperationException exception)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                mensaje = exception.Message
+            }, SerializerOptions));
+        }
         catch (Exception exception)
         {
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;

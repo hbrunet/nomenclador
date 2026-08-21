@@ -1,3 +1,6 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using NHibernate;
 using Nomenclador.Api.Data;
 using Nomenclador.Api.Mappers;
@@ -41,11 +44,39 @@ builder.Services.AddScoped<ConfiguracionNomencladorMapper>();
 builder.Services.AddScoped<ValidacionConfiguracionService>();
 builder.Services.AddScoped<ClonadoConfiguracionService>();
 builder.Services.AddScoped<ConfiguracionNomencladorService>();
+builder.Services.AddHttpClient<SeguridadService>(c => c.Timeout = TimeSpan.FromSeconds(30))
+    // svr-v-patri es interno; el proxy corporativo por defecto del sistema lo intercepta y lo bloquea (Squid ERR_ACCESS_DENIED).
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { UseProxy = false });
+
+// El token lo emitimos nosotros (SeguridadService) tras validar credenciales contra el servicio
+// externo; esta clave es puramente nuestra, no depende de nada compartido con svr-v-patri.
+var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(jwtSigningKey))
+{
+    throw new InvalidOperationException("La configuración 'Jwt:SigningKey' no está definida.");
+}
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+        };
+    });
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
 app.UseMiddleware<ApiExceptionMiddleware>();
 app.UseCors("VueClient");
-app.MapControllers();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers().RequireAuthorization();
 
 app.Run();

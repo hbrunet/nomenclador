@@ -62,6 +62,17 @@ a {
   flex-wrap: wrap;
 }
 
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-user-name {
+  color: #93c5fd;
+  font-size: 0.875rem;
+}
+
 .app-content {
   padding: 1.5rem 2rem;
   display: flex;
