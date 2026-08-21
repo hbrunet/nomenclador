@@ -14,9 +14,9 @@ const authStore = useAuthStore()
 
 const showShell = computed(() => route.name !== 'login')
 
-function handleLogout() {
-  authStore.logout()
-  router.push('/login')
+async function handleLogout() {
+  await authStore.logout()
+  await router.push('/login')
 }
 
 const menuItems = computed<MenuItem[]>(() => [
@@ -101,4 +101,3 @@ const menuItems = computed<MenuItem[]>(() => [
     <ConfirmDialog />
   </div>
 </template>
-

@@ -9,7 +9,7 @@ namespace Nomenclador.Api.Services;
 
 public sealed class SeguridadService(HttpClient httpClient, IConfiguration configuration)
 {
-    public async Task<LoginResultDto> ValidarUsuarioAsync(LoginDto credenciales)
+    public async Task<(string Token, LoginResultDto Response)> ValidarUsuarioAsync(LoginDto credenciales)
     {
         var loginUrl = configuration["ExternalAuth:LoginUrl"]
             ?? throw new InvalidOperationException("La configuración 'ExternalAuth:LoginUrl' no está definida.");
@@ -66,13 +66,14 @@ public sealed class SeguridadService(HttpClient httpClient, IConfiguration confi
         // se maneja con un JWT propio, firmado con una clave que controlamos íntegramente.
         var (token, expiresAt) = GenerarToken(credenciales.Username, authResponse.Data.User);
 
-        return new LoginResultDto
-        {
-            Token = token,
-            TokenType = "Bearer",
-            ExpiresAt = expiresAt,
-            DisplayName = authResponse.Data.User.DisplayName,
-        };
+        return (
+            token,
+            new LoginResultDto
+            {
+                TokenType = "Bearer",
+                ExpiresAt = expiresAt,
+                DisplayName = authResponse.Data.User.DisplayName,
+            });
     }
 
     private (string Token, DateTime ExpiresAt) GenerarToken(string username, UserInfo user)

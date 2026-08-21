@@ -6,4 +6,8 @@ export const authService = {
     const { data } = await apiClient.post<LoginResultDto>('/seg/login', credentials)
     return data
   },
+
+  async logout(): Promise<void> {
+    await apiClient.post('/seg/logout')
+  },
 }

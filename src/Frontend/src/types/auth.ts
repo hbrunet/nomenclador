@@ -4,7 +4,6 @@ export interface LoginDto {
 }
 
 export interface LoginResultDto {
-  token: string
   tokenType: string
   expiresAt: string
   displayName: string

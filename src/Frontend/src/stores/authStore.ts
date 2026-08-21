@@ -4,37 +4,41 @@ import { tokenStorage } from '../utils/tokenStorage'
 import type { LoginDto } from '../types/auth'
 
 interface AuthState {
-  token: string | null
   displayName: string | null
   loggingIn: boolean
 }
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
-    token: tokenStorage.getToken(),
     displayName: tokenStorage.getDisplayName(),
     loggingIn: false,
   }),
   getters: {
-    isAuthenticated: (state) => !!state.token,
+    isAuthenticated: (state) => !!state.displayName,
   },
   actions: {
     async login(credentials: LoginDto) {
       this.loggingIn = true
       try {
         const result = await authService.login(credentials)
-        tokenStorage.setSession(result.token, result.displayName)
-        this.token = result.token
+        tokenStorage.setSession(result.displayName)
         this.displayName = result.displayName
       } finally {
         this.loggingIn = false
       }
     },
 
-    logout() {
+    clearSession() {
       tokenStorage.clearSession()
-      this.token = null
       this.displayName = null
+    },
+
+    async logout() {
+      try {
+        await authService.logout()
+      } finally {
+        this.clearSession()
+      }
     },
   },
 })
