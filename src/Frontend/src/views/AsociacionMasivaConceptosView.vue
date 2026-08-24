@@ -262,12 +262,12 @@ onMounted(async () => {
       </div>
 
       <div class="flex flex-column gap-1">
-        <label class="field-label">Buscar</label>
+        <label class="field-label">Filtrar</label>
         <InputText v-model="conceptoQuery" placeholder="Código, código/subcódigo (25/100) o d:descripción..."
           class="w-full" />
         <span class="muted text-sm">
-          Por defecto busca por código. Usá "código/subcódigo" para buscar por ambos (ej. 25/100),
-          o el prefijo "d:" para buscar por descripción (ej. d:decreto).
+          Por defecto filtra por código. Usá "código/subcódigo" para filtrar por ambos (ej. 25/100),
+          o el prefijo "d:" para filtrar por descripción (ej. d:decreto).
         </span>
       </div>
 

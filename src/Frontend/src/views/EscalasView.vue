@@ -20,7 +20,8 @@ const deleteError = ref<string | null>(null)
 const filteredEscalas = computed(() => {
   const q = filterQuery.value.toLowerCase().trim()
   if (!q) return escalas.value
-  return escalas.value.filter((e) => e.descripcion.toLowerCase().includes(q))
+  return escalas.value.filter((e) => e.descripcion.toLowerCase().includes(q) 
+  || e.id.toString().includes(q))
 })
 
 async function load() {
@@ -69,7 +70,7 @@ onMounted(load)
     <div class="mb-3" style="max-width: 400px">
       <InputText
         v-model="filterQuery"
-        placeholder="Buscar por descripción..."
+        placeholder="Filtrar por ID o descripción..."
         class="w-full"
       />
     </div>
@@ -99,7 +100,7 @@ onMounted(load)
           {{ filterQuery ? 'Sin resultados para el filtro aplicado.' : 'No hay escalas salariales cargadas.' }}
         </span>
       </template>
-      <Column field="id" header="ID" style="width: 5rem; text-align: right" />
+      <Column field="id" header="ID" style="width: 5rem; text-align: right" sortable />
       <Column field="descripcion" header="Descripción" sortable />
       <Column header="Categorías" style="width: 8rem; text-align: right">
         <template #body="{ data }">

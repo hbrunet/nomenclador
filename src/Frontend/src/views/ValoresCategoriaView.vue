@@ -34,7 +34,7 @@ const filteredValores = computed(() => {
   const t = filterTipo.value.toLowerCase().trim()
   return valores.value.filter(
     (v) =>
-      (!q || v.descripcion.toLowerCase().includes(q)) &&
+      (!q || v.descripcion.toLowerCase().includes(q) || v.id.toString().includes(q)) &&
       (!t || v.tipo.toLowerCase().includes(t) || v.idTipo.toString().includes(t)),
   )
 })
@@ -160,8 +160,8 @@ onMounted(async () => {
         <TabPanel value="valores">
           <div class="flex justify-content-between align-items-end gap-3 mt-3 mb-3 flex-wrap">
             <div class="flex gap-2 flex-wrap">
-              <InputText v-model="filterValores" placeholder="Buscar por descripción..." style="width: 240px" />
-              <InputText v-model="filterTipo" placeholder="Filtrar por tipo..." style="width: 180px" />
+              <InputText v-model="filterValores" placeholder="Filtrar por ID o descripción..." style="width: 340px" />
+              <InputText v-model="filterTipo" placeholder="Filtrar por tipo..." style="width: 240px" />
             </div>
             <div class="flex gap-2">
               <Button
@@ -205,7 +205,7 @@ onMounted(async () => {
                 {{ filterValores || filterTipo ? 'Sin resultados para el filtro aplicado.' : 'No hay valores cargados.' }}
               </span>
             </template>
-            <Column field="id" header="ID" style="width: 5rem; text-align: right" />
+            <Column field="id" header="ID" style="width: 5rem; text-align: right" sortable />
             <Column field="descripcion" header="Descripción" sortable />
             <Column field="tipo" header="Tipo" sortable>
               <template #body="{ data }">

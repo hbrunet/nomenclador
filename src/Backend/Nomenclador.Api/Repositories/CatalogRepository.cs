@@ -543,7 +543,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetValorCategoriaTiposAsync()
     {
         return await session.Query<ValorCategoriaTipoCatalogEntity>()
-            .OrderBy(x => x.Descripcion)
+            .OrderBy(x => x.Id)
+            .ThenBy(x => x.Descripcion)
             .Select(x => new CatalogItemDto { Id = x.Id, Descripcion = x.Descripcion })
             .ToListAsync();
     }
@@ -843,7 +844,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetValorFijoTiposAsync()
     {
         var items = await session.Query<ValorFijoTipoCatalogEntity>()
-            .OrderBy(x => x.Descripcion)
+            .OrderBy(x => x.Id)
+            .ThenBy(x => x.Descripcion)
             .ToListAsync();
 
         return items.Select(item => new CatalogItemDto
