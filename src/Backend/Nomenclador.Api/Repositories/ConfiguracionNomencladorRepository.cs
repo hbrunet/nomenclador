@@ -403,40 +403,65 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
         if (configuracion is not null)
         {
-            if (NHibernateUtil.IsInitialized(configuracion.ValoresCategorias))
-            {
-                // Collection already in memory (e.g. loaded earlier in this session): use it to
-                // avoid an extra DB round-trip and keep the in-memory cache up to date.
-                if (!configuracion.ValoresCategorias.Any(v => v.ValorCategoriaId == request.IdValorCategoria))
-                {
-                    configuracion.ValoresCategorias.Add(new ValorCategoriaConfiguradoEntity
-                    {
-                        ConfiguracionNomencladorId = configuracionId,
-                        ValorCategoriaId = request.IdValorCategoria,
-                    });
-                    await session.FlushAsync();
-                }
-            }
-            else
-            {
-                // Collection not yet loaded: check and insert at DB level to avoid forcing a full
-                // collection load just to verify existence.
-                var yaExiste = await session.Query<ValorCategoriaConfiguradoEntity>()
-                    .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorCategoriaId == request.IdValorCategoria);
-
-                if (!yaExiste)
-                {
-                    await session.SaveAsync(new ValorCategoriaConfiguradoEntity
-                    {
-                        ConfiguracionNomencladorId = configuracionId,
-                        ValorCategoriaId = request.IdValorCategoria,
-                    });
-                    await session.FlushAsync();
-                }
-            }
+            await ReemplazarValorPorCategoriaPorTipoAsync(configuracion, configuracionId, request.IdValorCategoria);
+            await session.FlushAsync();
         }
 
         await tx.CommitAsync();
+    }
+
+    // Una configuración solo puede tener un valor por categoría asociado por tipo: si ya hay uno
+    // del mismo tipo que el solicitado, se lo quita y se asocia el nuevo en su lugar, en vez de
+    // bloquear la operación.
+    private async Task ReemplazarValorPorCategoriaPorTipoAsync(ConfiguracionNomencladorEntity configuracion, int configuracionId, int valorCategoriaId)
+    {
+        var coleccionCargada = NHibernateUtil.IsInitialized(configuracion.ValoresCategorias);
+
+        var existentesIds = coleccionCargada
+            ? configuracion.ValoresCategorias.Select(v => v.ValorCategoriaId).ToList()
+            : await session.Query<ValorCategoriaConfiguradoEntity>()
+                .Where(v => v.ConfiguracionNomencladorId == configuracionId)
+                .Select(v => v.ValorCategoriaId)
+                .ToListAsync();
+
+        if (existentesIds.Contains(valorCategoriaId)) return;
+
+        var tipoIds = await GetValorCategoriaTipoIdsAsync([.. existentesIds, valorCategoriaId]);
+        var nuevoTipoId = tipoIds.GetValueOrDefault(valorCategoriaId);
+        var idConflicto = nuevoTipoId.HasValue
+            ? existentesIds.FirstOrDefault(id => tipoIds.GetValueOrDefault(id) == nuevoTipoId, 0)
+            : 0;
+
+        if (coleccionCargada)
+        {
+            if (idConflicto != 0)
+            {
+                var existente = configuracion.ValoresCategorias.First(v => v.ValorCategoriaId == idConflicto);
+                configuracion.ValoresCategorias.Remove(existente);
+            }
+
+            configuracion.ValoresCategorias.Add(new ValorCategoriaConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = configuracionId,
+                ValorCategoriaId = valorCategoriaId,
+            });
+        }
+        else
+        {
+            if (idConflicto != 0)
+            {
+                var existente = await session.Query<ValorCategoriaConfiguradoEntity>()
+                    .FirstOrDefaultAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorCategoriaId == idConflicto);
+                if (existente is not null)
+                    await session.DeleteAsync(existente);
+            }
+
+            await session.SaveAsync(new ValorCategoriaConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = configuracionId,
+                ValorCategoriaId = valorCategoriaId,
+            });
+        }
     }
 
     public async Task RemoveValorPorCategoriaAsync(int configuracionId, int valorCategoriaId)
@@ -502,29 +527,53 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         using var tx = session.BeginTransaction();
 
-        var existentesSet = new HashSet<(int ConfiguracionNomencladorId, int ValorCategoriaId)>();
+        // Se traen TODAS las asociaciones existentes de estas configuraciones (no solo las de
+        // los valores solicitados): hacen falta para detectar conflictos de tipo contra valores
+        // ya asociados que no forman parte de esta tanda.
+        var asociadosPorConfiguracion = new Dictionary<int, HashSet<int>>();
         foreach (var configuracionesChunk in GetChunks(configuracionIds))
         {
-            foreach (var valoresCategoriasChunk in GetChunks(valoresCategoriasIds))
-            {
-                var existentesChunk = await session.Query<ValorCategoriaConfiguradoEntity>()
-                    .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId) && valoresCategoriasChunk.Contains(v.ValorCategoriaId))
-                    .Select(v => new { v.ConfiguracionNomencladorId, v.ValorCategoriaId })
-                    .ToListAsync();
+            var existentesChunk = await session.Query<ValorCategoriaConfiguradoEntity>()
+                .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId))
+                .Select(v => new { v.ConfiguracionNomencladorId, v.ValorCategoriaId })
+                .ToListAsync();
 
-                foreach (var existente in existentesChunk)
-                {
-                    existentesSet.Add((existente.ConfiguracionNomencladorId, existente.ValorCategoriaId));
-                }
+            foreach (var e in existentesChunk)
+            {
+                if (!asociadosPorConfiguracion.TryGetValue(e.ConfiguracionNomencladorId, out var set))
+                    asociadosPorConfiguracion[e.ConfiguracionNomencladorId] = set = [];
+                set.Add(e.ValorCategoriaId);
             }
         }
+
+        var todosLosIds = asociadosPorConfiguracion.Values.SelectMany(s => s).Concat(valoresCategoriasIds);
+        var tipoIds = await GetValorCategoriaTipoIdsAsync(todosLosIds);
 
         var creadas = 0;
         foreach (var configuracionId in configuracionIds)
         {
+            if (!asociadosPorConfiguracion.TryGetValue(configuracionId, out var asociados))
+                asociadosPorConfiguracion[configuracionId] = asociados = [];
+
             foreach (var valorCategoriaId in valoresCategoriasIds)
             {
-                if (!existentesSet.Add((configuracionId, valorCategoriaId))) continue;
+                if (!asociados.Add(valorCategoriaId)) continue;
+
+                // Un valor por categoría de un tipo ya asociado no bloquea la asociación:
+                // reemplaza al existente de ese mismo tipo en vez de convivir con él.
+                var nuevoTipoId = tipoIds.GetValueOrDefault(valorCategoriaId);
+                var idConflicto = nuevoTipoId.HasValue
+                    ? asociados.FirstOrDefault(id => id != valorCategoriaId && tipoIds.GetValueOrDefault(id) == nuevoTipoId, 0)
+                    : 0;
+
+                if (idConflicto != 0)
+                {
+                    asociados.Remove(idConflicto);
+                    var existente = await session.Query<ValorCategoriaConfiguradoEntity>()
+                        .FirstOrDefaultAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorCategoriaId == idConflicto);
+                    if (existente is not null)
+                        await session.DeleteAsync(existente);
+                }
 
                 await session.SaveAsync(new ValorCategoriaConfiguradoEntity
                 {
@@ -539,6 +588,27 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         await tx.CommitAsync();
 
         return creadas;
+    }
+
+    // Devuelve, para cada IdValorCategoria, el Id de su tipo (null si no tiene tipo asignado).
+    private async Task<Dictionary<int, int?>> GetValorCategoriaTipoIdsAsync(IEnumerable<int> valorCategoriaIds)
+    {
+        var ids = valorCategoriaIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        var result = new Dictionary<int, int?>();
+        foreach (var chunk in GetChunks(ids))
+        {
+            var rows = await session.Query<ValorCategoriaCatalogEntity>()
+                .Where(x => chunk.Contains(x.Id))
+                .Select(x => new { x.Id, TipoId = x.Tipo == null ? (int?)null : x.Tipo.Id })
+                .ToListAsync();
+
+            foreach (var row in rows)
+                result[row.Id] = row.TipoId;
+        }
+
+        return result;
     }
 
     public async Task<int> DesasociarValoresCategoriasMasivoAsync(IReadOnlyCollection<int> configuracionesIds, IReadOnlyCollection<int> valoresCategoriasIds)
