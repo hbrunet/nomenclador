@@ -549,11 +549,26 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         var todosLosIds = asociadosPorConfiguracion.Values.SelectMany(s => s).Concat(valoresCategoriasIds);
         var tipoIds = await GetValorCategoriaTipoIdsAsync(todosLosIds);
 
+        var asociadosPorConfiguracionPorTipo = new Dictionary<int, Dictionary<int, int>>();
+        foreach (var (configuracionId, asociados) in asociadosPorConfiguracion)
+        {
+            var porTipo = new Dictionary<int, int>();
+            foreach (var valorCategoriaId in asociados)
+            {
+                var tipoId = tipoIds.GetValueOrDefault(valorCategoriaId);
+                if (tipoId.HasValue)
+                    porTipo[tipoId.Value] = valorCategoriaId;
+            }
+            asociadosPorConfiguracionPorTipo[configuracionId] = porTipo;
+        }
+
         var creadas = 0;
         foreach (var configuracionId in configuracionIds)
         {
             if (!asociadosPorConfiguracion.TryGetValue(configuracionId, out var asociados))
                 asociadosPorConfiguracion[configuracionId] = asociados = [];
+            if (!asociadosPorConfiguracionPorTipo.TryGetValue(configuracionId, out var asociadosPorTipo))
+                asociadosPorConfiguracionPorTipo[configuracionId] = asociadosPorTipo = [];
 
             foreach (var valorCategoriaId in valoresCategoriasIds)
             {
@@ -563,10 +578,10 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
                 // reemplaza al existente de ese mismo tipo en vez de convivir con él.
                 var nuevoTipoId = tipoIds.GetValueOrDefault(valorCategoriaId);
                 var idConflicto = nuevoTipoId.HasValue
-                    ? asociados.FirstOrDefault(id => id != valorCategoriaId && tipoIds.GetValueOrDefault(id) == nuevoTipoId, 0)
+                    ? asociadosPorTipo.GetValueOrDefault(nuevoTipoId.Value)
                     : 0;
 
-                if (idConflicto != 0)
+                if (idConflicto != 0 && idConflicto != valorCategoriaId)
                 {
                     asociados.Remove(idConflicto);
                     var existente = await session.Query<ValorCategoriaConfiguradoEntity>()
@@ -574,6 +589,8 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
                     if (existente is not null)
                         await session.DeleteAsync(existente);
                 }
+                if (nuevoTipoId.HasValue)
+                    asociadosPorTipo[nuevoTipoId.Value] = valorCategoriaId;
 
                 await session.SaveAsync(new ValorCategoriaConfiguradoEntity
                 {
