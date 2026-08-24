@@ -204,40 +204,86 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
         if (configuracion is not null)
         {
-            if (NHibernateUtil.IsInitialized(configuracion.ValoresFijos))
-            {
-                // Collection already in memory: use it to avoid an extra DB round-trip and keep
-                // the in-memory cache up to date.
-                if (!configuracion.ValoresFijos.Any(v => v.ValorFijoId == request.IdValorFijo))
-                {
-                    configuracion.ValoresFijos.Add(new ValorFijoConfiguradoEntity
-                    {
-                        ConfiguracionNomencladorId = configuracionId,
-                        ValorFijoId = request.IdValorFijo,
-                    });
-                    await session.FlushAsync();
-                }
-            }
-            else
-            {
-                // Collection not yet loaded: check and insert at DB level to avoid forcing a full
-                // collection load just to verify existence.
-                var yaExiste = await session.Query<ValorFijoConfiguradoEntity>()
-                    .AnyAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorFijoId == request.IdValorFijo);
-
-                if (!yaExiste)
-                {
-                    await session.SaveAsync(new ValorFijoConfiguradoEntity
-                    {
-                        ConfiguracionNomencladorId = configuracionId,
-                        ValorFijoId = request.IdValorFijo,
-                    });
-                    await session.FlushAsync();
-                }
-            }
+            await ReemplazarValorFijoPorTipoAsync(configuracion, configuracionId, request.IdValorFijo);
+            await session.FlushAsync();
         }
 
         await tx.CommitAsync();
+    }
+
+    // Una configuración solo puede tener un valor fijo asociado por tipo: si ya hay uno del
+    // mismo tipo que el solicitado, se lo quita y se asocia el nuevo en su lugar, en vez de
+    // bloquear la operación.
+    private async Task ReemplazarValorFijoPorTipoAsync(ConfiguracionNomencladorEntity configuracion, int configuracionId, int valorFijoId)
+    {
+        var coleccionCargada = NHibernateUtil.IsInitialized(configuracion.ValoresFijos);
+
+        var existentesIds = coleccionCargada
+            ? configuracion.ValoresFijos.Select(v => v.ValorFijoId).ToList()
+            : await session.Query<ValorFijoConfiguradoEntity>()
+                .Where(v => v.ConfiguracionNomencladorId == configuracionId)
+                .Select(v => v.ValorFijoId)
+                .ToListAsync();
+
+        if (existentesIds.Contains(valorFijoId)) return;
+
+        var tipoIds = await GetValorFijoTipoIdsAsync([.. existentesIds, valorFijoId]);
+        var nuevoTipoId = tipoIds.GetValueOrDefault(valorFijoId);
+        var idConflicto = nuevoTipoId.HasValue
+            ? existentesIds.FirstOrDefault(id => tipoIds.GetValueOrDefault(id) == nuevoTipoId, 0)
+            : 0;
+
+        if (coleccionCargada)
+        {
+            if (idConflicto != 0)
+            {
+                var existente = configuracion.ValoresFijos.First(v => v.ValorFijoId == idConflicto);
+                configuracion.ValoresFijos.Remove(existente);
+            }
+
+            configuracion.ValoresFijos.Add(new ValorFijoConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = configuracionId,
+                ValorFijoId = valorFijoId,
+            });
+        }
+        else
+        {
+            if (idConflicto != 0)
+            {
+                var existente = await session.Query<ValorFijoConfiguradoEntity>()
+                    .FirstOrDefaultAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorFijoId == idConflicto);
+                if (existente is not null)
+                    await session.DeleteAsync(existente);
+            }
+
+            await session.SaveAsync(new ValorFijoConfiguradoEntity
+            {
+                ConfiguracionNomencladorId = configuracionId,
+                ValorFijoId = valorFijoId,
+            });
+        }
+    }
+
+    // Devuelve, para cada IdValorFijo, el Id de su tipo (null si no tiene tipo asignado).
+    private async Task<Dictionary<int, int?>> GetValorFijoTipoIdsAsync(IEnumerable<int> valorFijoIds)
+    {
+        var ids = valorFijoIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        var result = new Dictionary<int, int?>();
+        foreach (var chunk in GetChunks(ids))
+        {
+            var rows = await session.Query<ValorFijoCatalogEntity>()
+                .Where(x => chunk.Contains(x.Id))
+                .Select(x => new { x.Id, TipoId = x.Tipo == null ? (int?)null : x.Tipo.Id })
+                .ToListAsync();
+
+            foreach (var row in rows)
+                result[row.Id] = row.TipoId;
+        }
+
+        return result;
     }
 
     public async Task RemoveValorFijoAsync(int configuracionId, int valorFijoId)
@@ -264,21 +310,53 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         using var tx = session.BeginTransaction();
 
-        var existentes = await session.Query<ValorFijoConfiguradoEntity>()
-            .Where(v => configuracionIds.Contains(v.ConfiguracionNomencladorId) && valorFijoIds.Contains(v.ValorFijoId))
-            .Select(v => new { v.ConfiguracionNomencladorId, v.ValorFijoId })
-            .ToListAsync();
+        // Se traen TODAS las asociaciones existentes de estas configuraciones (no solo las de
+        // los valores solicitados): hacen falta para detectar conflictos de tipo contra valores
+        // ya asociados que no forman parte de esta tanda.
+        var asociadosPorConfiguracion = new Dictionary<int, HashSet<int>>();
+        foreach (var configuracionesChunk in GetChunks(configuracionIds))
+        {
+            var existentesChunk = await session.Query<ValorFijoConfiguradoEntity>()
+                .Where(v => configuracionesChunk.Contains(v.ConfiguracionNomencladorId))
+                .Select(v => new { v.ConfiguracionNomencladorId, v.ValorFijoId })
+                .ToListAsync();
 
-        var existentesSet = existentes
-            .Select(e => (e.ConfiguracionNomencladorId, e.ValorFijoId))
-            .ToHashSet();
+            foreach (var e in existentesChunk)
+            {
+                if (!asociadosPorConfiguracion.TryGetValue(e.ConfiguracionNomencladorId, out var set))
+                    asociadosPorConfiguracion[e.ConfiguracionNomencladorId] = set = [];
+                set.Add(e.ValorFijoId);
+            }
+        }
+
+        var todosLosIds = asociadosPorConfiguracion.Values.SelectMany(s => s).Concat(valorFijoIds);
+        var tipoIds = await GetValorFijoTipoIdsAsync(todosLosIds);
 
         var creadas = 0;
         foreach (var configuracionId in configuracionIds)
         {
+            if (!asociadosPorConfiguracion.TryGetValue(configuracionId, out var asociados))
+                asociadosPorConfiguracion[configuracionId] = asociados = [];
+
             foreach (var valorFijoId in valorFijoIds)
             {
-                if (!existentesSet.Add((configuracionId, valorFijoId))) continue;
+                if (!asociados.Add(valorFijoId)) continue;
+
+                // Un valor fijo de un tipo ya asociado no bloquea la asociación: reemplaza al
+                // existente de ese mismo tipo en vez de convivir con él.
+                var nuevoTipoId = tipoIds.GetValueOrDefault(valorFijoId);
+                var idConflicto = nuevoTipoId.HasValue
+                    ? asociados.FirstOrDefault(id => id != valorFijoId && tipoIds.GetValueOrDefault(id) == nuevoTipoId, 0)
+                    : 0;
+
+                if (idConflicto != 0)
+                {
+                    asociados.Remove(idConflicto);
+                    var existente = await session.Query<ValorFijoConfiguradoEntity>()
+                        .FirstOrDefaultAsync(v => v.ConfiguracionNomencladorId == configuracionId && v.ValorFijoId == idConflicto);
+                    if (existente is not null)
+                        await session.DeleteAsync(existente);
+                }
 
                 await session.SaveAsync(new ValorFijoConfiguradoEntity
                 {

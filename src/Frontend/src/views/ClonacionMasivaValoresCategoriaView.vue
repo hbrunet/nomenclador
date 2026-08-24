@@ -207,13 +207,13 @@ onMounted(() => {
               placeholder="Todos"
               show-clear
               filter
-              filter-placeholder="Buscar tipo..."
+              filter-placeholder="Filtrar por tipo..."
               class="w-full"
             />
           </div>
           <div class="flex flex-column gap-1" style="flex: 2; min-width: 200px">
-            <label class="field-label">Buscar</label>
-            <InputText v-model="valorQuery" placeholder="Buscar por descripción o período (ej. 06/2026)..." class="w-full" />
+            <label class="field-label">Filtrar</label>
+            <InputText v-model="valorQuery" placeholder="Filtrar por descripción o período (ej. 06/2026)..." class="w-full" />
           </div>
         </div>
 

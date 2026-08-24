@@ -78,8 +78,8 @@ function openCloneConfigDialog(source: ConfiguracionNomencladorListItemDto) {
 </script>
 
 <template>
-  <section class="panel p-4 flex flex-column gap-3">
-    <div class="flex justify-content-between align-items-center flex-wrap gap-3">
+  <section class="panel p-4">
+    <div class="flex justify-content-between align-items-center">
       <div>
        
       </div>
