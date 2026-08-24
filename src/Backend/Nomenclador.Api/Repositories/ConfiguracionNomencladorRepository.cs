@@ -275,12 +275,12 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         foreach (var chunk in GetChunks(ids))
         {
             var rows = await session.Query<ValorFijoCatalogEntity>()
-                .Fetch(x => x.Tipo)
                 .Where(x => chunk.Contains(x.Id))
+                .Select(x => new { x.Id, TipoId = x.Tipo == null ? (int?)null : x.Tipo.Id })
                 .ToListAsync();
 
             foreach (var row in rows)
-                result[row.Id] = row.Tipo?.Id;
+                result[row.Id] = row.TipoId;
         }
 
         return result;
