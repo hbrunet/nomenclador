@@ -1,5 +1,6 @@
 **/bin/
 **/obj/
+**/Backend/Nomenclador.Api/.publish/
 src/Frontend/dist/
 src/Frontend/node_modules/
 src/Backend/Nomenclador.Api/.publish/

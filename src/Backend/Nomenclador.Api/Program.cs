@@ -10,17 +10,29 @@ using Nomenclador.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// No-op cuando se corre con `dotnet run`/consola; activa el hosting como Windows Service
+// (Event Log, content root correcto) cuando el ejecutable se registra con sc.exe/services.msc.
+builder.Host.UseWindowsService(options => options.ServiceName = "NomencladorApi");
+
 builder.Services.AddControllers();
+
+// Orígenes fijos para desarrollo local + orígenes adicionales desde config
+// (appsettings.Production.json) para el/los frontend(s) desplegados.
+var corsOrigins = new[]
+{
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+}.Concat(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+    .ToArray();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("VueClient", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:4173",
-                "http://127.0.0.1:4173")
+            .WithOrigins(corsOrigins)
             .AllowCredentials()
             .AllowAnyHeader()
             .AllowAnyMethod();
