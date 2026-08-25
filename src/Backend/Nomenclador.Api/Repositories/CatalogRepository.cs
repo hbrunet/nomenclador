@@ -1174,5 +1174,12 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
         return clones.Select(ToValorFijoCatalogDto).ToList();
     }
+
+    public async Task TestDatabaseConnectionAsync()
+    {
+        await session.CreateSQLQuery("SELECT 1 AS ok FROM dual")
+            .AddScalar("ok", NHibernateUtil.Int32)
+            .UniqueResultAsync<int>();
+    }
 }
 
