@@ -89,8 +89,9 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
         var codigoSubcodigoMatch = CodigoSubcodigoRegex.Match(trimmed);
         if (codigoSubcodigoMatch.Success)
         {
-            var codigo = int.Parse(codigoSubcodigoMatch.Groups["codigo"].Value);
-            var subcodigo = int.Parse(codigoSubcodigoMatch.Groups["subcodigo"].Value);
+            if (!int.TryParse(codigoSubcodigoMatch.Groups["codigo"].Value, out var codigo)
+                || !int.TryParse(codigoSubcodigoMatch.Groups["subcodigo"].Value, out var subcodigo))
+                return;
             criteria.Where(Restrictions.Eq("Codigo", codigo));
             criteria.Where(Restrictions.Eq("Subcodigo", subcodigo));
             return;
