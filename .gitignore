@@ -2,3 +2,4 @@
 **/obj/
 src/Frontend/dist/
 src/Frontend/node_modules/
+src/Backend/Nomenclador.Api/.publish/
