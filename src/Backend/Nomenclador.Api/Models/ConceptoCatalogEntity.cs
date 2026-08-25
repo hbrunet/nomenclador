@@ -4,7 +4,7 @@ public class ConceptoCatalogEntity
 {
     public virtual int Id { get; set; }
 
-    public virtual string Codigo { get; set; } = string.Empty;
+    public virtual int Codigo { get; set; }
 
     public virtual int Subcodigo { get; set; }
 

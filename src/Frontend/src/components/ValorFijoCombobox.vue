@@ -17,19 +17,20 @@ const emit = defineEmits<{
 }>()
 
 const isOpen = ref(false)
-const query = ref('')
+const descFilter = ref('')
+const tipoFilter = ref('')
 
 const excludedSet = computed(() => new Set(props.valoresExcluidos))
 
 const filteredItems = computed(() => {
-  const q = query.value.toLowerCase().trim()
+  const descQ = descFilter.value.toLowerCase().trim()
+  const tipoQ = tipoFilter.value.toLowerCase().trim()
   return props.valoresDisponibles
     .filter((item) => !excludedSet.value.has(item.id))
     .filter(
       (item) =>
-        !q ||
-        (item.descripcion ?? '').toLowerCase().includes(q) ||
-        (item.tipo ?? '').toLowerCase().includes(q),
+        (!descQ || (item.descripcion ?? '').toLowerCase().includes(descQ)) &&
+        (!tipoQ || (item.tipo ?? '').toLowerCase().includes(tipoQ) || (item.idTipo ?? '').toString().includes(tipoQ)),
     )
 })
 
@@ -39,7 +40,8 @@ function handleAdd(id: number) {
 
 function handleClose() {
   isOpen.value = false
-  query.value = ''
+  descFilter.value = ''
+  tipoFilter.value = ''
 }
 </script>
 
@@ -58,15 +60,22 @@ function handleClose() {
       :modal="true"
       :style="{ width: '42rem' }"
       :closable="true"
-      @hide="query = ''"
+      @hide="descFilter = ''; tipoFilter = ''"
     >
       <div class="flex flex-column gap-3">
-        <InputText
-          v-model="query"
-          placeholder="Buscar por descripción o tipo..."
-          class="w-full"
-          autofocus
-        />
+        <div class="flex gap-2">
+          <InputText
+            v-model="descFilter"
+            placeholder="Filtrar por descripción..."
+            autofocus
+          />
+
+          <InputText
+            v-model="tipoFilter"
+            placeholder="Filtrar por tipo..."
+            autofocus
+          />
+        </div>
 
         <DataTable
           :value="filteredItems"
@@ -81,8 +90,12 @@ function handleClose() {
             <span class="muted">No hay valores disponibles para agregar.</span>
           </template>
           <Column field="descripcion" header="Descripción" sortable />
-          <Column field="tipo" header="Tipo" sortable style="width: 10rem" />
-          <Column header="Valor" sortable sort-field="valor" style="width: 9rem; text-align: right">
+          <Column field="tipo" header="Tipo" sortable >
+            <template #body="{ data }">
+              {{ data.idTipo }} - {{ data.tipo }}
+            </template>
+          </Column>
+          <Column header="Valor" sortable sort-field="valor" style="text-align: right">
             <template #body="{ data }">
               {{ (data.valor ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
             </template>

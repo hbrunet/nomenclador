@@ -31,7 +31,8 @@ const confirm = useConfirm()
 const toast = useToast()
 const selectedItemIndex = ref<number | null>(null)
 const modalRef = ref<InstanceType<typeof ValorCategoriaItemsModal> | null>(null)
-const filterQuery = ref('')
+const descFilter = ref('')
+const tipoFilter = ref('') 
 const saving = ref(false)
 const removingIds = ref<Set<number>>(new Set())
 const errorMessage = ref<string | null>(null)
@@ -40,15 +41,14 @@ const valuesById = computed(() => new Map(props.valoresDisponibles.map((item) =>
 const valoresExcluidos = computed(() => valoresCategorias.value.map((item) => item.idValorCategoria))
 
 const tableData = computed(() => {
-  const q = filterQuery.value.toLowerCase().trim()
+  const descQ = descFilter.value.toLowerCase().trim()
+  const tipoQ = tipoFilter.value.toLowerCase().trim()
   return valoresCategorias.value
     .filter((item) => {
       const cat = valuesById.value.get(item.idValorCategoria)
       const matchesQuery =
-        !q ||
-        (cat?.descripcion ?? '').toLowerCase().includes(q) ||
-        (cat?.tipo ?? '').toLowerCase().includes(q) ||
-        (cat?.idTipo.toString() ?? '').toLowerCase().includes(q)
+        (!descQ || (cat?.descripcion ?? '').toLowerCase().includes(descQ)) &&
+        (!tipoQ || (cat?.tipo ?? '').toLowerCase().includes(tipoQ) || (cat?.idTipo.toString() ?? '').toLowerCase().includes(tipoQ))
       return matchesQuery
     })
     .map((item) => ({
@@ -162,8 +162,9 @@ function verItems(idValorCategoria: number) {
       @add="addValorCategoria"
     />
 
-    <div class="flex flex-column gap-1" style="max-width: 400px">
-      <InputText v-model="filterQuery" placeholder="Buscar por descripción o tipo..." class="w-full" />
+    <div class="flex flex-row gap-2">
+      <InputText v-model="descFilter" placeholder="Filtrar por descripción..." />
+      <InputText v-model="tipoFilter" placeholder="Filtrar por tipo..." />
     </div>
 
     <DataTable

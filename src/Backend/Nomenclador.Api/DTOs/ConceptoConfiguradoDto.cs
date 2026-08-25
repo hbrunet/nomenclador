@@ -4,7 +4,7 @@ public sealed class ConceptoConfiguradoDto
 {
     public int IdConcepto { get; init; }
 
-    public string Codigo { get; init; } = string.Empty;
+    public int Codigo { get; init; }
 
     public int Subcodigo { get; init; }
 
