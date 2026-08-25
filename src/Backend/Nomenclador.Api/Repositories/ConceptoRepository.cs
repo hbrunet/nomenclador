@@ -1,6 +1,8 @@
 using NHibernate;
 using NHibernate.Criterion;
 using NHibernate.Linq;
+using NHibernate.SqlCommand;
+using NHibernate.Type;
 using Nomenclador.Api.DTOs;
 using Nomenclador.Api.Models;
 using System.Text.RegularExpressions;
@@ -18,21 +20,18 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
 
     public async Task<IReadOnlyCollection<ConceptoCatalogDto>> GetAllAsync(string? query)
     {
-        var concepts = session.Query<ConceptoCatalogEntity>();
+        ConceptoCatalogEntity alias = null!;
+        var criteria = session.QueryOver(() => alias);
 
-        if (!string.IsNullOrWhiteSpace(query))
-        {
-            var q = query.Trim().ToLowerInvariant();
-            concepts = concepts.Where(item =>
-                item.Codigo.Contains(q) ||
-                item.DescripcionBreve.ToLower().Contains(q) ||
-                item.Descripcion.ToLower().Contains(q));
-        }
+        ApplyQueryFilter(criteria, query);
 
-        return await concepts
-            .OrderBy(item => item.Codigo)
-            .ThenBy(item => item.Subcodigo)
+        var items = await criteria
+            .OrderBy(() => alias.Codigo).Asc
+            .ThenBy(() => alias.Subcodigo).Asc
             .Take(100)
+            .ListAsync();
+
+        return items
             .Select(item => new ConceptoCatalogDto
             {
                 Id = item.Id,
@@ -41,7 +40,7 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
                 DescripcionBreve = item.DescripcionBreve,
                 Descripcion = item.Descripcion,
             })
-            .ToListAsync();
+            .ToList();
     }
 
     public async Task<(IReadOnlyCollection<ConceptoCatalogDto> Items, int Total)> GetPagedAsync(
@@ -90,7 +89,7 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
         var codigoSubcodigoMatch = CodigoSubcodigoRegex.Match(trimmed);
         if (codigoSubcodigoMatch.Success)
         {
-            var codigo = codigoSubcodigoMatch.Groups["codigo"].Value;
+            var codigo = int.Parse(codigoSubcodigoMatch.Groups["codigo"].Value);
             var subcodigo = int.Parse(codigoSubcodigoMatch.Groups["subcodigo"].Value);
             criteria.Where(Restrictions.Eq("Codigo", codigo));
             criteria.Where(Restrictions.Eq("Subcodigo", subcodigo));
@@ -109,7 +108,11 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
         }
 
         var codigoLike = $"%{trimmed}%";
-        criteria.Where(Restrictions.InsensitiveLike("Codigo", codigoLike));
+        // SqlString.Parse (no el constructor directo) reconoce "?" como parámetro.
+        criteria.Where(new SQLCriterion(
+            SqlString.Parse("lower(to_char({alias}.CODIGO)) like ?"),
+            [codigoLike.ToLowerInvariant()],
+            [NHibernateUtil.String]));
     }
 }
 

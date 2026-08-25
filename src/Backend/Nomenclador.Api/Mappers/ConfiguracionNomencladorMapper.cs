@@ -117,7 +117,7 @@ public sealed class ConfiguracionNomencladorMapper
                         return new ConceptoConfiguradoDto
                         {
                             IdConcepto = item.ConceptoId,
-                            Codigo = "N/D",
+                            Codigo = 0,
                             Subcodigo = 0,
                             Descripcion = "Concepto no encontrado en el catálogo",
                             DescripcionBreve = "N/D",

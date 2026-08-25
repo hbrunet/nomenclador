@@ -92,7 +92,7 @@ function handleClose() {
       <div class="flex flex-column gap-3">
         <InputText
           v-model="query"
-          placeholder="Buscar por código, subcódigo o descripción..."
+          placeholder="Filtrar por código, código/subcódigo o d:descripción..."
           class="w-full"
           autofocus
         />
@@ -102,18 +102,16 @@ function handleClose() {
           scrollable
           scroll-height="320px"
           striped-rows
-          :sort-field="'codigo'"
-          :sort-order="1"
           :virtual-scroller-options="{ itemSize: 46 }"
           :loading="loadingConceptos"
         >
           <template #empty>
             <span class="muted">{{ emptyMessage }}</span>
           </template>
-          <Column field="codigo" header="Código" sortable style="width: 8rem; text-align: right" />
-          <Column field="subcodigo" header="Subcódigo" sortable style="width: 8rem; text-align: right" />
-          <Column field="descripcionBreve" header="Descripción Breve" sortable />
-          <Column field="descripcion" header="Descripción" sortable />
+          <Column field="codigo" header="Código" style="width: 8rem; text-align: right" />
+          <Column field="subcodigo" header="Subcódigo" style="width: 8rem; text-align: right" />
+          <Column field="descripcionBreve" header="Descripción Breve" />
+          <Column field="descripcion" header="Descripción" />
           <Column style="width: 4rem">
             <template #body="{ data }">
               <Button

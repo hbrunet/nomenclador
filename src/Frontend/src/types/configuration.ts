@@ -135,7 +135,7 @@ export interface ValorCategoriaCatalogItem extends CatalogItem {
 
 export interface ConceptoCatalogItem {
   id: number
-  codigo: string
+  codigo: number
   subcodigo: number
   descripcionBreve: string
   descripcion: string
@@ -143,7 +143,7 @@ export interface ConceptoCatalogItem {
 
 export interface ConceptoConfiguradoViewModel {
   idConcepto: number
-  codigo: string
+  codigo: number
   subcodigo: number
   descripcion: string
   descripcionBreve: string

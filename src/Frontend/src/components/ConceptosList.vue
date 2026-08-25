@@ -44,7 +44,7 @@ const filterQuery = ref('')
 const localResolved = ref<Map<number, ConceptoCatalogItem>>(new Map())
 
 const resolvedLookup = computed(() => {
-  const map = new Map<number, { codigo: string; subcodigo: number; descripcion: string; descripcionBreve: string }>()
+  const map = new Map<number, { codigo: number; subcodigo: number; descripcion: string; descripcionBreve: string }>()
   for (const item of props.conceptosResueltos) {
     map.set(item.idConcepto, item)
   }
@@ -65,13 +65,32 @@ const tableData = computed(() => {
       const resolved = resolvedLookup.value.get(item.idConcepto)
       return {
         idConcepto: item.idConcepto,
-        codigo: resolved?.codigo ?? String(item.idConcepto),
-        subcodigo: resolved && resolved.codigo !== 'N/D' ? resolved.subcodigo : 'N/D',
+        codigo: String(resolved?.codigo ?? 'N/D'),
+        subcodigo: resolved ? String(resolved.subcodigo) : 'N/D',
         descripcionBreve: resolved?.descripcionBreve ?? 'N/D',
         descripcion: resolved?.descripcion ?? 'N/D',
       }
     })
-    .filter((item) => !q || item.descripcion.toLowerCase().includes(q))
+    .filter((item) => {
+      if (!q) return true
+
+      // "d:texto" busca únicamente en descripción / descripción breve.
+      if (q.startsWith('d:')) {
+        const term = q.slice(2).trim()
+        if (!term) return true
+        return item.descripcion.toLowerCase().includes(term) || item.descripcionBreve.toLowerCase().includes(term)
+      }
+
+      // "codigo/subcodigo" filtra ambos campos por separado.
+      if (q.includes('/')) {
+        const [codigoPart, subcodigoPart] = q.split('/').map((part) => part.trim())
+        const matchesCodigo = !codigoPart || item.codigo.toLowerCase().includes(codigoPart)
+        const matchesSubcodigo = !subcodigoPart || item.subcodigo.toLowerCase().includes(subcodigoPart)
+        return matchesCodigo && matchesSubcodigo
+      }
+
+      return item.codigo.toLowerCase().includes(q)
+    })
 })
 
 async function addConcepto(item: ConceptoCatalogItem) {
@@ -151,8 +170,8 @@ function confirmRemoveConcepto(idConcepto: number) {
       @add="addConcepto"
     />
 
-    <div class="flex flex-column gap-1" style="max-width: 400px">
-      <InputText v-model="filterQuery" placeholder="Buscar por descripción..." class="w-full" />
+    <div class="flex flex-column gap-1" style="max-width: 500px">
+      <InputText v-model="filterQuery" placeholder="Filtrar por código, código/subcódigo o d:descripción..." class="w-full" />
     </div>
 
     <DataTable
