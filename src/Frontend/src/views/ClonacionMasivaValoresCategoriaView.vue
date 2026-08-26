@@ -148,6 +148,7 @@ async function handleClonar() {
     clearSelection()
     await loadValoresCategoria(true)
   } catch (e: any) {
+    console.error('Error al clonar los valores por categoría seleccionados:', e)
     toast.add({
       severity: 'error',
       summary: 'Error al clonar',
@@ -265,7 +266,7 @@ onMounted(() => {
             </template>
           </Column>
           <Column field="descripcion" header="Descripción" sortable />
-          <Column field="tipo" header="Tipo" sortable>
+          <Column field="idTipo" header="Tipo" sortable>
             <template #body="{ data }">
               {{ data.idTipo }} - {{ data.tipo }}
             </template>

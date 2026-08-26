@@ -62,7 +62,7 @@ const escalaSuggestions = ref<CatalogItem[]>([])
 function searchEscala(event: AutoCompleteCompleteEvent) {
   const q = event.query.toLowerCase().trim()
   escalaSuggestions.value = props.catalogs.escalas
-    .filter((e) => !q || e.descripcion.toLowerCase().includes(q))
+    .filter((e) => !q || e.descripcion.toLowerCase().includes(q) || e.id.toString().includes(q))
     .slice(0, 100)
 }
 

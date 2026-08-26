@@ -150,6 +150,11 @@ function verItems(idValorCategoria: number) {
   selectedItemIndex.value = index
   modalRef.value?.open(idValorCategoria)
 }
+
+const cantidadValoresCategorias = computed(() => tableData.value.length)
+const virtualScrollerOptions = computed(() =>
+  tableData.value.length > 150 ? { itemSize: 46 } : undefined,
+)
 </script>
 
 <template>
@@ -174,7 +179,7 @@ function verItems(idValorCategoria: number) {
       :sort-order="1"
       scrollable
       scroll-height="600px"
-      :virtual-scroller-options="{ itemSize: 46 }"
+      :virtual-scroller-options="virtualScrollerOptions"
     >
       <template #empty>
         <span class="muted">
@@ -183,7 +188,7 @@ function verItems(idValorCategoria: number) {
       </template>
       <Column field="idValorCategoria" header="ID" sortable style="text-align: right" />
       <Column field="descripcion" header="Descripción" sortable />
-      <Column field="tipo" header="Tipo" sortable >
+      <Column field="idTipo" header="Tipo" sortable >
         <template #body="{ data }">
           {{ data.idTipo }} - {{ data.tipo }}
         </template>
@@ -213,7 +218,9 @@ function verItems(idValorCategoria: number) {
         </template>
       </Column>
     </DataTable>
-
+    <p class="muted" style="text-align: right;">
+      Cantidad de items: {{ cantidadValoresCategorias }}
+    </p>
     <ValorCategoriaItemsModal
       ref="modalRef"
       :item="selectedItem"

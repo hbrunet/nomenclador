@@ -15,18 +15,6 @@ const router = useRouter()
 const { catalogs, configuraciones, pagination, loadingList, fetchCatalogs, fetchList } =
   useConfiguration()
 
-const selectedNomenclador = ref<CatalogItem | null>(null)
-const nomencladorSuggestions = ref<CatalogItem[]>([])
-
-function searchNomenclador(event: AutoCompleteCompleteEvent) {
-  const q = event.query.toLowerCase().trim()
-  nomencladorSuggestions.value = catalogs.value.nomencladores
-    .filter((n: CatalogItem) => !q 
-      || n.descripcion.toLowerCase().includes(q) 
-      || n.id.toString().includes(q))
-    .slice(0, 100)
-}
-
 const selectedEscala = ref<CatalogItem | null>(null)
 const escalaSuggestions = ref<CatalogItem[]>([])
 
@@ -36,13 +24,14 @@ function searchEscala(event: AutoCompleteCompleteEvent) {
     .filter((e: CatalogItem) => !q 
       || e.descripcion.toLowerCase().includes(q) 
       || e.id.toString().includes(q))
-    .slice(0, 100)
+    .slice(0, 150)
 }
 
 const filters = reactive({
   zonaId: null as number | null,
   vigenteEn: null as Date | null,
   estado: null as string | null,
+  nomencladorId: null as number | null,
 })
 
 const estadoOptions = ['Activa', 'Futura', 'Vencida']
@@ -51,7 +40,7 @@ const PAGE_SIZE = ref(20)
 
 function buildParams(page: number) {
   return {
-    nomencladorId: selectedNomenclador.value?.id ?? undefined,
+    nomencladorId: filters.nomencladorId ?? undefined,
     escalaSalarialId: selectedEscala.value?.id ?? undefined,
     zonaId: filters.zonaId ?? undefined,
     vigenteEn: filters.vigenteEn ? filters.vigenteEn.toISOString().substring(0, 7) : undefined,
@@ -85,16 +74,14 @@ onMounted(async () => {
     <div class="flex flex-wrap gap-3 align-items-end">
       <div class="flex flex-column gap-1" style="flex: 2 ">
         <label class="field-label">Nomenclador</label>
-        <AutoComplete
-          v-model="selectedNomenclador"
-          :suggestions="nomencladorSuggestions"
-          :option-label="n => `${n.id} - ${n.descripcion}`"
-          placeholder="Escribir para buscar..."
-          force-selection
-          show-clear
-          fluid
-          @complete="searchNomenclador"
-        />
+        <Select v-model="filters.nomencladorId"
+            :options="catalogs.nomencladores"
+            :option-label="n => `${n.id} - ${n.descripcion}`"
+            option-value="id"
+            placeholder="Todos"
+            show-clear
+            filter
+            class="w-full" />
       </div>
 
       <div class="flex flex-column gap-1" style="flex: 2">

@@ -139,7 +139,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetNomencladoresAsync()
     {
         return await session.Query<NomencladorCatalogEntity>()
-            .OrderBy(item => item.Descripcion)
+            .OrderBy(item => item.Id)
+            .ThenBy(item => item.Descripcion)
             .Select(item => new CatalogItemDto { Id = item.Id, Descripcion = item.Descripcion })
             .ToListAsync();
     }

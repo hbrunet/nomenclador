@@ -13,8 +13,8 @@ public sealed class ClonadoConfiguracionService
             IdNomenclador = source.IdNomenclador,
             IdEscalaSalarial = source.IdEscalaSalarial,
             IdZona = source.IdZona,
-            FechaInicio = request.FechaInicio,
-            FechaFin = request.FechaFin,
+            FechaInicio = new DateOnly(request.FechaInicio.Year, request.FechaInicio.Month, 1),
+            FechaFin = new DateOnly(request.FechaFin?.Year ?? 9999, request.FechaFin?.Month ?? 12, 1),
             Conceptos = request.CopiarConceptos
                 ? source.Conceptos.Select(item => new ConceptoConfiguradoInputDto
                 {
