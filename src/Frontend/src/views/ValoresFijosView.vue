@@ -237,7 +237,7 @@ onMounted(async () => {
             </template>
             <Column field="id" header="ID" style="width: 5rem; text-align: right" sortable />
             <Column field="descripcion" header="Descripción" sortable />
-            <Column field="tipo" header="Tipo" sortable >
+            <Column field="idTipo" header="Tipo" sortable >
               <template #body="{ data }">
                 {{ data.idTipo }} - {{ data.tipo }}
               </template>

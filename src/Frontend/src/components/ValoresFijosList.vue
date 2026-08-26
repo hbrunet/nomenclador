@@ -60,6 +60,8 @@ const tableData = computed(() => {
     }))
 })
 
+const cantidadValoresFijos = computed(() => tableData.value.length)
+
 async function addValorFijo(id: number) {
   if (valoresFijos.value.some((item) => item.idValorFijo === id)) return
 
@@ -148,6 +150,10 @@ async function handleModalSaved(
   }
   emit('catalog-refresh')
 }
+
+const virtualScrollerOptions = computed(() =>
+  tableData.value.length > 150 ? { itemSize: 46 } : undefined,
+)
 </script>
 
 <template>
@@ -172,7 +178,7 @@ async function handleModalSaved(
       :sort-order="1"
       scrollable
       scroll-height="600px"
-      :virtual-scroller-options="{ itemSize: 46 }"
+      :virtual-scroller-options="virtualScrollerOptions"
     >
       <template #empty>
         <span class="muted">
@@ -181,7 +187,7 @@ async function handleModalSaved(
       </template>
       <Column field="idValorFijo" header="ID" sortable style="text-align: right"/>
        <Column field="descripcion" header="Descripción" sortable />
-      <Column field="tipo" header="Tipo" sortable >
+      <Column field="idTipo" header="Tipo" sortable >
         <template #body="{ data }">
           {{ data.idTipo }} - {{ data.tipo }}
         </template>
@@ -216,7 +222,9 @@ async function handleModalSaved(
         </template>
       </Column>
     </DataTable>
-
+    <p class="muted" style="text-align: right;">
+      Cantidad de items: {{ cantidadValoresFijos }}
+    </p>
     <ValorFijoEditModal ref="editModalRef" :configuracion-id="props.configuracionId" @saved="handleModalSaved" />
   </div>
 </template>

@@ -44,7 +44,7 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         if (!string.IsNullOrWhiteSpace(estado))
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var today = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             switch (estado.Trim().ToUpperInvariant())
             {
                 case "FUTURA":
@@ -114,8 +114,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     public async Task AddAsync(ConfiguracionNomencladorEntity entity, Action<ConfiguracionNomencladorEntity>? afterSave = null)
     {
         using var tx = session.BeginTransaction();
-        // SaveAsync hace que la secuencia de Oracle asigne entity.Id de inmediato,
-        // de modo que el callback puede usarlo (p. ej. para setear las FK de los hijos).
         await session.SaveAsync(entity);
         afterSave?.Invoke(entity);
         await session.FlushAsync();
@@ -131,8 +129,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         {
             if (NHibernateUtil.IsInitialized(configuracion.Conceptos))
             {
-                // Collection already in memory: use it to avoid extra DB round-trips and keep
-                // the in-memory cache up to date.
                 if (!configuracion.Conceptos.Any(c => c.ConceptoId == request.IdConcepto))
                 {
                     configuracion.Conceptos.Add(new ConceptoConfiguradoEntity
@@ -146,8 +142,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
             }
             else
             {
-                // Collection not yet loaded: check and insert at DB level to avoid forcing a full
-                // collection load just to verify existence.
                 var yaExiste = await session.Query<ConceptoConfiguradoEntity>()
                     .AnyAsync(c => c.ConfiguracionNomencladorId == configuracionId && c.ConceptoId == request.IdConcepto);
 
@@ -183,7 +177,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
             await session.FlushAsync();
         }
 
-        // Renumerar el orden de los conceptos restantes para que sea consecutivo.
         var restantes = await session.Query<ConceptoConfiguradoEntity>()
             .Where(c => c.ConfiguracionNomencladorId == configuracionId)
             .OrderBy(c => c.Orden)
@@ -211,9 +204,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         await tx.CommitAsync();
     }
 
-    // Una configuración solo puede tener un valor fijo asociado por tipo: si ya hay uno del
-    // mismo tipo que el solicitado, se lo quita y se asocia el nuevo en su lugar, en vez de
-    // bloquear la operación.
     private async Task ReemplazarValorFijoPorTipoAsync(ConfiguracionNomencladorEntity configuracion, int configuracionId, int valorFijoId)
     {
         var coleccionCargada = NHibernateUtil.IsInitialized(configuracion.ValoresFijos);
@@ -265,7 +255,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         }
     }
 
-    // Devuelve, para cada IdValorFijo, el Id de su tipo (null si no tiene tipo asignado).
     private async Task<Dictionary<int, int?>> GetValorFijoTipoIdsAsync(IEnumerable<int> valorFijoIds)
     {
         var ids = valorFijoIds.Distinct().ToList();
@@ -310,9 +299,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         using var tx = session.BeginTransaction();
 
-        // Se traen TODAS las asociaciones existentes de estas configuraciones (no solo las de
-        // los valores solicitados): hacen falta para detectar conflictos de tipo contra valores
-        // ya asociados que no forman parte de esta tanda.
         var asociadosPorConfiguracion = new Dictionary<int, HashSet<int>>();
         foreach (var configuracionesChunk in GetChunks(configuracionIds))
         {
@@ -342,8 +328,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
             {
                 if (!asociados.Add(valorFijoId)) continue;
 
-                // Un valor fijo de un tipo ya asociado no bloquea la asociación: reemplaza al
-                // existente de ese mismo tipo en vez de convivir con él.
                 var nuevoTipoId = tipoIds.GetValueOrDefault(valorFijoId);
                 var idConflicto = nuevoTipoId.HasValue
                     ? asociados.FirstOrDefault(id => id != valorFijoId && tipoIds.GetValueOrDefault(id) == nuevoTipoId, 0)
@@ -410,9 +394,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         await tx.CommitAsync();
     }
 
-    // Una configuración solo puede tener un valor por categoría asociado por tipo: si ya hay uno
-    // del mismo tipo que el solicitado, se lo quita y se asocia el nuevo en su lugar, en vez de
-    // bloquear la operación.
     private async Task ReemplazarValorPorCategoriaPorTipoAsync(ConfiguracionNomencladorEntity configuracion, int configuracionId, int valorCategoriaId)
     {
         var coleccionCargada = NHibernateUtil.IsInitialized(configuracion.ValoresCategorias);
@@ -468,11 +449,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     {
         using var tx = session.BeginTransaction();
 
-        // La colección ValoresCategorias del padre está mapeada con Cascade.AllDeleteOrphan().
-        // Si el padre ya fue cargado en esta sesión (p. ej. por GetByIdAsync), el ítem también
-        // queda referenciado en esa colección. Eliminarlo directamente con session.DeleteAsync
-        // mientras sigue en la colección provoca "deleted object would be re-saved by cascade".
-        // Por eso se remueve de la colección del padre para que el cascade emita el DELETE.
         var configuracion = await session.GetAsync<ConfiguracionNomencladorEntity>(configuracionId);
         var entity = configuracion?.ValoresCategorias
             .FirstOrDefault(v => v.ValorCategoriaId == valorCategoriaId);
@@ -527,9 +503,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         using var tx = session.BeginTransaction();
 
-        // Se traen TODAS las asociaciones existentes de estas configuraciones (no solo las de
-        // los valores solicitados): hacen falta para detectar conflictos de tipo contra valores
-        // ya asociados que no forman parte de esta tanda.
         var asociadosPorConfiguracion = new Dictionary<int, HashSet<int>>();
         foreach (var configuracionesChunk in GetChunks(configuracionIds))
         {
@@ -574,8 +547,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
             {
                 if (!asociados.Add(valorCategoriaId)) continue;
 
-                // Un valor por categoría de un tipo ya asociado no bloquea la asociación:
-                // reemplaza al existente de ese mismo tipo en vez de convivir con él.
                 var nuevoTipoId = tipoIds.GetValueOrDefault(valorCategoriaId);
                 var idConflicto = nuevoTipoId.HasValue
                     ? asociadosPorTipo.GetValueOrDefault(nuevoTipoId.Value)
@@ -607,7 +578,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         return creadas;
     }
 
-    // Devuelve, para cada IdValorCategoria, el Id de su tipo (null si no tiene tipo asignado).
     private async Task<Dictionary<int, int?>> GetValorCategoriaTipoIdsAsync(IEnumerable<int> valorCategoriaIds)
     {
         var ids = valorCategoriaIds.Distinct().ToList();
@@ -657,10 +627,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         return eliminadas;
     }
 
-    // NHibernate LINQ explota con "Evaluation failure on op_Implicit(...Int32[]...)" cuando
-    // .Contains() se llama sobre un array (int[]) dentro de un .Where(); List<int> sí funciona.
-    // Por eso los chunks se devuelven como List<int>, no int[] (ver también CatalogRepository,
-    // que usa el mismo patrón .ToList() para los mismos fines).
     private static IEnumerable<List<int>> GetChunks(IReadOnlyCollection<int> ids)
     {
         var distinctIds = ids.Distinct().ToList();
@@ -743,9 +709,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         return eliminadas;
     }
 
-    // EscalaSalarialId es un FK simple (no una colección M:N), por eso "asociar" acá es un
-    // UPDATE directo. Usado por la actualización masiva de escala salarial junto con
-    // CatalogRepository.CloneEscalasMasivoAsync (clonar la escala primero, reasignar después).
     public async Task<Dictionary<int, int>> GetEscalaSalarialIdsAsync(IReadOnlyCollection<int> configuracionIds)
     {
         var ids = configuracionIds.Distinct().ToList();
@@ -754,11 +717,6 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         var result = new Dictionary<int, int>();
         foreach (var chunk in GetChunks(ids))
         {
-            // Se carga la entidad completa en vez de proyectar a un tipo anónimo: algunas filas
-            // tienen IDESCALASAL NULL en Oracle, y el transformer de tuplas de NHibernate para
-            // proyecciones LINQ ("new { x.Id, x.EscalaSalarialId }") explota con
-            // NullReferenceException al unboxear ese NULL, mientras que la carga de entidad
-            // completa lo maneja bien (lo mapea a 0, igual que GetByIdAsync).
             var rows = await session.Query<ConfiguracionNomencladorEntity>()
                 .Where(x => chunk.Contains(x.Id))
                 .ToListAsync();

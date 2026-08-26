@@ -158,6 +158,11 @@ function confirmRemoveConcepto(idConcepto: number) {
     accept: () => removeConcepto(idConcepto),
   })
 }
+
+const cantidadConceptos = computed(() => tableData.value.length)
+const virtualScrollerOptions = computed(() =>
+  tableData.value.length > 150 ? { itemSize: 46 } : undefined,
+)
 </script>
 
 <template>
@@ -179,7 +184,7 @@ function confirmRemoveConcepto(idConcepto: number) {
       striped-rows
       scrollable
       scroll-height="600px"
-      :virtual-scroller-options="{ itemSize: 46 }"
+      :virtual-scroller-options="virtualScrollerOptions"
     >
       <template #empty>
         <span class="muted">
@@ -205,5 +210,8 @@ function confirmRemoveConcepto(idConcepto: number) {
         </template>
       </Column>
     </DataTable>
+    <p class="muted" style="text-align: right;">
+      Cantidad de items: {{ cantidadConceptos }}
+    </p>
   </div>
 </template>

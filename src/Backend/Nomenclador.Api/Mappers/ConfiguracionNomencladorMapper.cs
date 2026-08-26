@@ -5,23 +5,11 @@ namespace Nomenclador.Api.Mappers;
 
 public sealed class ConfiguracionNomencladorMapper
 {
-    // Solo asigna los campos escalares. Se usa para crear una entidad nueva, cuando
-    // todavía no se conoce el Id generado por la secuencia (necesario para el FK
-    // compuesto de Conceptos/ValoresFijos/ValoresCategorias, ver ApplyChildren).
     public ConfiguracionNomencladorEntity ToNewEntity(ConfiguracionNomencladorCreateUpdateDto dto)
     {
         return ApplyScalars(new ConfiguracionNomencladorEntity(), dto);
     }
 
-    // Actualiza los campos escalares de una entidad ya persistida (tab "Datos generales").
-    // A propósito NO toca Conceptos/ValoresFijos/ValoresCategorias: esas colecciones ya se
-    // gestionan exclusivamente por los endpoints granulares (AddConceptoAsync, etc.), que
-    // manipulan la MISMA instancia de colección trackeada por NHibernate. Si esta operación
-    // reconstruyera esas colecciones desde el DTO (clear + reinsertar los mismos ítems), un
-    // ítem sin cambios chocaría con el objeto ya cargado en la sesión bajo la misma clave
-    // compuesta ("a different object with the same identifier value was already associated
-    // with the session"), y reasignar la colección entera rompe el tracking de NHibernate
-    // ("A collection with cascade='all-delete-orphan' was no longer referenced...").
     public ConfiguracionNomencladorEntity Apply(ConfiguracionNomencladorEntity entity, ConfiguracionNomencladorCreateUpdateDto dto)
     {
         return ApplyScalars(entity, dto);
@@ -32,21 +20,12 @@ public sealed class ConfiguracionNomencladorMapper
         entity.NomencladorId = dto.IdNomenclador;
         entity.EscalaSalarialId = dto.IdEscalaSalarial;
         entity.ZonaId = dto.IdZona;
-        entity.FechaInicio = dto.FechaInicio;
-        entity.FechaFin = dto.FechaFin ?? DateOnly.MaxValue;
+        entity.FechaInicio = new DateOnly(dto.FechaInicio.Year, dto.FechaInicio.Month, 1);
+        entity.FechaFin = new DateOnly(dto.FechaFin?.Year ?? 9999, dto.FechaFin?.Month ?? 12, 1);
 
         return entity;
     }
 
-    // Reemplaza Conceptos/ValoresFijos/ValoresCategorias. Solo se usa una vez, justo
-    // después de crear una configuración nueva (entity.Id recién asignado, colecciones
-    // todavía vacías) para persistir lo que el usuario haya armado en el borrador local
-    // antes de que la configuración existiera. Requiere que entity.Id ya sea válido:
-    // HISTNOM_CONCEPTO/HISTNOM_VALORUNICO/HISTNOM_VALPCAT usan clave compuesta
-    // (IDHISTORIAL + Id del catálogo) y las colecciones están mapeadas con Inverse(),
-    // por lo que NHibernate NO completa el FK automáticamente al hacer cascade insert:
-    // hay que setear ConfiguracionNomencladorId explícitamente en cada hijo nuevo, igual
-    // que ya hacen los métodos AddConceptoAsync/AddValorFijoAsync/AddValorPorCategoriaAsync.
     public void ApplyChildren(ConfiguracionNomencladorEntity entity, ConfiguracionNomencladorCreateUpdateDto dto)
     {
         entity.Conceptos.Clear();
@@ -217,8 +196,6 @@ public sealed class ConfiguracionNomencladorMapper
         return catalog.TryGetValue(id, out var item) ? $"{item.Id} - {item.Descripcion}" : $"{entityName} no encontrado en el catálogo";
     }
 
-    // La zona es opcional: a diferencia de MapCatalogDescription (que indica un dato roto,
-    // un id que ya no existe en el catálogo), acá un id nulo es un estado válido y esperado.
     private static string MapZonaDescription<TCatalog>(IReadOnlyDictionary<int, TCatalog> catalog, int? id)
         where TCatalog : CatalogEntityBase
     {
@@ -227,7 +204,7 @@ public sealed class ConfiguracionNomencladorMapper
 
     private static string ResolveEstado(DateOnly fechaInicio, DateOnly? fechaFin)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
 
         if (fechaInicio > today)
         {
