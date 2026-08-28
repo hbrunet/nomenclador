@@ -87,12 +87,14 @@ export interface ClonacionMasivaValoresFijosDto {
   valoresFijosIds: number[]
   nuevoPeriodo: string
   coeficienteAjuste: number
+  actualizarValoresExistentes: boolean
 }
 
 export interface ClonacionMasivaValoresCategoriaDto {
   valoresCategoriaIds: number[]
   nuevoPeriodo: string
   coeficienteAjuste: number
+  actualizarValoresExistentes: boolean
 }
 
 export interface ActualizacionMasivaEscalaSalarialDto {
