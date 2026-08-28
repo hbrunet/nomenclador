@@ -93,7 +93,7 @@ public sealed class ValoresCategoriaController(CatalogRepository catalogReposito
     [HttpPost("clonacion-masiva")]
     public async Task<IActionResult> CloneMasivo([FromBody] ClonacionMasivaValoresCategoriaDto dto)
     {
-        if (dto.NuevoPeriodo == default)
+        if (!dto.ActualizarValoresExistentes && dto.NuevoPeriodo == default)
             return BadRequest(new { message = "El nuevo período es obligatorio." });
 
         if (dto.CoeficienteAjuste <= 0)

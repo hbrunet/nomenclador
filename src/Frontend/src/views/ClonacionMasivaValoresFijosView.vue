@@ -110,20 +110,25 @@ function toggleSelection(item: ValorFijoCatalogItem, checked: boolean | null) {
 const nuevoPeriodo = ref<Date | null>(null)
 const coeficienteAjuste = ref<number>(1)
 const cloning = ref(false)
+const actualizarValoresExistentes = ref(false)
 
-const isValidPeriodo = computed(() => nuevoPeriodo.value !== null)
+const isValidPeriodo = computed(() => nuevoPeriodo.value !== null || actualizarValoresExistentes.value)
 const isValidCoeficiente = computed(() => (coeficienteAjuste.value ?? 0) > 0)
 const canClone = computed(
   () => selectedValores.value.length > 0 && isValidPeriodo.value && isValidCoeficiente.value,
 )
+const confirmationMessage = computed(() => {
+  if (!actualizarValoresExistentes.value) return `Se clonarán ${selectedValores.value.length} valor(es) fijo(s), reemplazando el período de su descripción por el nuevo período seleccionado. Esta acción no se puede deshacer.`
+  else return `Se actualizarán ${selectedValores.value.length} valor(es) fijo(s). Esta acción no se puede deshacer.`
+})
+
 
 function confirmClonar() {
-  if (!canClone.value || !nuevoPeriodo.value) return
+  if (!canClone.value) return
   confirm.require({
-    message: `Se clonarán ${selectedValores.value.length} valor(es) fijo(s), reemplazando el período de su descripción por el nuevo período seleccionado. Esta acción no se puede deshacer.`,
-    header: 'Confirmar clonación masiva',
-    icon: 'pi pi-clone',
-    acceptLabel: 'Clonar',
+    message: confirmationMessage.value,
+    header: 'Confirmar',
+    acceptLabel: actualizarValoresExistentes.value ? 'Actualizar' : 'Clonar',
     rejectLabel: 'Cancelar',
     rejectProps: { severity: 'secondary', outlined: true },
     accept: () => handleClonar(),
@@ -137,13 +142,14 @@ async function handleClonar() {
   try {
     const clonados = await valoresFijosService.cloneMasivo({
       valoresFijosIds: selectedValores.value.map((v) => v.id),
-      nuevoPeriodo: formatLocalDate(nuevoPeriodo.value),
+      nuevoPeriodo: actualizarValoresExistentes.value ? '' : formatLocalDate(nuevoPeriodo.value),
       coeficienteAjuste: coeficienteAjuste.value,
+      actualizarValoresExistentes: actualizarValoresExistentes.value,
     })
     toast.add({
       severity: 'success',
       summary: 'Clonación masiva completada',
-      detail: `Se crearon ${clonados.length} valor(es) fijo(s) nuevo(s).`,
+      detail: `Se ${actualizarValoresExistentes.value ? 'actualizaron' : 'clonaron'} ${clonados.length} valor(es) fijo(s).`,
       life: 5000,
     })
     clearSelection()
@@ -151,8 +157,8 @@ async function handleClonar() {
   } catch (e: any) {
     toast.add({
       severity: 'error',
-      summary: 'Error al clonar',
-      detail: e.response?.data?.mensaje ?? 'Ocurrió un error al clonar los valores fijos seleccionados.',
+      summary: 'Error',
+      detail: e.response?.data?.mensaje ?? 'Ocurrió un error inesperado.',
       life: 5000,
     })
   } finally {
@@ -187,86 +193,44 @@ onMounted(() => {
         <div class="flex gap-2 flex-wrap">
           <div class="flex flex-column gap-1" style="flex: 1; min-width: 200px">
             <label class="field-label">Grupo</label>
-            <Select
-              v-model="grupoFilter"
-              :options="grupos"
-              option-label="descripcion"
-              option-value="id"
-              placeholder="Todos"
-              show-clear
-              filter
-              class="w-full"
-            />
+            <Select v-model="grupoFilter" :options="grupos" option-label="descripcion" option-value="id"
+              placeholder="Todos" show-clear filter class="w-full" />
           </div>
           <div class="flex flex-column gap-1" style="flex: 1; min-width: 160px">
             <label class="field-label">Tipo</label>
-            <Select
-              v-model="tipoFilter"
-              :options="tiposDisponibles"
-              :option-label="(option) => `${option.id} - ${option.descripcion}`"
-              option-value="id"
-              placeholder="Todos"
-              show-clear
-              filter
-              filter-placeholder="Filtrar por tipo..."
-              class="w-full"
-            />
+            <Select v-model="tipoFilter" :options="tiposDisponibles"
+              :option-label="(option) => `${option.id} - ${option.descripcion}`" option-value="id" placeholder="Todos"
+              show-clear filter filter-placeholder="Filtrar por tipo..." class="w-full" />
           </div>
           <div class="flex flex-column gap-1" style="flex: 2; min-width: 200px">
             <label class="field-label">Filtrar</label>
-            <InputText v-model="valorQuery" placeholder="Filtrar por descripción o período (ej. 06/2026)..." class="w-full" />
+            <InputText v-model="valorQuery" placeholder="Filtrar por descripción o período (ej. 06/2026)..."
+              class="w-full" />
           </div>
         </div>
 
         <div class="flex gap-2 flex-wrap">
-          <Button
-            v-if="hayFiltroActivo && valoresFiltrados.length"
-            label="Seleccionar todos los filtrados"
-            icon="pi pi-check-square"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="seleccionarTodosFiltrados"
-          />
-          <Button
-            v-if="selectedValores.length"
-            label="Limpiar selección"
-            icon="pi pi-times"
-            severity="secondary"
-            text
-            size="small"
-            @click="clearSelection"
-          />
+          <Button v-if="hayFiltroActivo && valoresFiltrados.length" label="Seleccionar todos los filtrados"
+            icon="pi pi-check-square" severity="secondary" outlined size="small" @click="seleccionarTodosFiltrados" />
+          <Button v-if="selectedValores.length" label="Limpiar selección" icon="pi pi-times" severity="secondary" text
+            size="small" @click="clearSelection" />
         </div>
 
-        <DataTable
-          :key="`${grupoFilter}-${tipoFilter}-${valorQuery}`"
-          :selection="selectedValores"
-          @update:selection="(value) => (selectedValores = value)"
-          :value="valoresFiltrados"
-          :loading="loadingValores"
-          data-key="id"
-          striped-rows
-          sort-field="descripcion"
-          :sort-order="1"
-          scrollable
-          scroll-height="520px"
-          :virtual-scroller-options="virtualScrollerOptions"
-        >
+        <DataTable :key="`${grupoFilter}-${tipoFilter}-${valorQuery}`" :selection="selectedValores"
+          @update:selection="(value) => (selectedValores = value)" :value="valoresFiltrados" :loading="loadingValores"
+          data-key="id" striped-rows sort-field="descripcion" :sort-order="1" scrollable scroll-height="520px"
+          :virtual-scroller-options="virtualScrollerOptions">
           <template #empty>
             <span class="muted">No hay valores fijos para el filtro aplicado.</span>
           </template>
           <Column style="width: 3rem">
             <template #body="{ data }">
-              <Checkbox
-                :model-value="isSelected(data)"
-                binary
-                @update:model-value="(checked) => toggleSelection(data, checked)"
-              />
+              <Checkbox :model-value="isSelected(data)" binary
+                @update:model-value="(checked) => toggleSelection(data, checked)" />
             </template>
           </Column>
           <Column field="descripcion" header="Descripción" sortable />
-          <Column field="idTipo" header="Tipo" sortable >
+          <Column field="idTipo" header="Tipo" sortable>
             <template #body="{ data }">
               {{ data.idTipo }} - {{ data.tipo }}
             </template>
@@ -284,30 +248,25 @@ onMounted(() => {
         <h3 class="text-lg m-0 font-semibold">Parámetros</h3>
 
         <div class="field">
+          <label class="field-label ml-2">
+            <Checkbox v-model="actualizarValoresExistentes" binary />
+            Actualizar valores existentes
+          </label>
+        </div>
+
+        <div class="field">
           <label class="field-label">Nuevo período</label>
-          <DatePicker v-model="nuevoPeriodo" view="month" date-format="mm/yy" placeholder="MM/AAAA" class="w-full" />
+          <DatePicker :disabled="actualizarValoresExistentes" v-model="nuevoPeriodo" view="month" date-format="mm/yy" placeholder="MM/AAAA" class="w-full" />
         </div>
 
         <div class="field">
           <label class="field-label">Coeficiente de ajuste</label>
-          <InputNumber
-            v-model="coeficienteAjuste"
-            input-id="coeficienteAjuste"
-            :min-fraction-digits="2"
-            :max-fraction-digits="4"
-            :min="0"
-            :input-style="{ textAlign: 'right' }"
-            fluid
-          />
+          <InputNumber v-model="coeficienteAjuste" input-id="coeficienteAjuste" :min-fraction-digits="2"
+            :max-fraction-digits="4" :min="0" :input-style="{ textAlign: 'right' }" fluid />
         </div>
 
-        <Button
-          label="Clonar seleccionados"
-          icon="pi pi-clone"
-          :loading="cloning"
-          :disabled="!canClone"
-          @click="confirmClonar"
-        />
+        <Button :label="actualizarValoresExistentes ? 'Actualizar seleccionados' : 'Clonar seleccionados'" :loading="cloning" :disabled="!canClone"
+          @click="confirmClonar" />
       </section>
     </div>
   </div>

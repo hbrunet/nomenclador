@@ -109,20 +109,24 @@ function toggleSelection(item: ValorCategoriaListItemDto, checked: boolean | nul
 const nuevoPeriodo = ref<Date | null>(null)
 const coeficienteAjuste = ref<number>(1)
 const cloning = ref(false)
+const actualizarValoresExistentes = ref(false)
 
-const isValidPeriodo = computed(() => nuevoPeriodo.value !== null)
+const isValidPeriodo = computed(() => (nuevoPeriodo.value !== null || actualizarValoresExistentes.value))
 const isValidCoeficiente = computed(() => (coeficienteAjuste.value ?? 0) > 0)
 const canClone = computed(
   () => selectedValores.value.length > 0 && isValidPeriodo.value && isValidCoeficiente.value,
 )
+const confirmationMessage = computed(() => {
+  if (!actualizarValoresExistentes.value) return `Se clonarán ${selectedValores.value.length} valor(es) por categoría, reemplazando el período de su descripción por el período seleccionado y ajustando el importe de todos sus ítems. Esta acción no se puede deshacer.`
+  else return `Se actualizarán ${selectedValores.value.length} valor(es) por categoría, ajustando el importe de todos sus ítems. Esta acción no se puede deshacer.`
+})
 
 function confirmClonar() {
-  if (!canClone.value || !nuevoPeriodo.value) return
+  if (!canClone.value) return
   confirm.require({
-    message: `Se clonarán ${selectedValores.value.length} valor(es) por categoría, reemplazando el período de su descripción por el nuevo período seleccionado y ajustando el importe de todos sus ítems. Esta acción no se puede deshacer.`,
-    header: 'Confirmar clonación masiva',
-    icon: 'pi pi-clone',
-    acceptLabel: 'Clonar',
+    message: confirmationMessage.value,
+    header: 'Confirmar',
+    acceptLabel: actualizarValoresExistentes.value ? 'Actualizar' : 'Clonar',
     rejectLabel: 'Cancelar',
     rejectProps: { severity: 'secondary', outlined: true },
     accept: () => handleClonar(),
@@ -136,23 +140,23 @@ async function handleClonar() {
   try {
     const clonados = await valoresCategoriaService.cloneMasivo({
       valoresCategoriaIds: selectedValores.value.map((v) => v.id),
-      nuevoPeriodo: formatLocalDate(nuevoPeriodo.value),
+      nuevoPeriodo: actualizarValoresExistentes.value ? '' : formatLocalDate(nuevoPeriodo.value),
       coeficienteAjuste: coeficienteAjuste.value,
+      actualizarValoresExistentes: actualizarValoresExistentes.value,
     })
     toast.add({
       severity: 'success',
-      summary: 'Clonación masiva completada',
-      detail: `Se crearon ${clonados.length} valor(es) por categoría nuevo(s).`,
+      summary:  'Clonación masiva completada',
+      detail: `Se ${actualizarValoresExistentes.value ? 'actualizaron' : 'clonaron'} ${clonados.length} valor(es) por categoría.`,
       life: 5000,
     })
     clearSelection()
     await loadValoresCategoria(true)
   } catch (e: any) {
-    console.error('Error al clonar los valores por categoría seleccionados:', e)
     toast.add({
       severity: 'error',
-      summary: 'Error al clonar',
-      detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Ocurrió un error al clonar los valores por categoría seleccionados.',
+      summary: 'Error',
+      detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Ocurrió un error inesperado.',
       life: 5000,
     })
   } finally {
@@ -280,8 +284,15 @@ onMounted(() => {
         <h3 class="text-lg m-0 font-semibold">Parámetros</h3>
 
         <div class="field">
+          <label class="field-label ml-2">
+            <Checkbox v-model="actualizarValoresExistentes" binary />
+            Actualizar valores existentes
+          </label>
+        </div>
+
+        <div class="field">
           <label class="field-label">Nuevo período</label>
-          <DatePicker v-model="nuevoPeriodo" view="month" date-format="mm/yy" placeholder="MM/AAAA" class="w-full" />
+          <DatePicker :disabled="actualizarValoresExistentes"  v-model="nuevoPeriodo" view="month" date-format="mm/yy" placeholder="MM/AAAA" class="w-full" />
         </div>
 
         <div class="field">
@@ -298,8 +309,7 @@ onMounted(() => {
         </div>
 
         <Button
-          label="Clonar seleccionados"
-          icon="pi pi-clone"
+          :label="actualizarValoresExistentes ? 'Actualizar seleccionados' : 'Clonar seleccionados'"
           :loading="cloning"
           :disabled="!canClone"
           @click="confirmClonar"

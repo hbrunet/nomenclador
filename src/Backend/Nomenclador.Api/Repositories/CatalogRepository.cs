@@ -508,6 +508,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             Tipo = item.Tipo?.Descripcion ?? string.Empty,
             Valor = item.Valor
         };
+        
 
     public async Task UpdateValorCategoriaItemsAsync(IReadOnlyCollection<ValorCategoriaConfiguradoItemDto> items)
     {
@@ -791,55 +792,93 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             .GroupBy(item => item.ValorCategoriaId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        var clones = valores.Select(v => new ValorCategoriaCatalogEntity
+        if (dto.ActualizarValoresExistentes)
         {
-            Descripcion = ReemplazarPeriodoEnDescripcion(v.Descripcion, dto.NuevoPeriodo),
-            Tipo = v.Tipo,
-        }).ToList();
-
-        using var tx = session.BeginTransaction();
-        foreach (var clone in clones)
-            await session.SaveAsync(clone);
-        await session.FlushAsync();
-
-        var result = new List<ValorCategoriaDetailDto>(clones.Count);
-        for (var i = 0; i < valores.Count; i++)
-        {
-            var clone = clones[i];
-            var originalItems = itemsByValorCategoriaId.GetValueOrDefault(valores[i].Id, []);
-            var clonedItemDtos = new List<ValorCategoriaConfiguradoItemDto>(originalItems.Count);
-
-            foreach (var item in originalItems)
+            using var tx = session.BeginTransaction();
+            foreach (var valor in valores)
             {
-                var clonedItem = new ValorCategoriaConfiguradoItemEntity
+                var originalItems = itemsByValorCategoriaId.GetValueOrDefault(valor.Id, []);
+                foreach (var item in originalItems)
+                    item.Importe = Math.Round(item.Importe * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero);
+            }
+            await session.FlushAsync();
+            await tx.CommitAsync();
+
+            var result = new List<ValorCategoriaDetailDto>(valores.Count);
+            for (var i = 0; i < valores.Count; i++)
+            {
+                var valor = valores[i];
+                var originalItems = itemsByValorCategoriaId.GetValueOrDefault(valor.Id, []);
+                var itemDtos = originalItems.Select(item => new ValorCategoriaConfiguradoItemDto
                 {
-                    ValorCategoriaId = clone.Id,
-                    Numero = item.Numero,
-                    Importe = Math.Round(item.Importe * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero),
-                };
-                await session.SaveAsync(clonedItem);
-                clonedItemDtos.Add(new ValorCategoriaConfiguradoItemDto
+                    Id = item.Id,
+                    NumeroCategoria = item.Numero,
+                    Importe = item.Importe,
+                }).ToList();
+
+                result.Add(new ValorCategoriaDetailDto
                 {
-                    Id = clonedItem.Id,
-                    NumeroCategoria = clonedItem.Numero,
-                    Importe = clonedItem.Importe,
+                    Id = valor.Id,
+                    Descripcion = valor.Descripcion,
+                    IdTipo = valor.Tipo?.Id ?? 0,
+                    Tipo = valor.Tipo?.Descripcion ?? string.Empty,
+                    Items = itemDtos,
                 });
             }
 
-            result.Add(new ValorCategoriaDetailDto
+            return result;
+        }
+        else
+        {
+            var clones = valores.Select(v => new ValorCategoriaCatalogEntity
             {
-                Id = clone.Id,
-                Descripcion = clone.Descripcion,
-                IdTipo = clone.Tipo?.Id ?? 0,
-                Tipo = clone.Tipo?.Descripcion ?? string.Empty,
-                Items = clonedItemDtos,
-            });
+                Descripcion = ReemplazarPeriodoEnDescripcion(v.Descripcion, dto.NuevoPeriodo),
+                Tipo = v.Tipo,
+            }).ToList();
+
+            using var tx = session.BeginTransaction();
+            foreach (var clone in clones)
+                await session.SaveAsync(clone);
+            await session.FlushAsync();
+            await tx.CommitAsync();
+            
+            var result = new List<ValorCategoriaDetailDto>(clones.Count);
+            for (var i = 0; i < valores.Count; i++)
+            {
+                var clone = clones[i];
+                var originalItems = itemsByValorCategoriaId.GetValueOrDefault(valores[i].Id, []);
+                var clonedItemDtos = new List<ValorCategoriaConfiguradoItemDto>(originalItems.Count);
+
+                foreach (var item in originalItems)
+                {
+                    var clonedItem = new ValorCategoriaConfiguradoItemEntity
+                    {
+                        ValorCategoriaId = clone.Id,
+                        Numero = item.Numero,
+                        Importe = Math.Round(item.Importe * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero),
+                    };
+                    await session.SaveAsync(clonedItem);
+                    clonedItemDtos.Add(new ValorCategoriaConfiguradoItemDto
+                    {
+                        Id = clonedItem.Id,
+                        NumeroCategoria = clonedItem.Numero,
+                        Importe = clonedItem.Importe,
+                    });
+                }
+
+                result.Add(new ValorCategoriaDetailDto
+                {
+                    Id = clone.Id,
+                    Descripcion = clone.Descripcion,
+                    IdTipo = clone.Tipo?.Id ?? 0,
+                    Tipo = clone.Tipo?.Descripcion ?? string.Empty,
+                    Items = clonedItemDtos,
+                });
+            }
+
+            return result;
         }
 
-        await session.FlushAsync();
-        await tx.CommitAsync();
-
-        return result;
     }
 
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetValorFijoTiposAsync()
@@ -1092,7 +1131,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         await session.FlushAsync();
         await tx.CommitAsync();
 
-        return true;    
+        return true;
     }
 
     public async Task<ValorFijoCatalogDto?> UpdateValorFijoAsync(int id, ValorFijoCreateDto dto)
@@ -1160,20 +1199,35 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
         if (valores.Count == 0) return null;
 
-        var clones = valores.Select(v => new ValorFijoCatalogEntity
+        if (dto.ActualizarValoresExistentes)
         {
-            Descripcion = ReemplazarPeriodoEnDescripcion(v.Descripcion, dto.NuevoPeriodo),
-            Tipo = v.Tipo,
-            Valor = Math.Round(v.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero)
-        }).ToList();
+            using var tx = session.BeginTransaction();
+            foreach (var valor in valores)
+            {
+                valor.Valor = Math.Round(valor.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero);
+            }
+            await session.FlushAsync();
+            await tx.CommitAsync();
+            return valores.Select(ToValorFijoCatalogDto).ToList();
+        }
+        else
+        {
+            var clones = valores.Select(v => new ValorFijoCatalogEntity
+            {
+                Descripcion = ReemplazarPeriodoEnDescripcion(v.Descripcion, dto.NuevoPeriodo),
+                Tipo = v.Tipo,
+                Valor = Math.Round(v.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero)
+            }).ToList();
 
-        using var tx = session.BeginTransaction();
-        foreach (var clone in clones)
-            await session.SaveAsync(clone);
-        await session.FlushAsync();
-        await tx.CommitAsync();
-
-        return clones.Select(ToValorFijoCatalogDto).ToList();
+            using var tx = session.BeginTransaction();
+            foreach (var clone in clones)
+            {
+                await session.SaveAsync(clone);
+            }
+            await session.FlushAsync();
+            await tx.CommitAsync();
+            return clones.Select(ToValorFijoCatalogDto).ToList();
+        }
     }
 
     public async Task TestDatabaseConnectionAsync()
