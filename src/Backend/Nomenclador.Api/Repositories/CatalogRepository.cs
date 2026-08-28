@@ -801,6 +801,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                 foreach (var item in originalItems)
                     item.Importe = Math.Round(item.Importe * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero);
             }
+            await session.FlushAsync();
             await tx.CommitAsync();
 
             var result = new List<ValorCategoriaDetailDto>(valores.Count);
@@ -839,7 +840,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             foreach (var clone in clones)
                 await session.SaveAsync(clone);
             await session.FlushAsync();
-
+            await tx.CommitAsync();
+            
             var result = new List<ValorCategoriaDetailDto>(clones.Count);
             for (var i = 0; i < valores.Count; i++)
             {
@@ -873,7 +875,6 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                     Items = clonedItemDtos,
                 });
             }
-            await tx.CommitAsync();
 
             return result;
         }
@@ -1205,6 +1206,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             {
                 valor.Valor = Math.Round(valor.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero);
             }
+            await session.FlushAsync();
             await tx.CommitAsync();
             return valores.Select(ToValorFijoCatalogDto).ToList();
         }
@@ -1222,6 +1224,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             {
                 await session.SaveAsync(clone);
             }
+            await session.FlushAsync();
             await tx.CommitAsync();
             return clones.Select(ToValorFijoCatalogDto).ToList();
         }
