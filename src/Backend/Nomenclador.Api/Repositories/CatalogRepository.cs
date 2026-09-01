@@ -1235,7 +1235,10 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         var periodoActivo = await session.Query<PeriodoCatalogEntity>()
             .Where(p => p.Activo)
             .Select(p => p.Periodo)
-            .FirstOrDefaultAsync();
+            .SingleOrDefaultAsync();
+
+        if (periodoActivo == default)
+            throw new InvalidOperationException("No se encontró ningún período activo.");
 
         return periodoActivo;
     }
