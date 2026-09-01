@@ -44,11 +44,15 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         if (!string.IsNullOrWhiteSpace(estado))
         {
-            var periodoActivo = await session.Query<PeriodoCatalogEntity>()
-                .Where(p => p.Activo)
-                .Select(p => p.Periodo)
-                .SingleAsync();
+var periodoActivo = await session.Query<PeriodoCatalogEntity>()
+    .Where(p => p.Activo)
+    .Select(p => p.Periodo)
+    .SingleOrDefaultAsync();
 
+if (periodoActivo == default)
+{
+    throw new InvalidOperationException("No hay un período activo configurado en el catálogo USUARIO.PERIODO.");
+}
             switch (estado.Trim().ToUpperInvariant())
             {
                 case "FUTURA":
