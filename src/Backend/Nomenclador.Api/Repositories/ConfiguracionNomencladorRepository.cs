@@ -16,7 +16,8 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         DateOnly? vigenteEn,
         string? estado,
         int page,
-        int pageSize)
+        int pageSize,
+        DateOnly? periodoActivo = null)
     {
         ConfiguracionNomencladorEntity alias = null!;
         NomencladorCatalogEntity nomencladorAlias = null!;
@@ -44,31 +45,26 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         if (!string.IsNullOrWhiteSpace(estado))
         {
-var periodoActivo = await session.Query<PeriodoCatalogEntity>()
-    .Where(p => p.Activo)
-    .Select(p => p.Periodo)
-    .SingleOrDefaultAsync();
+            if (periodoActivo == null || periodoActivo == default(DateOnly))
+                throw new InvalidOperationException("No hay un período activo configurado en el catálogo USUARIO.PERIODO.");
 
-if (periodoActivo == default)
-{
-    throw new InvalidOperationException("No hay un período activo configurado en el catálogo USUARIO.PERIODO.");
-}
+            var periodoActivoValue = periodoActivo.Value;
             switch (estado.Trim().ToUpperInvariant())
             {
                 case "FUTURA":
                     query.Where(Restrictions.Gt(
-                        Projections.Property(() => alias.FechaInicio), periodoActivo));
+                        Projections.Property(() => alias.FechaInicio), periodoActivoValue));
                     break;
                 case "VENCIDA":
                     query.Where(Restrictions.And(
                         Restrictions.IsNotNull(Projections.Property(() => alias.FechaFin)),
-                        Restrictions.Lt(Projections.Property(() => alias.FechaFin), periodoActivo)));
+                        Restrictions.Lt(Projections.Property(() => alias.FechaFin), periodoActivoValue)));
                     break;
                 case "ACTIVA":
                     query.Where(Restrictions.Le(
-                        Projections.Property(() => alias.FechaInicio), periodoActivo));
+                        Projections.Property(() => alias.FechaInicio), periodoActivoValue));
                     query.Where(Restrictions.Ge(
-                        Projections.Property(() => alias.FechaFin), periodoActivo));
+                        Projections.Property(() => alias.FechaFin), periodoActivoValue));
                     break;
             }
         }
