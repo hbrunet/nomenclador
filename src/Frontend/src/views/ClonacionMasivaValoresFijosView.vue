@@ -265,7 +265,7 @@ onMounted(() => {
             :max-fraction-digits="4" :min="0" :input-style="{ textAlign: 'right' }" fluid />
         </div>
 
-        <Button :label="actualizarValoresExistentes ? 'Actualizar seleccionados' : 'Clonar seleccionados'" :loading="cloning" :disabled="!canClone"
+        <Button :label="actualizarValoresExistentes ? 'Actualizar' : 'Clonar'" :loading="cloning" :disabled="!canClone"
           @click="confirmClonar" />
       </section>
     </div>

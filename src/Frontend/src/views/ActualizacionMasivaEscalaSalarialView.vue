@@ -242,8 +242,7 @@ onMounted(async () => {
         </div>
 
         <Button
-          label="Confirmar"
-          icon="pi pi-sync"
+          label="Actualizar"
           :loading="submitting"
           :disabled="!canConfirm"
           @click="confirmActualizar"

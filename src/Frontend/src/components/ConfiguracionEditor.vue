@@ -129,6 +129,9 @@ const activeTab = ref('datos-generales')
                   option-value="id"
                   placeholder="Seleccione un nomenclador"
                   class="w-full"
+                  filter
+                  filter-placeholder="Buscar..."
+                  show-clear
                 />
               </div>
 
