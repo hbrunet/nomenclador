@@ -10,7 +10,7 @@ import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
-import { formatLocalDate, formatPeriodo } from '../utils/date'
+import { formatLocalDate, formatPeriodo, parseLocalDate } from '../utils/date'
 import type { ConfiguracionNomencladorListItemDto } from '../types/configuration'
 
 const toast = useToast()
@@ -149,6 +149,10 @@ async function handleConfirmar() {
 }
 
 onMounted(async () => {
+  const periodoActivo = await configurationService.getPeriodoActivo()
+  if (periodoActivo) {
+    filters.vigenteEn = parseLocalDate(periodoActivo)
+  }
   await loadConfiguraciones()
 })
 </script>

@@ -24,9 +24,10 @@ public sealed class ConfiguracionNomencladorService(
         var (entities, total) = await configuracionRepository.GetAllAsync(
             nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize);
         var catalogs = await catalogRepository.GetSnapshotForListAsync();
+        var periodoActivo = await catalogRepository.GetPeriodoActivoAsync();
 
         var items = entities
-            .Select(entity => mapper.ToListItemDto(entity, catalogs))
+            .Select(entity => mapper.ToListItemDto(entity, catalogs, periodoActivo))
             .ToList();
 
         return new PagedResult<ConfiguracionNomencladorListItemDto>
@@ -122,7 +123,8 @@ public sealed class ConfiguracionNomencladorService(
     private async Task<ConfiguracionNomencladorDetailDto> BuildDetailAsync(ConfiguracionNomencladorEntity entity)
     {
         var catalogs = await catalogRepository.GetSnapshotForEntityAsync(entity);
-        return mapper.ToDetailDto(entity, catalogs);
+        var periodoActivo = await catalogRepository.GetPeriodoActivoAsync();
+        return mapper.ToDetailDto(entity, catalogs, periodoActivo);
     }
 
     public async Task<ConfiguracionNomencladorDetailDto> AddValorFijoAsync(int id, ValorFijoConfiguradoInputDto valorFijo)

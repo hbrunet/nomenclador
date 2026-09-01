@@ -35,6 +35,14 @@ export const apiClient = axios.create({
   },
 })
 
+// Se consulta desde muchas pantallas (listado, asociaciones/clonaciones masivas)
+// para precargar el filtro "vigente en". Se cachea en memoria por sesión de SPA
+// (se pierde en un reload completo, ej. tras un 401) para evitar refetch en cada
+// pantalla; a diferencia del token no se persiste en localStorage porque el
+// período activo puede cambiar durante la sesión y no queremos servir un valor
+// desactualizado entre recargas.
+let periodoActivoRequest: Promise<string> | null = null
+
 
 apiClient.interceptors.response.use(
   (response) => response,
@@ -272,5 +280,18 @@ export const configurationService = {
       payload,
     )
     return data
+  },
+
+  async getPeriodoActivo() {
+    if (!periodoActivoRequest) {
+      periodoActivoRequest = apiClient
+        .get<string>('/catalogs/periodo-activo')
+        .then(({ data }) => data)
+        .catch((error) => {
+          periodoActivoRequest = null
+          throw error
+        })
+    }
+    return periodoActivoRequest
   },
 }

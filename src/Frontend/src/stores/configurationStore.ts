@@ -101,6 +101,7 @@ export const useConfigurationStore = defineStore('configuration', {
       categorias: [],
       valoresFijos: [],
       valoresCategorias: [],
+      periodoActivo: null,
     },
     validation: createEmptyValidation(),
     loadingList: false,
@@ -115,12 +116,13 @@ export const useConfigurationStore = defineStore('configuration', {
     },
 
     async fetchCatalogs(escalaId?: number) {
-      const [nomencladores, escalas, zonas, valoresFijos, valoresCategorias] = await Promise.all([
+      const [nomencladores, escalas, zonas, valoresFijos, valoresCategorias, periodoActivo] = await Promise.all([
         configurationService.getNomencladores(),
         configurationService.getEscalas(),
         configurationService.getZonas(),
         configurationService.getValoresFijos(),
         configurationService.getValoresCategorias(),
+        configurationService.getPeriodoActivo(),
       ])
 
       this.catalogs = {
@@ -130,6 +132,7 @@ export const useConfigurationStore = defineStore('configuration', {
         zonas,
         valoresFijos,
         valoresCategorias,
+        periodoActivo,
       }
 
       if (escalaId) {

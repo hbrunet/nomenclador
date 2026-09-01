@@ -304,4 +304,5 @@ export interface CatalogsState {
   categorias: CategoriaCatalogItem[]
   valoresFijos: ValorFijoCatalogItem[]
   valoresCategorias: ValorCategoriaCatalogItem[]
+  periodoActivo: string | null
 }

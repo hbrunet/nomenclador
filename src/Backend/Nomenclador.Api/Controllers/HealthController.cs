@@ -16,7 +16,7 @@ public sealed class HealthController(CatalogRepository catalogRepository) : Cont
     [HttpGet("testdb")]
     public async Task<IActionResult> TestDb()
     {
-        await catalogRepository.TestDatabaseConnectionAsync();
+        await catalogRepository.GetPeriodoActivoAsync();
 
         return Ok("Database connection successful");
     }

@@ -42,7 +42,7 @@ defineExpose({ open })
     v-model:visible="isVisible"
     :header="isEditMode ? 'Editar grupo' : 'Nuevo grupo'"
     :modal="true"
-    :style="{ width: '28rem' }"
+    :style="{ width: '35rem' }"
   >
     <div class="flex flex-column gap-4 pt-2">
       <div class="field">
@@ -61,6 +61,7 @@ defineExpose({ open })
           filter
           display="chip"
           class="w-full"
+          :maxSelectedLabels="3"
         />
       </div>
     </div>

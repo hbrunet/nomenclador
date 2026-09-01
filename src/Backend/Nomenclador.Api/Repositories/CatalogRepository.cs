@@ -117,7 +117,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                 .Fetch(x => x.Tipo)
                 .Where(item => valorCategoriaIds.Contains(item.Id))
                 .ToListAsync();
-
+    
         return new CatalogSnapshot
         {
             Nomencladores = nomenclador is null
@@ -1230,11 +1230,14 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         }
     }
 
-    public async Task TestDatabaseConnectionAsync()
+    public async Task<DateOnly> GetPeriodoActivoAsync()
     {
-        await session.CreateSQLQuery("SELECT 1 AS ok FROM dual")
-            .AddScalar("ok", NHibernateUtil.Int32)
-            .UniqueResultAsync<int>();
+        var periodoActivo = await session.Query<PeriodoCatalogEntity>()
+            .Where(p => p.Activo)
+            .Select(p => p.Periodo)
+            .FirstOrDefaultAsync();
+
+        return periodoActivo;
     }
 }
 

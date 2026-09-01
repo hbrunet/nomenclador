@@ -11,7 +11,7 @@ import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
 import { conceptosService } from '../services/conceptosService'
-import { formatPeriodo } from '../utils/date'
+import { formatPeriodo, parseLocalDate } from '../utils/date'
 import type { ConceptoCatalogItem, ConfiguracionNomencladorListItemDto } from '../types/configuration'
 
 const toast = useToast()
@@ -232,6 +232,10 @@ onMounted(async () => {
   await Promise.all([
     loadConceptos()
   ])
+  const periodoActivo = await configurationService.getPeriodoActivo()
+  if (periodoActivo) {
+    filters.vigenteEn = parseLocalDate(periodoActivo)
+  }
   await loadConfiguraciones()
 })
 </script>
