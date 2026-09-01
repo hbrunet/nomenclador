@@ -50,7 +50,7 @@ defineExpose({ open })
     :modal="true"
     :style="{ width: '22rem' }"
   >
-    <p>{{ configSource?.nomencladorDescripcion }} {{ formatPeriodo(configSource?.fechaInicio) }} — {{ configSource?.fechaFin ? formatPeriodo(configSource?.fechaFin) : 'Vigente' }}</p>
+    <p>{{ configSource?.nomencladorDescripcion }} {{ configSource?.fechaInicio ? formatPeriodo(configSource.fechaInicio) : '' }} — {{ configSource?.fechaFin ? formatPeriodo(configSource.fechaFin) : 'Vigente' }}</p>
 
     <div class="flex flex-column gap-1 pt-2">
         <label class="field-label">Fecha inicio</label>
