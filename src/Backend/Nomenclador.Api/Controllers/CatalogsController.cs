@@ -88,4 +88,10 @@ public sealed class CatalogsController(CatalogRepository catalogRepository) : Co
         await catalogRepository.UpdateValorCategoriaItemsAsync(items);
         return NoContent();
     }
+
+    [HttpGet("periodo-activo")]
+    public async Task<IActionResult> GetPeriodoActivo()
+    {
+        return Ok(await catalogRepository.GetPeriodoActivoAsync());
+    }
 }

@@ -4,6 +4,7 @@ import DatePicker from 'primevue/datepicker'
 import Button from 'primevue/button'
 import { ref } from 'vue'
 import type { ConfiguracionNomencladorListItemDto } from '../types/configuration'
+import { formatPeriodo } from '../utils/date'
 const saving = ref(false)
 
 const emit = defineEmits<{
@@ -49,7 +50,7 @@ defineExpose({ open })
     :modal="true"
     :style="{ width: '22rem' }"
   >
-    <p class="muted m-0">{{ configSource?.nomencladorDescripcion }} - {{ configSource?.escalaDescripcion }}</p>
+    <p>{{ configSource?.nomencladorDescripcion }} {{ configSource?.fechaInicio ? formatPeriodo(configSource.fechaInicio) : '' }} — {{ configSource?.fechaFin ? formatPeriodo(configSource.fechaFin) : 'Vigente' }}</p>
 
     <div class="flex flex-column gap-1 pt-2">
         <label class="field-label">Fecha inicio</label>

@@ -117,7 +117,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                 .Fetch(x => x.Tipo)
                 .Where(item => valorCategoriaIds.Contains(item.Id))
                 .ToListAsync();
-
+    
         return new CatalogSnapshot
         {
             Nomencladores = nomenclador is null
@@ -839,9 +839,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             using var tx = session.BeginTransaction();
             foreach (var clone in clones)
                 await session.SaveAsync(clone);
-            await session.FlushAsync();
-            await tx.CommitAsync();
-            
+            await session.FlushAsync(); // need clone.Id (sequence-generated) before creating items that reference it
+
             var result = new List<ValorCategoriaDetailDto>(clones.Count);
             for (var i = 0; i < valores.Count; i++)
             {
@@ -875,6 +874,9 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                     Items = clonedItemDtos,
                 });
             }
+
+            await session.FlushAsync();
+            await tx.CommitAsync();
 
             return result;
         }
@@ -1230,11 +1232,17 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         }
     }
 
-    public async Task TestDatabaseConnectionAsync()
+    public async Task<DateOnly> GetPeriodoActivoAsync()
     {
-        await session.CreateSQLQuery("SELECT 1 AS ok FROM dual")
-            .AddScalar("ok", NHibernateUtil.Int32)
-            .UniqueResultAsync<int>();
+        var periodoActivo = await session.Query<PeriodoCatalogEntity>()
+            .Where(p => p.Activo)
+            .Select(p => p.Periodo)
+            .SingleOrDefaultAsync();
+
+        if (periodoActivo == default)
+            throw new InvalidOperationException("No se encontró ningún período activo.");
+
+        return periodoActivo;
     }
 }
 

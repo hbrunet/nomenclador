@@ -309,7 +309,7 @@ onMounted(() => {
         </div>
 
         <Button
-          :label="actualizarValoresExistentes ? 'Actualizar seleccionados' : 'Clonar seleccionados'"
+          :label="actualizarValoresExistentes ? 'Actualizar' : 'Clonar'"
           :loading="cloning"
           :disabled="!canClone"
           @click="confirmClonar"

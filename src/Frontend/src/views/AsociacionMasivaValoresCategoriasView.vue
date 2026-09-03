@@ -12,7 +12,7 @@ import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
 import { gruposValorCategoriaService } from '../services/gruposValorCategoriaService'
-import { formatPeriodo } from '../utils/date'
+import { formatPeriodo, parseLocalDate } from '../utils/date'
 import type { CatalogItem, ConfiguracionNomencladorListItemDto, GrupoValorCategoriaDto, ValorCategoriaCatalogItem } from '../types/configuration'
 
 const toast = useToast()
@@ -241,6 +241,10 @@ onMounted(async () => {
     loadValoresCategorias(),
     loadGrupos(),
   ])
+  const periodoActivo = await configurationService.getPeriodoActivo()
+  if (periodoActivo) {
+    filters.vigenteEn = parseLocalDate(periodoActivo)
+  }
   await loadConfiguraciones()
 })
 </script>

@@ -60,7 +60,7 @@ public sealed class ConfiguracionNomencladorMapper
         }
     }
 
-    public ConfiguracionNomencladorListItemDto ToListItemDto(ConfiguracionNomencladorEntity entity, CatalogSnapshot catalogs)
+    public ConfiguracionNomencladorListItemDto ToListItemDto(ConfiguracionNomencladorEntity entity, CatalogSnapshot catalogs, DateOnly periodoActivo)
     {
         return new ConfiguracionNomencladorListItemDto
         {
@@ -70,11 +70,11 @@ public sealed class ConfiguracionNomencladorMapper
             ZonaDescripcion = MapZonaDescription(catalogs.Zonas, entity.ZonaId),
             FechaInicio = entity.FechaInicio,
             FechaFin = entity.FechaFin,
-            Estado = ResolveEstado(entity.FechaInicio, entity.FechaFin),
+            Estado = ResolveEstado(periodoActivo, entity.FechaInicio, entity.FechaFin),
         };
     }
 
-    public ConfiguracionNomencladorDetailDto ToDetailDto(ConfiguracionNomencladorEntity entity, CatalogSnapshot catalogs)
+    public ConfiguracionNomencladorDetailDto ToDetailDto(ConfiguracionNomencladorEntity entity, CatalogSnapshot catalogs, DateOnly periodoActivo)
     {
         return new ConfiguracionNomencladorDetailDto
         {
@@ -87,7 +87,7 @@ public sealed class ConfiguracionNomencladorMapper
             ZonaDescripcion = MapZonaDescription(catalogs.Zonas, entity.ZonaId),
             FechaInicio = entity.FechaInicio,
             FechaFin = entity.FechaFin,
-            Estado = ResolveEstado(entity.FechaInicio, entity.FechaFin),
+            Estado = ResolveEstado(periodoActivo, entity.FechaInicio, entity.FechaFin),
             Conceptos = entity.Conceptos
                 .Select(item =>
                 {
@@ -202,16 +202,14 @@ public sealed class ConfiguracionNomencladorMapper
         return id.HasValue ? MapCatalogDescription(catalog, id.Value, "Zona") : "Sin zona";
     }
 
-    private static string ResolveEstado(DateOnly fechaInicio, DateOnly? fechaFin)
+    private static string ResolveEstado(DateOnly periodoActivo, DateOnly fechaInicio, DateOnly? fechaFin)
     {
-        var today = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-
-        if (fechaInicio > today)
+        if (fechaInicio > periodoActivo)
         {
             return "Futura";
         }
 
-        if (fechaFin.HasValue && fechaFin.Value < today)
+        if (fechaFin.HasValue && fechaFin.Value < periodoActivo)
         {
             return "Vencida";
         }

@@ -69,7 +69,6 @@ onMounted(async () => {
   <section class="panel p-4">
     <div>
     <h2 class="text-xl mt-0 mb-3 font-semibold">Configuraciones</h2>
-    <p class="muted m-0">Filtros de búsqueda</p>
     </div>  
     <div class="flex flex-wrap gap-3 align-items-end">
       <div class="flex flex-column gap-1" style="flex: 2 ">
@@ -113,7 +112,12 @@ onMounted(async () => {
 
       <div class="flex flex-column gap-1" style="flex: 1">
         <label class="field-label">Vigente en</label>
-        <DatePicker v-model="filters.vigenteEn" type="date" class="w-full"  view="month" dateFormat="mm/yy"/>
+        <DatePicker v-model="filters.vigenteEn" 
+          type="date" 
+          class="w-full"  
+          view="month" 
+          dateFormat="mm/yy"        
+        />
       </div>
 
       <div class="flex flex-column gap-1" style="flex: 1">
