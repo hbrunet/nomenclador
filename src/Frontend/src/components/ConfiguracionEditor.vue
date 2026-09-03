@@ -113,7 +113,7 @@ const activeTab = ref('datos-generales')
         <Tab value="conceptos" :disabled="isNew">Conceptos</Tab>
         <Tab value="valores-fijos" :disabled="isNew">Valores fijos</Tab>
         <Tab value="valores-categorias" :disabled="isNew">Valores por categoría</Tab>
-        <Tab value="categorias" :disabled="isNew">Categorías escala</Tab>
+        <Tab value="categorias" :disabled="isNew">Categorías {{ selectedEscala?.descripcion ?? '' }}</Tab>
       </TabList>
 
       <TabPanels>

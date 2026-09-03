@@ -8,7 +8,6 @@ import Select from 'primevue/select'
 import Button from 'primevue/button'
 import ConfiguracionesList from '../components/ConfiguracionesList.vue'
 import { useConfiguration } from '../composables/useConfiguration'
-import { parseLocalDate } from '../utils/date'
 import type { CatalogItem } from '../types/configuration'
 
 const router = useRouter()
@@ -62,9 +61,6 @@ async function goToPage(page: number, pageSize: number) {
 
 onMounted(async () => {
   await fetchCatalogs()
-  if (catalogs.value.periodoActivo) {
-    filters.vigenteEn = parseLocalDate(catalogs.value.periodoActivo)
-  }
   await loadList()
 })
 </script>

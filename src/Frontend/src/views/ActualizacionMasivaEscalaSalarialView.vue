@@ -109,9 +109,8 @@ const canConfirm = computed(
 function confirmActualizar() {
   if (!canConfirm.value || !nuevoPeriodo.value) return
   confirm.require({
-    message: `Se clonará la escala salarial de cada una de las ${selectedConfiguraciones.value.length} configuración(es) seleccionada(s) (con el período y coeficiente indicados) y se reasignará esa configuración a la escala clonada. Esta acción no se puede deshacer.`,
+    message: `Se clonará la escala salarial de cada una de las ${selectedConfiguraciones.value.length} configuración(es) seleccionada(s). Esta acción no se puede deshacer.`,
     header: 'Confirmar actualización masiva de escala salarial',
-    icon: 'pi pi-sync',
     acceptLabel: 'Confirmar',
     rejectLabel: 'Cancelar',
     rejectProps: { severity: 'secondary', outlined: true },
@@ -165,7 +164,7 @@ onMounted(async () => {
         Paso 1: Seleccioná las configuraciones vigentes, el nuevo período y el coeficiente de ajuste. 
       </p>
       <p class="muted mt-2 mb-0">
-        Paso 2: Al confirmar, el sistema clonará las escalas salariales con sus categorías ajustadas y las asignará automáticamente.
+        Paso 2: Al confirmar, el sistema clonará las escalas salariales con sus categorías ajustadas y las asociará automáticamente a las configuraciones seleccionadas.
       </p>
     </section>
 

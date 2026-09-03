@@ -839,9 +839,8 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             using var tx = session.BeginTransaction();
             foreach (var clone in clones)
                 await session.SaveAsync(clone);
-            await session.FlushAsync();
-            await tx.CommitAsync();
-            
+            await session.FlushAsync(); // need clone.Id (sequence-generated) before creating items that reference it
+
             var result = new List<ValorCategoriaDetailDto>(clones.Count);
             for (var i = 0; i < valores.Count; i++)
             {
@@ -875,6 +874,9 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                     Items = clonedItemDtos,
                 });
             }
+
+            await session.FlushAsync();
+            await tx.CommitAsync();
 
             return result;
         }
