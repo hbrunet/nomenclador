@@ -202,7 +202,7 @@ defineExpose({ open })
       </div>
 
       <Message v-if="matches && resueltos.length === 0" severity="warn" :closable="false">
-        No hay ningún tipo resuelto todavía: elegií un candidato para los tipos ambiguos o probá otro período.
+        No hay ningún tipo resuelto todavía: elegí un candidato para los tipos ambiguos o probá otro período.
       </Message>
     </div>
 
