@@ -1269,10 +1269,12 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         var mmYyyy = new Regex($@"\b{Regex.Escape(periodo.ToString("MM/yyyy"))}\b");
         var yyyyMm = new Regex($@"\b{Regex.Escape(periodo.ToString("yyyy/MM"))}\b");
 
+        var tiposById = tipos.ToDictionary(t => t.Id, t => t.Descripcion ?? string.Empty);
+
         var result = new List<SustitucionValorFijoMatchDto>(ids.Count);
         foreach (var idTipo in ids)
         {
-            var tipoDescripcion = tipos.FirstOrDefault(t => t.Id == idTipo)?.Descripcion ?? string.Empty;
+            var tipoDescripcion = tiposById.GetValueOrDefault(idTipo, string.Empty);
             var candidatos = valoresPorTipo.GetValueOrDefault(idTipo, [])
                 // Descripcion puede ser null (Oracle guarda "" como NULL para VARCHAR2);
                 // Regex.IsMatch(null) explota, así que se descartan esas filas como no-match.
