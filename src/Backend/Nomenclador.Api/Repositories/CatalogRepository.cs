@@ -1249,7 +1249,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             .ToListAsync();
 
         var valoresPorTipo = new Dictionary<int, List<ValorFijoCatalogEntity>>();
-        const int oracleInLimit = 1000;
+        const int oracleInLimit = 900;
         for (var i = 0; i < ids.Count; i += oracleInLimit)
         {
             var batch = ids.Skip(i).Take(oracleInLimit).ToList();
