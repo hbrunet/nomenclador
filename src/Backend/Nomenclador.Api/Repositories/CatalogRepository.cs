@@ -1235,7 +1235,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
     /// <summary>
     /// Para "sustitución de valores fijos": dado un conjunto de tipos y un período, busca
     /// en el catálogo el valor fijo de cada tipo cuya descripción menciona ese período (mismo
-    /// texto libre "MM/YYYY"/"YYYY/YYYY" que usa ReemplazarPeriodoEnDescripcion). Si un tipo no
+    /// texto libre "MM/YYYY"/"YYYY/MM" que usa ReemplazarPeriodoEnDescripcion). Si un tipo no
     /// tiene ningún valor con ese período, o tiene más de uno (ambiguo), no se resuelve.
     /// </summary>
     public async Task<List<SustitucionValorFijoMatchDto>> BuscarValoresFijosPorTipoYPeriodoAsync(
