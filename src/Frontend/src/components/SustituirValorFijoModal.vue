@@ -91,7 +91,7 @@ async function buscar() {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: e.response?.data?.mensaje ?? 'No se pudo buscar los valores del período indicado.',
+      detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'No se pudo buscar los valores del período indicado.',
       life: 5000,
     })
   } finally {
