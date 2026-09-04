@@ -204,7 +204,7 @@ onMounted(() => {
           </div>
           <div class="flex flex-column gap-1" style="flex: 2; min-width: 200px">
             <label class="field-label">Filtrar</label>
-            <InputText v-model="valorQuery" placeholder="Filtrar por descripción o período (ej. 06/2026)..."
+            <InputText v-model="valorQuery" placeholder="Filtrar por descripción..."
               class="w-full" />
           </div>
         </div>
@@ -218,7 +218,7 @@ onMounted(() => {
 
         <DataTable :key="`${grupoFilter}-${tipoFilter}-${valorQuery}`" :selection="selectedValores"
           @update:selection="(value) => (selectedValores = value)" :value="valoresFiltrados" :loading="loadingValores"
-          data-key="id" striped-rows sort-field="descripcion" :sort-order="1" scrollable scroll-height="520px"
+          data-key="id" striped-rows sort-field="idTipo" :sort-order="1" scrollable scroll-height="520px"
           :virtual-scroller-options="virtualScrollerOptions">
           <template #empty>
             <span class="muted">No hay valores fijos para el filtro aplicado.</span>
@@ -229,12 +229,13 @@ onMounted(() => {
                 @update:model-value="(checked) => toggleSelection(data, checked)" />
             </template>
           </Column>
-          <Column field="descripcion" header="Descripción" sortable />
+          
           <Column field="idTipo" header="Tipo" sortable>
             <template #body="{ data }">
               {{ data.idTipo }} - {{ data.tipo }}
             </template>
           </Column>
+          <Column field="descripcion" header="Descripción" sortable />
           <Column header="Valor" style="text-align: right">
             <template #body="{ data }">
               {{ data.valor?.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}

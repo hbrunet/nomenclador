@@ -160,8 +160,9 @@ onMounted(async () => {
         <TabPanel value="valores">
           <div class="flex justify-content-between align-items-end gap-3 mt-3 mb-3 flex-wrap">
             <div class="flex gap-2 flex-wrap">
-              <InputText v-model="filterValores" placeholder="Filtrar por ID o descripción..." style="width: 340px" />
               <InputText v-model="filterTipo" placeholder="Filtrar por tipo..." style="width: 240px" />
+              <InputText v-model="filterValores" placeholder="Filtrar por ID o descripción..." style="width: 340px" />
+              
             </div>
             <div class="flex gap-2">
               <Button
@@ -194,7 +195,7 @@ onMounted(async () => {
             :value="filteredValores"
             :loading="loadingValores"
             striped-rows
-            :sort-field="'descripcion'"
+            :sort-field="'idTipo'"
             :sort-order="1"
             paginator
             :rows="15"
@@ -206,12 +207,13 @@ onMounted(async () => {
               </span>
             </template>
             <Column field="id" header="ID" style="width: 5rem; text-align: right" sortable />
-            <Column field="descripcion" header="Descripción" sortable />
             <Column field="idTipo" header="Tipo" sortable>
               <template #body="{ data }">
                 {{ data.idTipo }} - {{ data.tipo }}
               </template>
             </Column>
+            <Column field="descripcion" header="Descripción" sortable />
+            
             <Column header="Items" style="width: 6rem; text-align: right">
               <template #body="{ data }">{{ data.cantidadItems }}</template>
             </Column>

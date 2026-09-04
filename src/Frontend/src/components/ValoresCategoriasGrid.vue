@@ -168,14 +168,15 @@ const virtualScrollerOptions = computed(() =>
     />
 
     <div class="flex flex-row gap-2">
-      <InputText v-model="descFilter" placeholder="Filtrar por descripción..." />
       <InputText v-model="tipoFilter" placeholder="Filtrar por tipo..." />
+      <InputText v-model="descFilter" placeholder="Filtrar por descripción..." />
+      
     </div>
 
     <DataTable
       :value="tableData"
       striped-rows
-      :sort-field="'descripcion'"
+      :sort-field="'idTipo'"
       :sort-order="1"
       scrollable
       scroll-height="600px"
@@ -187,12 +188,13 @@ const virtualScrollerOptions = computed(() =>
         </span>
       </template>
       <Column field="idValorCategoria" header="ID" sortable style="text-align: right" />
-      <Column field="descripcion" header="Descripción" sortable />
       <Column field="idTipo" header="Tipo" sortable >
         <template #body="{ data }">
           {{ data.idTipo }} - {{ data.tipo }}
         </template>
       </Column>
+      <Column field="descripcion" header="Descripción" sortable />
+      
       <Column>
         <template #body="{ data }">
           <div class="flex gap-1 align-items-center">
