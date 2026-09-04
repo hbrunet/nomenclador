@@ -1232,6 +1232,75 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         }
     }
 
+    /// <summary>
+    /// Para "sustitución de valores fijos": dado un conjunto de tipos y un período, busca
+    /// en el catálogo el valor fijo de cada tipo cuya descripción menciona ese período (mismo
+    /// texto libre "MM/YYYY"/"YYYY/YYYY" que usa ReemplazarPeriodoEnDescripcion). Si un tipo no
+    /// tiene ningún valor con ese período, o tiene más de uno (ambiguo), no se resuelve.
+    /// </summary>
+    public async Task<List<SustitucionValorFijoMatchDto>> BuscarValoresFijosPorTipoYPeriodoAsync(
+        IReadOnlyCollection<int> tipoIds, DateOnly periodo)
+    {
+        var ids = tipoIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        var tipos = await session.Query<ValorFijoTipoCatalogEntity>()
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync();
+
+        var valoresPorTipo = new Dictionary<int, List<ValorFijoCatalogEntity>>();
+        const int oracleInLimit = 1000;
+        for (var i = 0; i < ids.Count; i += oracleInLimit)
+        {
+            var batch = ids.Skip(i).Take(oracleInLimit).ToList();
+            var batchValores = await session.Query<ValorFijoCatalogEntity>()
+                .Fetch(x => x.Tipo)
+                .Where(x => x.Tipo != null && batch.Contains(x.Tipo.Id))
+                .ToListAsync();
+            foreach (var valor in batchValores)
+            {
+                var idTipo = valor.Tipo!.Id;
+                if (!valoresPorTipo.TryGetValue(idTipo, out var list))
+                    valoresPorTipo[idTipo] = list = [];
+                list.Add(valor);
+            }
+        }
+
+        var mmYyyy = new Regex($@"\b{Regex.Escape(periodo.ToString("MM/yyyy"))}\b");
+        var yyyyMm = new Regex($@"\b{Regex.Escape(periodo.ToString("yyyy/MM"))}\b");
+
+        var result = new List<SustitucionValorFijoMatchDto>(ids.Count);
+        foreach (var idTipo in ids)
+        {
+            var tipoDescripcion = tipos.FirstOrDefault(t => t.Id == idTipo)?.Descripcion ?? string.Empty;
+            var candidatos = valoresPorTipo.GetValueOrDefault(idTipo, [])
+                // Descripcion puede ser null (Oracle guarda "" como NULL para VARCHAR2);
+                // Regex.IsMatch(null) explota, así que se descartan esas filas como no-match.
+                .Where(v => !string.IsNullOrEmpty(v.Descripcion) && (mmYyyy.IsMatch(v.Descripcion) || yyyyMm.IsMatch(v.Descripcion)))
+                .ToList();
+
+            var match = candidatos.Count == 1 ? candidatos[0] : null;
+            result.Add(new SustitucionValorFijoMatchDto
+            {
+                IdTipo = idTipo,
+                Tipo = tipoDescripcion,
+                Encontrado = match is not null,
+                Ambiguo = candidatos.Count > 1,
+                IdValorFijo = match?.Id,
+                Descripcion = match?.Descripcion,
+                Valor = match?.Valor,
+                Candidatos = candidatos.Select(v => new SustitucionValorFijoCandidatoDto
+                {
+                    IdValorFijo = v.Id,
+                    Descripcion = v.Descripcion,
+                    Valor = v.Valor,
+                }).ToList(),
+            });
+        }
+
+        return result;
+    }
+
     public async Task<DateOnly> GetPeriodoActivoAsync()
     {
         var periodoActivo = await session.Query<PeriodoCatalogEntity>()

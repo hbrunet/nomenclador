@@ -2,6 +2,7 @@ import { apiClient } from './configurationService'
 import type {
   CatalogItem,
   ClonacionMasivaValoresFijosDto,
+  SustitucionValorFijoMatch,
   ValorFijoCatalogItem,
   ValorFijoCloneDto,
   ValorFijoCreateUpdateDto,
@@ -77,6 +78,14 @@ export const valoresFijosService = {
   async cloneMasivo(dto: ClonacionMasivaValoresFijosDto): Promise<ValorFijoCatalogItem[]> {
     const { data } = await apiClient.post<ValorFijoCatalogItem[]>('/valores-fijos/clonacion-masiva', dto)
     if (valoresCache) valoresCache = [...valoresCache, ...data]
+    return data
+  },
+
+  async buscarPorTipoYPeriodo(tiposIds: number[], periodo: string): Promise<SustitucionValorFijoMatch[]> {
+    const { data } = await apiClient.post<SustitucionValorFijoMatch[]>('/valores-fijos/buscar-por-tipo-y-periodo', {
+      tiposIds,
+      periodo,
+    })
     return data
   },
 }

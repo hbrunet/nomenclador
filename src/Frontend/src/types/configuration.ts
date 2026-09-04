@@ -90,6 +90,28 @@ export interface ClonacionMasivaValoresFijosDto {
   actualizarValoresExistentes: boolean
 }
 
+export interface SustitucionValorFijoBusquedaDto {
+  tiposIds: number[]
+  periodo: string
+}
+
+export interface SustitucionValorFijoCandidato {
+  idValorFijo: number
+  descripcion: string
+  valor: number
+}
+
+export interface SustitucionValorFijoMatch {
+  idTipo: number
+  tipo: string
+  encontrado: boolean
+  ambiguo: boolean
+  idValorFijo: number | null
+  descripcion: string | null
+  valor: number | null
+  candidatos: SustitucionValorFijoCandidato[]
+}
+
 export interface ClonacionMasivaValoresCategoriaDto {
   valoresCategoriaIds: number[]
   nuevoPeriodo: string

@@ -325,7 +325,9 @@ const virtualScrollerOptions = computed(() =>
         @update:selection="handleValoresSelectionChange" 
         :value="valoresFiltrados"
         :loading="loadingValores" 
-        data-key="id" striped-rows sort-field="descripcion" 
+        data-key="id" 
+        striped-rows 
+        sort-field="idTipo" 
         :sort-order="1" scrollable
         scroll-height="1040px"
         :virtual-scroller-options="virtualScrollerOptions">
@@ -333,12 +335,13 @@ const virtualScrollerOptions = computed(() =>
           <span class="muted">No hay valores fijos para el filtro aplicado.</span>
         </template>
         <Column selection-mode="multiple" />
-        <Column field="descripcion" header="Descripción" sortable />
         <Column field="idTipo" header="Tipo" sortable  >
           <template #body="{ data }">
               {{ data.idTipo }} - {{ data.tipo }}
           </template>
         </Column>
+        <Column field="descripcion" header="Descripción" sortable />
+        
         <Column header="Valor" sortable sort-field="valor" style="text-align: right">
           <template #body="{ data }">
             {{ data.valor?.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}

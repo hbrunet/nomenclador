@@ -99,5 +99,17 @@ public sealed class ValoresFijosController(CatalogRepository catalogRepository) 
         var result = await catalogRepository.CloneValoresFijosMasivoAsync(dto);
         return result is null ? NotFound() : Ok(result);
     }
+
+    [HttpPost("buscar-por-tipo-y-periodo")]
+    public async Task<IActionResult> BuscarPorTipoYPeriodo([FromBody] SustitucionValorFijoBusquedaDto dto)
+    {
+        if (dto.TiposIds.Count == 0)
+            return BadRequest(new { message = "Debe indicar al menos un tipo para buscar." });
+
+        if (dto.Periodo == default)
+            return BadRequest(new { message = "El período es obligatorio." });
+
+        return Ok(await catalogRepository.BuscarValoresFijosPorTipoYPeriodoAsync(dto.TiposIds, dto.Periodo));
+    }
 }
 

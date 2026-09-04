@@ -218,7 +218,7 @@ onMounted(() => {
           </div>
           <div class="flex flex-column gap-1" style="flex: 2; min-width: 200px">
             <label class="field-label">Filtrar</label>
-            <InputText v-model="valorQuery" placeholder="Filtrar por descripción o período (ej. 06/2026)..." class="w-full" />
+            <InputText v-model="valorQuery" placeholder="Filtrar por descripción..." class="w-full" />
           </div>
         </div>
 
@@ -251,7 +251,7 @@ onMounted(() => {
           :loading="loadingValores"
           data-key="id"
           striped-rows
-          sort-field="descripcion"
+          sort-field="idTipo"
           :sort-order="1"
           scrollable
           scroll-height="520px"
@@ -269,12 +269,13 @@ onMounted(() => {
               />
             </template>
           </Column>
-          <Column field="descripcion" header="Descripción" sortable />
-          <Column field="idTipo" header="Tipo" sortable>
+           <Column field="idTipo" header="Tipo" sortable>
             <template #body="{ data }">
               {{ data.idTipo }} - {{ data.tipo }}
             </template>
           </Column>
+          <Column field="descripcion" header="Descripción" sortable />
+         
           <Column field="cantidadItems" header="Ítems" style="text-align: right" sortable />
         </DataTable>
       </section>

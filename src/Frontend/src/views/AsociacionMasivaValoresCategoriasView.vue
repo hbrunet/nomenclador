@@ -307,18 +307,19 @@ onMounted(async () => {
         size="small" class="align-self-start" @click="clearValoresSelection" />
 
       <DataTable :selection="selectedValores" @update:selection="handleValoresSelectionChange" :value="valoresFiltrados"
-        :loading="loadingValores" data-key="id" striped-rows sort-field="descripcion" :sort-order="1" scrollable
+        :loading="loadingValores" data-key="id" striped-rows sort-field="idTipo" :sort-order="1" scrollable
         scroll-height="1040px" :virtual-scroller-options="virtualScrollerOptions">
         <template #empty>
           <span class="muted">No hay valores por categoría para el filtro aplicado.</span>
         </template>
         <Column selection-mode="multiple" />
-        <Column field="descripcion" header="Descripción" sortable />
         <Column field="idTipo" header="Tipo" sortable>
           <template #body="{ data }">
             {{ data.idTipo }} - {{ data.tipo }}
           </template>
         </Column>
+        <Column field="descripcion" header="Descripción" sortable />
+        
       </DataTable>
     </section>
 
