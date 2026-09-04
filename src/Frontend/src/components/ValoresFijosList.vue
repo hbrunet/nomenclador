@@ -133,8 +133,8 @@ function openSustituirModal() {
   if (!props.configuracionId || selectedRows.value.length === 0) return
   const rows = selectedRows.value.map((row) => ({
     idValorFijo: row.idValorFijo,
-    idTipo: valuesById.value.get(row.idValorFijo)?.idTipo ?? 0,
-    tipo: valuesById.value.get(row.idValorFijo)?.tipo ?? 'N/D',
+    idTipo: row.idTipo,
+    tipo: row.tipo,
   }))
   sustituirModalRef.value?.open(rows, props.configuracionId)
 }
