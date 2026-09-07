@@ -1303,6 +1303,88 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         return result;
     }
 
+    /// <summary>
+    /// Análogo a BuscarValoresFijosPorTipoYPeriodoAsync pero para valores por categoría: no
+    /// tienen un campo Valor propio (ver ClonacionMasivaValoresCategoriaMasivoAsync), así que
+    /// el candidato expone CantidadItems como referencia informativa en vez de un importe.
+    /// </summary>
+    public async Task<List<SustitucionValorCategoriaMatchDto>> BuscarValoresCategoriaPorTipoYPeriodoAsync(
+        IReadOnlyCollection<int> tipoIds, DateOnly periodo)
+    {
+        var ids = tipoIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        var tipos = await session.Query<ValorCategoriaTipoCatalogEntity>()
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync();
+
+        var valoresPorTipo = new Dictionary<int, List<ValorCategoriaCatalogEntity>>();
+        const int oracleInLimit = 900;
+        for (var i = 0; i < ids.Count; i += oracleInLimit)
+        {
+            var batch = ids.Skip(i).Take(oracleInLimit).ToList();
+            var batchValores = await session.Query<ValorCategoriaCatalogEntity>()
+                .Fetch(x => x.Tipo)
+                .Where(x => x.Tipo != null && batch.Contains(x.Tipo.Id))
+                .ToListAsync();
+            foreach (var valor in batchValores)
+            {
+                var idTipo = valor.Tipo!.Id;
+                if (!valoresPorTipo.TryGetValue(idTipo, out var list))
+                    valoresPorTipo[idTipo] = list = [];
+                list.Add(valor);
+            }
+        }
+
+        var valorIds = valoresPorTipo.Values.SelectMany(list => list).Select(v => v.Id).Distinct().ToList();
+        var countById = new Dictionary<int, int>();
+        for (var i = 0; i < valorIds.Count; i += oracleInLimit)
+        {
+            var batch = valorIds.Skip(i).Take(oracleInLimit).ToList();
+            var batchItems = await session.Query<ValorCategoriaConfiguradoItemEntity>()
+                .Where(x => batch.Contains(x.ValorCategoriaId))
+                .Select(x => x.ValorCategoriaId)
+                .ToListAsync();
+            foreach (var group in batchItems.GroupBy(id => id))
+                countById[group.Key] = group.Count();
+        }
+
+        var mmYyyy = new Regex($@"\b{Regex.Escape(periodo.ToString("MM/yyyy"))}\b");
+        var yyyyMm = new Regex($@"\b{Regex.Escape(periodo.ToString("yyyy/MM"))}\b");
+
+        var tiposById = tipos.ToDictionary(t => t.Id, t => t.Descripcion ?? string.Empty);
+
+        var result = new List<SustitucionValorCategoriaMatchDto>(ids.Count);
+        foreach (var idTipo in ids)
+        {
+            var tipoDescripcion = tiposById.GetValueOrDefault(idTipo, string.Empty);
+            var candidatos = valoresPorTipo.GetValueOrDefault(idTipo, [])
+                // Descripcion puede ser null (Oracle guarda "" como NULL para VARCHAR2);
+                // Regex.IsMatch(null) explota, así que se descartan esas filas como no-match.
+                .Where(v => !string.IsNullOrEmpty(v.Descripcion) && (mmYyyy.IsMatch(v.Descripcion) || yyyyMm.IsMatch(v.Descripcion)))
+                .ToList();
+
+            var match = candidatos.Count == 1 ? candidatos[0] : null;
+            result.Add(new SustitucionValorCategoriaMatchDto
+            {
+                IdTipo = idTipo,
+                Tipo = tipoDescripcion,
+                Encontrado = match is not null,
+                Ambiguo = candidatos.Count > 1,
+                IdValorCategoria = match?.Id,
+                Descripcion = match?.Descripcion,
+                Candidatos = candidatos.Select(v => new SustitucionValorCategoriaCandidatoDto
+                {
+                    IdValorCategoria = v.Id,
+                    Descripcion = v.Descripcion,
+                    CantidadItems = countById.GetValueOrDefault(v.Id, 0),
+                }).ToList(),
+            });
+        }
+
+        return result;
+    }
+
     public async Task<DateOnly> GetPeriodoActivoAsync()
     {
         var periodoActivo = await session.Query<PeriodoCatalogEntity>()

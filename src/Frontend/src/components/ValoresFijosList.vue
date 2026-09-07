@@ -188,10 +188,10 @@ const virtualScrollerOptions = computed(() =>
       <InputText v-model="tipoFilter" placeholder="Filtrar por tipo..." />
       <InputText v-model="descFilter" placeholder="Filtrar por descripción..." />
       <Button
+        v-if="selectedRows.length > 0 && props.configuracionId"
         label="Sustituir"
         icon="pi pi-sync"
-        severity="primary"
-        :disabled="selectedRows.length === 0 || !props.configuracionId"
+        severity="secondary"
         :title="!props.configuracionId ? 'Guardá la configuración antes de sustituir valores fijos.' : undefined"
         @click="openSustituirModal"
       />

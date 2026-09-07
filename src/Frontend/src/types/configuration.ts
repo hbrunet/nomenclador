@@ -112,6 +112,27 @@ export interface SustitucionValorFijoMatch {
   candidatos: SustitucionValorFijoCandidato[]
 }
 
+export interface SustitucionValorCategoriaBusquedaDto {
+  tiposIds: number[]
+  periodo: string
+}
+
+export interface SustitucionValorCategoriaCandidato {
+  idValorCategoria: number
+  descripcion: string
+  cantidadItems: number
+}
+
+export interface SustitucionValorCategoriaMatch {
+  idTipo: number
+  tipo: string
+  encontrado: boolean
+  ambiguo: boolean
+  idValorCategoria: number | null
+  descripcion: string | null
+  candidatos: SustitucionValorCategoriaCandidato[]
+}
+
 export interface ClonacionMasivaValoresCategoriaDto {
   valoresCategoriaIds: number[]
   nuevoPeriodo: string

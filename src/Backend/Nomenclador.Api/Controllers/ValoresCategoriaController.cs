@@ -105,4 +105,16 @@ public sealed class ValoresCategoriaController(CatalogRepository catalogReposito
         var result = await catalogRepository.CloneValoresCategoriaMasivoAsync(dto);
         return result is null ? NotFound() : Ok(result);
     }
+
+    [HttpPost("buscar-por-tipo-y-periodo")]
+    public async Task<IActionResult> BuscarPorTipoYPeriodo([FromBody] SustitucionValorCategoriaBusquedaDto dto)
+    {
+        if (dto.TiposIds.Count == 0)
+            return BadRequest(new { message = "Debe indicar al menos un tipo para buscar." });
+
+        if (dto.Periodo == default)
+            return BadRequest(new { message = "El período es obligatorio." });
+
+        return Ok(await catalogRepository.BuscarValoresCategoriaPorTipoYPeriodoAsync(dto.TiposIds, dto.Periodo));
+    }
 }

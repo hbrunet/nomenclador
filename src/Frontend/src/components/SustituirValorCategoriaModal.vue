@@ -9,11 +9,11 @@ import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
-import { valoresFijosService } from '../services/valoresFijosService'
+import { valoresCategoriaService } from '../services/valoresCategoriaService'
 import { formatLocalDate } from '../utils/date'
-import type { ConfiguracionNomencladorDetailDto, SustitucionValorFijoMatch } from '../types/configuration'
+import type { ConfiguracionNomencladorDetailDto, SustitucionValorCategoriaMatch } from '../types/configuration'
 
-type SelectedRow = { idValorFijo: number; idTipo: number; tipo: string }
+type SelectedRow = { idValorCategoria: number; idTipo: number; tipo: string }
 
 const emit = defineEmits<{
   (e: 'substituted', detail: ConfiguracionNomencladorDetailDto): void
@@ -26,11 +26,11 @@ const isVisible = ref(false)
 const configuracionId = ref<number | null>(null)
 const rows = ref<SelectedRow[]>([])
 const periodo = ref<Date | null>(null)
-const matches = ref<SustitucionValorFijoMatch[] | null>(null)
+const matches = ref<SustitucionValorCategoriaMatch[] | null>(null)
 const searching = ref(false)
 const applying = ref(false)
-// Por tipo: id del valor fijo elegido para reemplazar. Se autocompleta cuando hay un único
-// candidato; cuando hay varios (ambiguo), queda null hasta que el usuario elige uno a mano.
+// Por tipo: id del valor por categoría elegido para reemplazar. Se autocompleta cuando hay un
+// único candidato; cuando hay varios (ambiguo), queda null hasta que el usuario elige uno a mano.
 const seleccion = ref<Record<number, number | null>>({})
 
 const tiposResumen = computed(() => {
@@ -40,17 +40,17 @@ const tiposResumen = computed(() => {
     if (entry) entry.cantidad += 1
     else map.set(row.idTipo, { idTipo: row.idTipo, tipo: row.tipo, cantidad: 1 })
   }
-  return [...map.values()].sort((a, b) => a.tipo.localeCompare(b.tipo))
+  return [...map.values()].sort((a, b) => a.idTipo - b.idTipo)
 })
 
 const matchesByTipo = computed(() => new Map((matches.value ?? []).map((m) => [m.idTipo, m])))
 
-// Entradas resueltas: una por tipo con id de valor fijo elegido (automático si había un único
-// candidato, manual si el usuario lo eligió en el caso ambiguo).
+// Entradas resueltas: una por tipo con id de valor por categoría elegido (automático si había un
+// único candidato, manual si el usuario lo eligió en el caso ambiguo).
 const resueltos = computed(() =>
   tiposResumen.value
-    .map((t) => ({ idTipo: t.idTipo, idValorFijo: seleccion.value[t.idTipo] ?? null }))
-    .filter((r): r is { idTipo: number; idValorFijo: number } => r.idValorFijo !== null),
+    .map((t) => ({ idTipo: t.idTipo, idValorCategoria: seleccion.value[t.idTipo] ?? null }))
+    .filter((r): r is { idTipo: number; idValorCategoria: number } => r.idValorCategoria !== null),
 )
 
 const canSearch = computed(() => periodo.value !== null && !searching.value)
@@ -77,14 +77,14 @@ async function buscar() {
   matches.value = null
   seleccion.value = {}
   try {
-    matches.value = await valoresFijosService.buscarPorTipoYPeriodo(
+    matches.value = await valoresCategoriaService.buscarPorTipoYPeriodo(
       tiposResumen.value.map((t) => t.idTipo),
       formatLocalDate(periodo.value),
     )
     // Autoselecciona cuando hay un único candidato; con varios, queda pendiente de elección manual.
     const nueva: Record<number, number | null> = {}
     for (const m of matches.value) {
-      nueva[m.idTipo] = m.candidatos.length === 1 ? m.candidatos[0].idValorFijo : null
+      nueva[m.idTipo] = m.candidatos.length === 1 ? m.candidatos[0].idValorCategoria : null
     }
     seleccion.value = nueva
   } catch (e: any) {
@@ -102,7 +102,7 @@ async function buscar() {
 function confirmAplicar() {
   if (!canAplicar.value) return
   confirm.require({
-    message: `Se sustituirán los valores fijos seleccionados de ${resueltos.value.length} tipo(s) por el valor elegido para el período indicado. Esta acción no se puede deshacer.`,
+    message: `Se sustituirán los valores por categoría seleccionados de ${resueltos.value.length} tipo(s) por el valor elegido para el período indicado. Esta acción no se puede deshacer.`,
     header: 'Confirmar sustitución',
     acceptLabel: 'Sustituir',
     rejectLabel: 'Cancelar',
@@ -116,13 +116,13 @@ async function aplicar() {
 
   applying.value = true
   try {
-    const newIds = [...new Set(resueltos.value.map((r) => r.idValorFijo))]
+    const newIds = [...new Set(resueltos.value.map((r) => r.idValorCategoria))]
 
     // No hace falta desasociar el valor viejo a mano: la config nunca tiene más de un
-    // valor por tipo (AddValorFijoAsync ya lo reemplaza al agregar), así que
-    // asociarValoresFijosMasivo detecta ese único conflicto por tipo y lo borra solo.
-    await configurationService.asociarValoresFijosMasivo({
-      valoresFijosIds: newIds,
+    // valor por tipo (AddValorPorCategoriaAsync ya lo reemplaza al agregar), así que
+    // asociarValoresCategoriasMasivo detecta ese único conflicto por tipo y lo borra solo.
+    await configurationService.asociarValoresCategoriasMasivo({
+      valoresCategoriasIds: newIds,
       configuracionesIds: [configuracionId.value],
     })
 
@@ -131,7 +131,7 @@ async function aplicar() {
     toast.add({
       severity: 'success',
       summary: 'Sustitución realizada',
-      detail: `Se sustituyeron los valores fijos de ${resueltos.value.length} tipo(s).`,
+      detail: `Se sustituyeron los valores por categoría de ${resueltos.value.length} tipo(s).`,
       life: 3000,
     })
     close()
@@ -151,11 +151,11 @@ defineExpose({ open })
 </script>
 
 <template>
-  <Dialog v-model:visible="isVisible" header="Sustituir valores fijos" :modal="true" :style="{ width: '40rem' }">
+  <Dialog v-model:visible="isVisible" header="Sustituir valores por categoría" :modal="true" :style="{ width: '40rem' }">
     <div class="flex flex-column gap-4">
       <div class="flex flex-column gap-2">
         <div
-          v-for="t in tiposResumen.sort((a, b) => a.idTipo - b.idTipo)"
+          v-for="t in tiposResumen"
           :key="t.idTipo"
           class="flex justify-content-between align-items-center gap-3 p-2 border-1 border-round"
           style="border-color: #e2e8f0"
@@ -172,7 +172,7 @@ defineExpose({ open })
               v-model="seleccion[t.idTipo]"
               :options="matchesByTipo.get(t.idTipo)!.candidatos"
               option-label="descripcion"
-              option-value="idValorFijo"
+              option-value="idValorCategoria"
               placeholder="Varios candidatos: elegir uno"
               show-clear
               style="min-width: 16rem"

@@ -9,6 +9,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import ValorCategoriaItemsModal from './ValorCategoriaItemsModal.vue'
 import ValorCategoriaCombobox from './ValorCategoriaCombobox.vue'
+import SustituirValorCategoriaModal from './SustituirValorCategoriaModal.vue'
 import { configurationService } from '../services/configurationService'
 import type {
   ConfiguracionNomencladorDetailDto,
@@ -31,11 +32,13 @@ const confirm = useConfirm()
 const toast = useToast()
 const selectedItemIndex = ref<number | null>(null)
 const modalRef = ref<InstanceType<typeof ValorCategoriaItemsModal> | null>(null)
+const sustituirModalRef = ref<InstanceType<typeof SustituirValorCategoriaModal> | null>(null)
 const descFilter = ref('')
 const tipoFilter = ref('') 
 const saving = ref(false)
 const removingIds = ref<Set<number>>(new Set())
 const errorMessage = ref<string | null>(null)
+const selectedRows = ref<{ idValorCategoria: number; idTipo: number; tipo: string }[]>([])
 
 const valuesById = computed(() => new Map(props.valoresDisponibles.map((item) => [item.id, item])))
 const valoresExcluidos = computed(() => valoresCategorias.value.map((item) => item.idValorCategoria))
@@ -151,6 +154,25 @@ function verItems(idValorCategoria: number) {
   modalRef.value?.open(idValorCategoria)
 }
 
+function openSustituirModal() {
+  if (!props.configuracionId || selectedRows.value.length === 0) return
+  const rows = selectedRows.value.map((row) => ({
+    idValorCategoria: row.idValorCategoria,
+    idTipo: row.idTipo,
+    tipo: row.tipo,
+  }))
+  sustituirModalRef.value?.open(rows, props.configuracionId)
+}
+
+function handleSubstituted(detail: ConfiguracionNomencladorDetailDto) {
+  valoresCategorias.value = detail.valoresCategorias.map((item) => ({
+    idValorCategoria: item.idValorCategoria,
+    items: item.items.map((i) => ({ id: i.id, numeroCategoria: i.numeroCategoria, importe: i.importe })),
+  }))
+  emit('detail-updated', detail)
+  selectedRows.value = []
+}
+
 const cantidadValoresCategorias = computed(() => tableData.value.length)
 const virtualScrollerOptions = computed(() =>
   tableData.value.length > 150 ? { itemSize: 46 } : undefined,
@@ -167,14 +189,23 @@ const virtualScrollerOptions = computed(() =>
       @add="addValorCategoria"
     />
 
-    <div class="flex flex-row gap-2">
+    <div class="flex flex-row gap-2 align-items-center">
       <InputText v-model="tipoFilter" placeholder="Filtrar por tipo..." />
       <InputText v-model="descFilter" placeholder="Filtrar por descripción..." />
-      
+      <Button
+        label="Sustituir"
+        icon="pi pi-sync"
+        severity="primary"
+        :disabled="selectedRows.length === 0 || !props.configuracionId"
+        :title="!props.configuracionId ? 'Guardá la configuración antes de sustituir valores por categoría.' : undefined"
+        @click="openSustituirModal"
+      />
     </div>
 
     <DataTable
+      v-model:selection="selectedRows"
       :value="tableData"
+      data-key="idValorCategoria"
       striped-rows
       :sort-field="'idTipo'"
       :sort-order="1"
@@ -187,6 +218,7 @@ const virtualScrollerOptions = computed(() =>
           {{ valoresCategorias.length ? 'Sin resultados para el filtro aplicado.' : 'No hay valores por categoría configurados.' }}
         </span>
       </template>
+      <Column selection-mode="multiple" header-style="width: 3rem" />
       <Column field="idValorCategoria" header="ID" sortable style="text-align: right" />
       <Column field="idTipo" header="Tipo" sortable >
         <template #body="{ data }">
@@ -229,5 +261,6 @@ const virtualScrollerOptions = computed(() =>
       :descripcion="selectedDescripcion"
       :tipo="selectedTipo"
     />
+    <SustituirValorCategoriaModal ref="sustituirModalRef" @substituted="handleSubstituted" />
   </div>
 </template>
