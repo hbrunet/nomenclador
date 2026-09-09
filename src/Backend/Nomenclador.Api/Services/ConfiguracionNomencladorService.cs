@@ -155,18 +155,44 @@ public sealed class ConfiguracionNomencladorService(
     // Clona cada escala salarial distinta referenciada por las configuraciones seleccionadas
     // (aplicando el coeficiente al Monto de sus categorías) y reasigna cada configuración a
     // su propio clon. No valida solapamiento de fechas al reasignar (decisión de negocio).
-    public async Task<ActualizacionMasivaEscalaSalarialResultDto> ActualizarEscalaSalarialMasivoAsync(
+    // Si alguna escala ya tiene un clon para el período pedido y !ActualizarSiExiste, aborta
+    // sin mutar nada y devuelve los conflictos (con las configuraciones que la referencian)
+    // para que el usuario decida: deseleccionarlas o reintentar con ActualizarSiExiste.
+    public async Task<ActualizacionMasivaEscalaSalarialResponseDto> ActualizarEscalaSalarialMasivoAsync(
         ActualizacionMasivaEscalaSalarialDto request)
     {
         var configuracionesIds = request.ConfiguracionesIds.Distinct().ToList();
         if (configuracionesIds.Count == 0)
-            return new ActualizacionMasivaEscalaSalarialResultDto();
+            return new ActualizacionMasivaEscalaSalarialResponseDto { Resultado = new() };
 
         var escalaIdPorConfiguracion = await configuracionRepository.GetEscalaSalarialIdsAsync(configuracionesIds);
         var escalaIdsDistintas = escalaIdPorConfiguracion.Values.Where(v => v > 0).Distinct().ToList();
 
-        var nuevaEscalaPorOriginal = await catalogRepository.CloneEscalasMasivoAsync(
-            escalaIdsDistintas, request.NuevoPeriodo, request.CoeficienteAjuste);
+        if (!request.ActualizarSiExiste)
+        {
+            var conflictosDetectados = await catalogRepository.DetectarConflictosClonEscalasAsync(
+                escalaIdsDistintas, request.NuevoPeriodo);
+
+            if (conflictosDetectados.Count > 0)
+            {
+                var conflictos = conflictosDetectados.Select(c => new EscalaCloneConflictDto
+                {
+                    EscalaOriginalId = c.EscalaOriginalId,
+                    EscalaOriginalDescripcion = c.EscalaOriginalDescripcion,
+                    EscalaExistenteId = c.EscalaExistenteId,
+                    EscalaExistenteDescripcion = c.EscalaExistenteDescripcion,
+                    ConfiguracionesIds = escalaIdPorConfiguracion
+                        .Where(kv => kv.Value == c.EscalaOriginalId)
+                        .Select(kv => kv.Key)
+                        .ToList(),
+                }).ToList();
+
+                return new ActualizacionMasivaEscalaSalarialResponseDto { Conflictos = conflictos };
+            }
+        }
+
+        var nuevaEscalaPorOriginal = await catalogRepository.CloneOActualizarEscalasMasivoAsync(
+            escalaIdsDistintas, request.NuevoPeriodo, request.CoeficienteAjuste, request.ActualizarSiExiste);
 
         var nuevaEscalaPorConfiguracion = new Dictionary<int, int>();
         foreach (var (configuracionId, escalaOriginalId) in escalaIdPorConfiguracion)
@@ -179,10 +205,13 @@ public sealed class ConfiguracionNomencladorService(
 
         var actualizadas = await configuracionRepository.ActualizarEscalaSalarialMasivoAsync(nuevaEscalaPorConfiguracion);
 
-        return new ActualizacionMasivaEscalaSalarialResultDto
+        return new ActualizacionMasivaEscalaSalarialResponseDto
         {
-            EscalasClonadas = nuevaEscalaPorOriginal.Count,
-            ConfiguracionesActualizadas = actualizadas,
+            Resultado = new ActualizacionMasivaEscalaSalarialResultDto
+            {
+                EscalasClonadas = nuevaEscalaPorOriginal.Count,
+                ConfiguracionesActualizadas = actualizadas,
+            },
         };
     }
 

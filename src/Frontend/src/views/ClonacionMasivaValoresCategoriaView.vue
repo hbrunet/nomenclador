@@ -9,12 +9,13 @@ import DatePicker from 'primevue/datepicker'
 import InputNumber from 'primevue/inputnumber'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import Dialog from 'primevue/dialog'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { valoresCategoriaService } from '../services/valoresCategoriaService'
 import { gruposValorCategoriaService } from '../services/gruposValorCategoriaService'
 import { formatLocalDate } from '../utils/date'
-import type { CatalogItem, GrupoValorCategoriaDto, ValorCategoriaListItemDto } from '../types/configuration'
+import type { CatalogItem, GrupoValorCategoriaDto, ValorCategoriaCloneConflictDto, ValorCategoriaListItemDto } from '../types/configuration'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -133,17 +134,19 @@ function confirmClonar() {
   })
 }
 
-async function handleClonar() {
-  if (!canClone.value || !nuevoPeriodo.value) return
+async function handleClonar(actualizarSiExiste = false) {
+  if (!canClone.value || (!nuevoPeriodo.value && !actualizarValoresExistentes.value)) return
 
   cloning.value = true
   try {
     const clonados = await valoresCategoriaService.cloneMasivo({
       valoresCategoriaIds: selectedValores.value.map((v) => v.id),
-      nuevoPeriodo: actualizarValoresExistentes.value ? '' : formatLocalDate(nuevoPeriodo.value),
+      nuevoPeriodo: actualizarValoresExistentes.value || !nuevoPeriodo.value ? undefined : formatLocalDate(nuevoPeriodo.value),
       coeficienteAjuste: coeficienteAjuste.value,
       actualizarValoresExistentes: actualizarValoresExistentes.value,
+      actualizarSiExiste,
     })
+    conflictDialogVisible.value = false
     toast.add({
       severity: 'success',
       summary:  'Clonación masiva completada',
@@ -153,12 +156,17 @@ async function handleClonar() {
     clearSelection()
     await loadValoresCategoria(true)
   } catch (e: any) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Ocurrió un error inesperado.',
-      life: 5000,
-    })
+    if (e.response?.status === 409 && Array.isArray(e.response.data)) {
+      conflicts.value = e.response.data
+      conflictDialogVisible.value = true
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Ocurrió un error inesperado.',
+        life: 5000,
+      })
+    }
   } finally {
     cloning.value = false
   }
@@ -168,6 +176,18 @@ onMounted(() => {
   loadValoresCategoria()
   loadGrupos()
 })
+
+// ── Conflictos: valores que ya tienen un clon para el período pedido ────────
+const conflictDialogVisible = ref(false)
+const conflicts = ref<ValorCategoriaCloneConflictDto[]>([])
+
+function quitarAfectadosYReintentar() {
+  const afectados = new Set(conflicts.value.map((c) => c.originalId))
+  selectedValores.value = selectedValores.value.filter((v) => !afectados.has(v.id))
+  conflictDialogVisible.value = false
+  conflicts.value = []
+  if (selectedValores.value.length > 0) handleClonar()
+}
 </script>
 
 <template>
@@ -317,5 +337,31 @@ onMounted(() => {
         />
       </section>
     </div>
+
+    <Dialog
+      v-model:visible="conflictDialogVisible"
+      header="Ya existen valores por categoría clonados para ese período"
+      modal
+      style="width: 560px"
+    >
+      <p class="mt-0">
+        Los siguientes valores por categoría ya tienen un clon con el mismo nombre (mismo tipo) para el período
+        seleccionado:
+      </p>
+      <ul class="mt-0">
+        <li v-for="c in conflicts" :key="c.originalId">
+          "{{ c.originalDescripcion }}" → ya existe "{{ c.existenteDescripcion }}" (ID {{ c.existenteId }})
+        </li>
+      </ul>
+      <p class="muted mb-0">
+        Puede actualizar los ítems de esos valores existentes y continuar con toda la selección, o quitarlos de la
+        selección y continuar solo con el resto.
+      </p>
+      <template #footer>
+        <Button label="Cancelar" severity="secondary" outlined @click="conflictDialogVisible = false" />
+        <Button label="Quitar afectados y continuar" severity="secondary" @click="quitarAfectadosYReintentar" />
+        <Button label="Actualizar existentes y continuar" :loading="cloning" @click="handleClonar(true)" />
+      </template>
+    </Dialog>
   </div>
 </template>

@@ -139,6 +139,8 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         if (request.ConfiguracionesIds.Count == 0)
             return BadRequest(new { message = "Debe seleccionar al menos una configuración para actualizar." });
 
-        return Ok(await configuracionService.ActualizarEscalaSalarialMasivoAsync(request));
+        var response = await configuracionService.ActualizarEscalaSalarialMasivoAsync(request);
+        if (response.Conflictos.Count > 0) return Conflict(response.Conflictos);
+        return Ok(response.Resultado);
     }
 }

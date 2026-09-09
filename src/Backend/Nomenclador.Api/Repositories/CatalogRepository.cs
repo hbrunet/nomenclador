@@ -19,6 +19,9 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
     private static string ReemplazarPeriodoEnDescripcion(string descripcion, DateOnly nuevoPeriodo)
     {
+        if (string.IsNullOrEmpty(descripcion))
+            return nuevoPeriodo.ToString("MM/yyyy");
+
         if (PeriodoMmYyyyRegex.IsMatch(descripcion))
             return PeriodoMmYyyyRegex.Replace(descripcion, nuevoPeriodo.ToString("MM/yyyy"));
 
@@ -286,6 +289,130 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         await tx.CommitAsync();
 
         return true;
+    }
+
+    // Detecta, para cada escala pedida, si ya existe otra escala con el nombre que tendría el
+    // clon para el período dado (mismo mecanismo ReemplazarPeriodoEnDescripcion) — evita crear
+    // duplicados si una clonación para ese período ya se hizo antes. No muta nada.
+    public async Task<List<EscalaCloneConflictDto>> DetectarConflictosClonEscalasAsync(
+        IReadOnlyCollection<int> escalaIds, DateOnly nuevoPeriodo)
+    {
+        var ids = escalaIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        const int oracleInLimit = 900;
+        var escalas = new List<EscalaSalarialCatalogEntity>(ids.Count);
+        for (var i = 0; i < ids.Count; i += oracleInLimit)
+        {
+            var batch = ids.Skip(i).Take(oracleInLimit).ToList();
+            var batchEscalas = await session.Query<EscalaSalarialCatalogEntity>()
+                .Where(x => batch.Contains(x.Id))
+                .ToListAsync();
+            escalas.AddRange(batchEscalas);
+        }
+        var conflictos = new List<EscalaCloneConflictDto>();
+        foreach (var escala in escalas)
+        {
+            var nombreDestino = ReemplazarPeriodoEnDescripcion(escala.Descripcion, nuevoPeriodo);
+            var existente = await session.Query<EscalaSalarialCatalogEntity>()
+                .Where(x => x.Descripcion == nombreDestino && x.Id != escala.Id)
+                .FirstOrDefaultAsync();
+
+            if (existente is null) continue;
+
+            conflictos.Add(new EscalaCloneConflictDto
+            {
+                EscalaOriginalId = escala.Id,
+                EscalaOriginalDescripcion = escala.Descripcion,
+                EscalaExistenteId = existente.Id,
+                EscalaExistenteDescripcion = existente.Descripcion,
+            });
+        }
+
+        return conflictos;
+    }
+
+    // Reemplaza el Monto de las categorías de una escala destino (ya existente) con el de las
+    // categorías de la escala original ajustado por el coeficiente, matcheando por Numero.
+    // Usado cuando se "actualiza" un clon en lugar de crear uno nuevo (conflicto de nombre).
+    private async Task ActualizarCategoriasDesdeOriginalAsync(int escalaDestinoId, int escalaOriginalId, decimal coeficienteAjuste)
+    {
+        var categoriasOriginales = await session.Query<CategoriaCatalogEntity>()
+            .Where(x => x.EscalaSalarialId == escalaOriginalId)
+            .ToListAsync();
+
+        var categoriasDestino = await session.Query<CategoriaCatalogEntity>()
+            .Where(x => x.EscalaSalarialId == escalaDestinoId)
+            .ToListAsync();
+        var categoriasDestinoPorNumero = categoriasDestino.ToDictionary(x => x.Numero);
+
+        using var tx = session.BeginTransaction();
+        foreach (var original in categoriasOriginales)
+        {
+            var nuevoMonto = Math.Round(original.Monto * coeficienteAjuste, 2, MidpointRounding.AwayFromZero);
+            if (categoriasDestinoPorNumero.TryGetValue(original.Numero, out var destino))
+            {
+                destino.Monto = nuevoMonto;
+            }
+            else
+            {
+                await session.SaveAsync(new CategoriaCatalogEntity
+                {
+                    EscalaSalarialId = escalaDestinoId,
+                    Numero = original.Numero,
+                    Descripcion = original.Descripcion,
+                    Monto = nuevoMonto,
+                    DescLarga = original.DescLarga,
+                });
+            }
+        }
+        await session.FlushAsync();
+        await tx.CommitAsync();
+    }
+
+    // Clona cada escala pedida, salvo las que ya tengan un conflicto de nombre para el período
+    // (ahí actualiza los montos de la escala existente en su lugar). Usado tanto por la
+    // clonación individual como por la actualización masiva.
+    public async Task<Dictionary<int, int>> CloneOActualizarEscalasMasivoAsync(
+        IReadOnlyCollection<int> escalaIds, DateOnly nuevoPeriodo, decimal coeficienteAjuste, bool actualizarSiExiste)
+    {
+        var ids = escalaIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        var conflictos = actualizarSiExiste
+            ? await DetectarConflictosClonEscalasAsync(ids, nuevoPeriodo)
+            : [];
+        var existenteIdPorOriginal = conflictos.ToDictionary(c => c.EscalaOriginalId, c => c.EscalaExistenteId);
+
+        var idsSinConflicto = ids.Where(id => !existenteIdPorOriginal.ContainsKey(id)).ToList();
+
+        var resultado = await CloneEscalasMasivoAsync(idsSinConflicto, nuevoPeriodo, coeficienteAjuste);
+
+        foreach (var (originalId, existenteId) in existenteIdPorOriginal)
+        {
+            await ActualizarCategoriasDesdeOriginalAsync(existenteId, originalId, coeficienteAjuste);
+            resultado[originalId] = existenteId;
+        }
+
+        return resultado;
+    }
+
+    // Clona una única escala salarial. Si ya existe una escala con el nombre que tendría el
+    // clon, devuelve un conflicto (salvo que actualizarSiExiste pida actualizar esa escala en
+    // su lugar). Usado por la clonación individual desde EscalasView.
+    public async Task<EscalaCloneResultDto> CloneEscalaAsync(int id, DateOnly nuevoPeriodo, decimal coeficienteAjuste, bool actualizarSiExiste)
+    {
+        if (!actualizarSiExiste)
+        {
+            var conflictos = await DetectarConflictosClonEscalasAsync([id], nuevoPeriodo);
+            if (conflictos.Count > 0)
+                return new EscalaCloneResultDto { Conflicto = conflictos[0] };
+        }
+
+        var nuevaEscalaPorOriginal = await CloneOActualizarEscalasMasivoAsync([id], nuevoPeriodo, coeficienteAjuste, actualizarSiExiste);
+        if (!nuevaEscalaPorOriginal.TryGetValue(id, out var destinoId)) return new EscalaCloneResultDto();
+
+        return new EscalaCloneResultDto { Escala = await GetEscalaDetailAsync(destinoId) };
     }
 
     // Clona cada escala salarial distinta (Descripcion con el período reemplazado, mismo
@@ -755,7 +882,45 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         }).ToList();
     }
 
-    public async Task<List<ValorCategoriaDetailDto>?> CloneValoresCategoriaMasivoAsync(ClonacionMasivaValoresCategoriaDto dto)
+    // Detecta, para cada valor por categoría pedido, si ya existe otro del mismo Tipo con el
+    // nombre que tendría el clon para el período dado — evita duplicados si esa clonación ya
+    // se hizo antes. No muta nada.
+    public async Task<List<ValorCategoriaCloneConflictDto>> DetectarConflictosClonValoresCategoriaAsync(
+        IReadOnlyCollection<int> valorCategoriaIds, DateOnly nuevoPeriodo)
+    {
+        var ids = valorCategoriaIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        var valores = await session.Query<ValorCategoriaCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync();
+
+        var conflictos = new List<ValorCategoriaCloneConflictDto>();
+        foreach (var valor in valores)
+        {
+            if (valor.Tipo is null) continue;
+
+            var nombreDestino = ReemplazarPeriodoEnDescripcion(valor.Descripcion, nuevoPeriodo);
+            var existente = await session.Query<ValorCategoriaCatalogEntity>()
+                .Where(x => x.Descripcion == nombreDestino && x.Id != valor.Id && x.Tipo != null && x.Tipo.Id == valor.Tipo.Id)
+                .FirstOrDefaultAsync();
+
+            if (existente is null) continue;
+
+            conflictos.Add(new ValorCategoriaCloneConflictDto
+            {
+                OriginalId = valor.Id,
+                OriginalDescripcion = valor.Descripcion,
+                ExistenteId = existente.Id,
+                ExistenteDescripcion = existente.Descripcion,
+            });
+        }
+
+        return conflictos;
+    }
+
+    public async Task<ClonacionMasivaValoresCategoriaResponseDto?> CloneValoresCategoriaMasivoAsync(ClonacionMasivaValoresCategoriaDto dto)
     {
         var ids = dto.ValoresCategoriaIds.Distinct().ToList();
 
@@ -826,28 +991,88 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                 });
             }
 
-            return result;
+            return new ClonacionMasivaValoresCategoriaResponseDto { Resultado = result };
         }
-        else
+
+        if (!dto.ActualizarSiExiste)
         {
-            var clones = valores.Select(v => new ValorCategoriaCatalogEntity
-            {
-                Descripcion = ReemplazarPeriodoEnDescripcion(v.Descripcion, dto.NuevoPeriodo),
-                Tipo = v.Tipo,
-            }).ToList();
+            var conflictosDetectados = await DetectarConflictosClonValoresCategoriaAsync(ids, dto.NuevoPeriodo);
+            if (conflictosDetectados.Count > 0)
+                return new ClonacionMasivaValoresCategoriaResponseDto { Conflictos = conflictosDetectados };
+        }
 
-            using var tx = session.BeginTransaction();
-            foreach (var clone in clones)
+        var conflictos = dto.ActualizarSiExiste
+            ? await DetectarConflictosClonValoresCategoriaAsync(ids, dto.NuevoPeriodo)
+            : [];
+        var existenteIdPorOriginal = conflictos.ToDictionary(c => c.OriginalId, c => c.ExistenteId);
+
+        var resultadoFinal = new List<ValorCategoriaDetailDto>(valores.Count);
+
+        using (var tx = session.BeginTransaction())
+        {
+            foreach (var valor in valores)
+            {
+                var originalItems = itemsByValorCategoriaId.GetValueOrDefault(valor.Id, []);
+
+                if (existenteIdPorOriginal.TryGetValue(valor.Id, out var existenteId))
+                {
+                    var existente = await session.Query<ValorCategoriaCatalogEntity>()
+                        .Fetch(x => x.Tipo)
+                        .Where(x => x.Id == existenteId)
+                        .FirstOrDefaultAsync();
+                    if (existente is not null)
+                    {
+                        var destinoItems = await session.Query<ValorCategoriaConfiguradoItemEntity>()
+                            .Where(x => x.ValorCategoriaId == existenteId)
+                            .ToListAsync();
+                        var destinoPorNumero = destinoItems.ToDictionary(x => x.Numero);
+
+                        foreach (var original in originalItems)
+                        {
+                            var nuevoImporte = Math.Round(original.Importe * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero);
+                            if (destinoPorNumero.TryGetValue(original.Numero, out var destinoItem))
+                                destinoItem.Importe = nuevoImporte;
+                            else
+                                await session.SaveAsync(new ValorCategoriaConfiguradoItemEntity
+                                {
+                                    ValorCategoriaId = existenteId,
+                                    Numero = original.Numero,
+                                    Importe = nuevoImporte,
+                                });
+                        }
+                        await session.FlushAsync();
+
+                        var itemsFinal = await session.Query<ValorCategoriaConfiguradoItemEntity>()
+                            .Where(x => x.ValorCategoriaId == existenteId)
+                            .OrderBy(x => x.Numero)
+                            .ToListAsync();
+
+                        resultadoFinal.Add(new ValorCategoriaDetailDto
+                        {
+                            Id = existente.Id,
+                            Descripcion = existente.Descripcion,
+                            IdTipo = existente.Tipo?.Id ?? 0,
+                            Tipo = existente.Tipo?.Descripcion ?? string.Empty,
+                            Items = itemsFinal.Select(i => new ValorCategoriaConfiguradoItemDto
+                            {
+                                Id = i.Id,
+                                NumeroCategoria = i.Numero,
+                                Importe = i.Importe,
+                            }).ToList(),
+                        });
+                        continue;
+                    }
+                }
+
+                var clone = new ValorCategoriaCatalogEntity
+                {
+                    Descripcion = ReemplazarPeriodoEnDescripcion(valor.Descripcion, dto.NuevoPeriodo),
+                    Tipo = valor.Tipo,
+                };
                 await session.SaveAsync(clone);
-            await session.FlushAsync(); // need clone.Id (sequence-generated) before creating items that reference it
+                await session.FlushAsync(); // need clone.Id (sequence-generated) before creating items that reference it
 
-            var result = new List<ValorCategoriaDetailDto>(clones.Count);
-            for (var i = 0; i < valores.Count; i++)
-            {
-                var clone = clones[i];
-                var originalItems = itemsByValorCategoriaId.GetValueOrDefault(valores[i].Id, []);
                 var clonedItemDtos = new List<ValorCategoriaConfiguradoItemDto>(originalItems.Count);
-
                 foreach (var item in originalItems)
                 {
                     var clonedItem = new ValorCategoriaConfiguradoItemEntity
@@ -865,7 +1090,7 @@ public sealed class CatalogRepository(NHibernate.ISession session)
                     });
                 }
 
-                result.Add(new ValorCategoriaDetailDto
+                resultadoFinal.Add(new ValorCategoriaDetailDto
                 {
                     Id = clone.Id,
                     Descripcion = clone.Descripcion,
@@ -877,10 +1102,9 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
             await session.FlushAsync();
             await tx.CommitAsync();
-
-            return result;
         }
 
+        return new ClonacionMasivaValoresCategoriaResponseDto { Resultado = resultadoFinal };
     }
 
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetValorFijoTiposAsync()
@@ -1178,7 +1402,42 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         return ToValorFijoCatalogDto(clone);
     }
 
-    public async Task<List<ValorFijoCatalogDto>?> CloneValoresFijosMasivoAsync(ClonacionMasivaValoresFijosDto dto)
+    public async Task<List<ValorFijoCloneConflictDto>> DetectarConflictosClonValoresFijosAsync(
+        IReadOnlyCollection<int> valorFijoIds, DateOnly nuevoPeriodo)
+    {
+        var ids = valorFijoIds.Distinct().ToList();
+        if (ids.Count == 0) return [];
+
+        var valores = await session.Query<ValorFijoCatalogEntity>()
+            .Fetch(x => x.Tipo)
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync();
+
+        var conflictos = new List<ValorFijoCloneConflictDto>();
+        foreach (var valor in valores)
+        {
+            if (valor.Tipo is null) continue;
+
+            var nombreDestino = ReemplazarPeriodoEnDescripcion(valor.Descripcion, nuevoPeriodo);
+            var existente = await session.Query<ValorFijoCatalogEntity>()
+                .Where(x => x.Descripcion == nombreDestino && x.Id != valor.Id && x.Tipo != null && x.Tipo.Id == valor.Tipo.Id)
+                .FirstOrDefaultAsync();
+
+            if (existente is null) continue;
+
+            conflictos.Add(new ValorFijoCloneConflictDto
+            {
+                OriginalId = valor.Id,
+                OriginalDescripcion = valor.Descripcion,
+                ExistenteId = existente.Id,
+                ExistenteDescripcion = existente.Descripcion,
+            });
+        }
+
+        return conflictos;
+    }
+
+    public async Task<ClonacionMasivaValoresFijosResponseDto?> CloneValoresFijosMasivoAsync(ClonacionMasivaValoresFijosDto dto)
     {
         var ids = dto.ValoresFijosIds.Distinct().ToList();
 
@@ -1210,26 +1469,53 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             }
             await session.FlushAsync();
             await tx.CommitAsync();
-            return valores.Select(ToValorFijoCatalogDto).ToList();
+            return new ClonacionMasivaValoresFijosResponseDto { Resultado = valores.Select(ToValorFijoCatalogDto).ToList() };
         }
-        else
-        {
-            var clones = valores.Select(v => new ValorFijoCatalogEntity
-            {
-                Descripcion = ReemplazarPeriodoEnDescripcion(v.Descripcion, dto.NuevoPeriodo),
-                Tipo = v.Tipo,
-                Valor = Math.Round(v.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero)
-            }).ToList();
 
-            using var tx = session.BeginTransaction();
-            foreach (var clone in clones)
+        if (!dto.ActualizarSiExiste)
+        {
+            var conflictosDetectados = await DetectarConflictosClonValoresFijosAsync(ids, dto.NuevoPeriodo);
+            if (conflictosDetectados.Count > 0)
+                return new ClonacionMasivaValoresFijosResponseDto { Conflictos = conflictosDetectados };
+        }
+
+        var conflictos = dto.ActualizarSiExiste
+            ? await DetectarConflictosClonValoresFijosAsync(ids, dto.NuevoPeriodo)
+            : [];
+        var existenteIdPorOriginal = conflictos.ToDictionary(c => c.OriginalId, c => c.ExistenteId);
+
+        var entidadesEnOrden = new List<ValorFijoCatalogEntity>(valores.Count);
+
+        using (var tx = session.BeginTransaction())
+        {
+            foreach (var valor in valores)
             {
+                if (existenteIdPorOriginal.TryGetValue(valor.Id, out var existenteId))
+                {
+                    var existente = await session.GetAsync<ValorFijoCatalogEntity>(existenteId);
+                    if (existente is not null)
+                    {
+                        existente.Valor = Math.Round(valor.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero);
+                        entidadesEnOrden.Add(existente);
+                        continue;
+                    }
+                }
+
+                var clone = new ValorFijoCatalogEntity
+                {
+                    Descripcion = ReemplazarPeriodoEnDescripcion(valor.Descripcion, dto.NuevoPeriodo),
+                    Tipo = valor.Tipo,
+                    Valor = Math.Round(valor.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero)
+                };
                 await session.SaveAsync(clone);
+                entidadesEnOrden.Add(clone);
             }
+
             await session.FlushAsync();
             await tx.CommitAsync();
-            return clones.Select(ToValorFijoCatalogDto).ToList();
         }
+
+        return new ClonacionMasivaValoresFijosResponseDto { Resultado = entidadesEnOrden.Select(ToValorFijoCatalogDto).ToList() };
     }
 
     /// <summary>

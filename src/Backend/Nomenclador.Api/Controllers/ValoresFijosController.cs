@@ -97,7 +97,9 @@ public sealed class ValoresFijosController(CatalogRepository catalogRepository) 
             return BadRequest(new { message = "Debe seleccionar al menos un valor fijo para clonar." });
 
         var result = await catalogRepository.CloneValoresFijosMasivoAsync(dto);
-        return result is null ? NotFound() : Ok(result);
+        if (result is null) return NotFound();
+        if (result.Conflictos.Count > 0) return Conflict(result.Conflictos);
+        return Ok(result.Resultado);
     }
 
     [HttpPost("buscar-por-tipo-y-periodo")]
