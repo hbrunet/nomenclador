@@ -141,7 +141,7 @@ async function handleClonar(actualizarSiExiste = false) {
   try {
     const clonados = await valoresCategoriaService.cloneMasivo({
       valoresCategoriaIds: selectedValores.value.map((v) => v.id),
-      nuevoPeriodo: actualizarValoresExistentes.value || !nuevoPeriodo.value ? '' : formatLocalDate(nuevoPeriodo.value),
+      nuevoPeriodo: actualizarValoresExistentes.value || !nuevoPeriodo.value ? undefined : formatLocalDate(nuevoPeriodo.value),
       coeficienteAjuste: coeficienteAjuste.value,
       actualizarValoresExistentes: actualizarValoresExistentes.value,
       actualizarSiExiste,
