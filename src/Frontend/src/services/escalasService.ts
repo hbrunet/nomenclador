@@ -2,6 +2,7 @@ import { apiClient } from './configurationService'
 import type {
   CategoriaCatalogItem,
   CategoriaCreateUpdateDto,
+  ClonarEscalaDto,
   EscalaCreateUpdateDto,
   EscalaDetailDto,
   EscalaListItemDto,
@@ -30,6 +31,11 @@ export const escalasService = {
 
   async delete(id: number): Promise<void> {
     await apiClient.delete(`/escalas/${id}`)
+  },
+
+  async clone(id: number, dto: ClonarEscalaDto): Promise<EscalaDetailDto> {
+    const { data } = await apiClient.post<EscalaDetailDto>(`/escalas/${id}/clonar`, dto)
+    return data
   },
 
   async createCategoria(escalaId: number, dto: CategoriaCreateUpdateDto): Promise<CategoriaCatalogItem> {

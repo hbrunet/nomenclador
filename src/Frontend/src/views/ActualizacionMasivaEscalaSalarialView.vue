@@ -7,11 +7,12 @@ import InputNumber from 'primevue/inputnumber'
 import Button from 'primevue/button'
 import Paginator from 'primevue/paginator'
 import Tag from 'primevue/tag'
+import Dialog from 'primevue/dialog'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { configurationService } from '../services/configurationService'
 import { formatLocalDate, formatPeriodo, parseLocalDate } from '../utils/date'
-import type { ConfiguracionNomencladorListItemDto } from '../types/configuration'
+import type { ConfiguracionNomencladorListItemDto, EscalaCloneConflictDto } from '../types/configuration'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -118,7 +119,25 @@ function confirmActualizar() {
   })
 }
 
-async function handleConfirmar() {
+// ── Conflictos: escalas que ya tienen un clon para el período pedido ─────────
+const conflictDialogVisible = ref(false)
+const conflicts = ref<EscalaCloneConflictDto[]>([])
+
+const configuracionesAfectadasIds = computed(() => {
+  const ids = new Set<number>()
+  for (const c of conflicts.value) for (const id of c.configuracionesIds) ids.add(id)
+  return ids
+})
+
+function quitarAfectadasYReintentar() {
+  const afectadas = configuracionesAfectadasIds.value
+  selectedConfiguraciones.value = selectedConfiguraciones.value.filter((c) => !afectadas.has(c.id))
+  conflictDialogVisible.value = false
+  conflicts.value = []
+  if (selectedConfiguraciones.value.length > 0) handleConfirmar()
+}
+
+async function handleConfirmar(actualizarSiExiste = false) {
   if (!canConfirm.value || !nuevoPeriodo.value) return
 
   submitting.value = true
@@ -127,7 +146,9 @@ async function handleConfirmar() {
       configuracionesIds: selectedConfiguraciones.value.map((c) => c.id),
       nuevoPeriodo: formatLocalDate(nuevoPeriodo.value),
       coeficienteAjuste: coeficienteAjuste.value,
+      actualizarSiExiste,
     })
+    conflictDialogVisible.value = false
     toast.add({
       severity: 'success',
       summary: 'Actualización masiva completada',
@@ -137,11 +158,16 @@ async function handleConfirmar() {
     clearConfigSelection()
     await loadConfiguraciones(pagination.page)
   } catch (e: any) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error al actualizar',
-      detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Ocurrió un error al actualizar la escala salarial de las configuraciones seleccionadas.',
-    })
+    if (e.response?.status === 409 && Array.isArray(e.response.data)) {
+      conflicts.value = e.response.data
+      conflictDialogVisible.value = true
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Error al actualizar',
+        detail: e.response?.data?.mensaje ?? e.response?.data?.message ?? 'Ocurrió un error al actualizar la escala salarial de las configuraciones seleccionadas.',
+      })
+    }
   } finally {
     submitting.value = false
   }
@@ -248,5 +274,32 @@ onMounted(async () => {
         />
       </section>
     </div>
+
+    <Dialog
+      v-model:visible="conflictDialogVisible"
+      header="Ya existen escalas clonadas para ese período"
+      modal
+      style="width: 560px"
+    >
+      <p class="mt-0">
+        Las siguientes escalas ya tienen un clon con el mismo nombre para el período seleccionado:
+      </p>
+      <ul class="mt-0">
+        <li v-for="c in conflicts" :key="c.escalaOriginalId">
+          "{{ c.escalaOriginalDescripcion }}" → ya existe "{{ c.escalaExistenteDescripcion }}" (ID {{ c.escalaExistenteId }})
+          — {{ c.configuracionesIds.length }} configuración(es) afectada(s)
+        </li>
+      </ul>
+      <p class="muted mb-0">
+        Puede actualizar los montos de esas escalas existentes y continuar con todas las configuraciones
+        seleccionadas, o quitar de la selección las configuraciones afectadas y continuar solo con el resto.
+      </p>
+      <template #footer>
+        <Button label="Cancelar" severity="secondary" outlined @click="conflictDialogVisible = false" />
+        <Button label="Quitar afectadas y continuar" severity="secondary" @click="quitarAfectadasYReintentar" />
+        <Button label="Actualizar existentes y continuar" :loading="submitting" @click="handleConfirmar(true)" />
+      </template>
+    </Dialog>
   </div>
 </template>
+

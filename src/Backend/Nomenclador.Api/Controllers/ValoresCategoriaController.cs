@@ -103,7 +103,9 @@ public sealed class ValoresCategoriaController(CatalogRepository catalogReposito
             return BadRequest(new { message = "Debe seleccionar al menos un valor por categoría para clonar." });
 
         var result = await catalogRepository.CloneValoresCategoriaMasivoAsync(dto);
-        return result is null ? NotFound() : Ok(result);
+        if (result is null) return NotFound();
+        if (result.Conflictos.Count > 0) return Conflict(result.Conflictos);
+        return Ok(result.Resultado);
     }
 
     [HttpPost("buscar-por-tipo-y-periodo")]

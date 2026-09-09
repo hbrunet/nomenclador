@@ -42,6 +42,20 @@ public sealed class EscalasController(CatalogRepository catalogRepository) : Con
             : Conflict(new { message = "La escala está siendo utilizada por una o más configuraciones y no puede eliminarse." });
     }
 
+    [HttpPost("{id:int}/clonar")]
+    public async Task<IActionResult> Clonar(int id, [FromBody] ClonarEscalaDto dto)
+    {
+        if (dto.NuevoPeriodo == default)
+            return BadRequest(new { message = "El nuevo período es obligatorio." });
+
+        if (dto.CoeficienteAjuste <= 0)
+            return BadRequest(new { message = "El coeficiente de ajuste debe ser mayor a cero." });
+
+        var result = await catalogRepository.CloneEscalaAsync(id, dto.NuevoPeriodo, dto.CoeficienteAjuste, dto.ActualizarSiExiste);
+        if (result.Conflicto is not null) return Conflict(result.Conflicto);
+        return result.Escala is null ? NotFound() : Ok(result.Escala);
+    }
+
     [HttpPost("{id:int}/categorias")]
     public async Task<IActionResult> CreateCategoria(int id, [FromBody] CategoriaCreateUpdateDto dto)
         => Ok(await catalogRepository.CreateCategoriaAsync(id, dto));

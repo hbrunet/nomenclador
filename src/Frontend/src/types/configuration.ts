@@ -30,6 +30,20 @@ export interface EscalaCreateUpdateDto {
   descripcion: string
 }
 
+export interface ClonarEscalaDto {
+  nuevoPeriodo: string
+  coeficienteAjuste: number
+  actualizarSiExiste?: boolean
+}
+
+export interface EscalaCloneConflictDto {
+  escalaOriginalId: number
+  escalaOriginalDescripcion: string
+  escalaExistenteId: number
+  escalaExistenteDescripcion: string
+  configuracionesIds: number[]
+}
+
 export interface CategoriaCreateUpdateDto {
   numero: number
   descripcion: string
@@ -88,6 +102,14 @@ export interface ClonacionMasivaValoresFijosDto {
   nuevoPeriodo: string
   coeficienteAjuste: number
   actualizarValoresExistentes: boolean
+  actualizarSiExiste?: boolean
+}
+
+export interface ValorFijoCloneConflictDto {
+  originalId: number
+  originalDescripcion: string
+  existenteId: number
+  existenteDescripcion: string
 }
 
 export interface SustitucionValorFijoBusquedaDto {
@@ -138,12 +160,21 @@ export interface ClonacionMasivaValoresCategoriaDto {
   nuevoPeriodo: string
   coeficienteAjuste: number
   actualizarValoresExistentes: boolean
+  actualizarSiExiste?: boolean
+}
+
+export interface ValorCategoriaCloneConflictDto {
+  originalId: number
+  originalDescripcion: string
+  existenteId: number
+  existenteDescripcion: string
 }
 
 export interface ActualizacionMasivaEscalaSalarialDto {
   configuracionesIds: number[]
   nuevoPeriodo: string
   coeficienteAjuste: number
+  actualizarSiExiste?: boolean
 }
 
 export interface ActualizacionMasivaEscalaSalarialResultDto {
