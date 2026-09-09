@@ -99,7 +99,7 @@ export interface ValorFijoCloneDto {
 
 export interface ClonacionMasivaValoresFijosDto {
   valoresFijosIds: number[]
-  nuevoPeriodo: string
+  nuevoPeriodo?: string
   coeficienteAjuste: number
   actualizarValoresExistentes: boolean
   actualizarSiExiste?: boolean
@@ -157,7 +157,7 @@ export interface SustitucionValorCategoriaMatch {
 
 export interface ClonacionMasivaValoresCategoriaDto {
   valoresCategoriaIds: number[]
-  nuevoPeriodo: string
+  nuevoPeriodo?: string
   coeficienteAjuste: number
   actualizarValoresExistentes: boolean
   actualizarSiExiste?: boolean
