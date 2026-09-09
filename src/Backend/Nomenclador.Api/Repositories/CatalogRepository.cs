@@ -300,10 +300,16 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         var ids = escalaIds.Distinct().ToList();
         if (ids.Count == 0) return [];
 
-        var escalas = await session.Query<EscalaSalarialCatalogEntity>()
-            .Where(x => ids.Contains(x.Id))
-            .ToListAsync();
-
+        const int oracleInLimit = 900;
+        var escalas = new List<EscalaSalarialCatalogEntity>(ids.Count);
+        for (var i = 0; i < ids.Count; i += oracleInLimit)
+        {
+            var batch = ids.Skip(i).Take(oracleInLimit).ToList();
+            var batchEscalas = await session.Query<EscalaSalarialCatalogEntity>()
+                .Where(x => batch.Contains(x.Id))
+                .ToListAsync();
+            escalas.AddRange(batchEscalas);
+        }
         var conflictos = new List<EscalaCloneConflictDto>();
         foreach (var escala in escalas)
         {
