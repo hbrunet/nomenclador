@@ -123,6 +123,17 @@ public sealed class ConfiguracionNomencladorService(
         foreach (var id in request.ConfiguracionesIds)
         {
             var source = await GetByIdAsync(id);
+            if (source.Estado != "Activa")
+            {
+                errores.Add(new ValidationMessageDto
+                {
+                    Codigo = "CONFIGURACION_NO_ACTIVA",
+                    Mensaje = $"La configuración '{source.NomencladorDescripcion} - {source.EscalaDescripcion}' no está activa.",
+                    Campo = "configuracionesIds",
+                });
+                continue;
+            }
+
             if (nuevaFechaInicio <= source.FechaInicio)
             {
                 errores.Add(new ValidationMessageDto
