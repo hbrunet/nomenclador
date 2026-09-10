@@ -172,7 +172,7 @@ foreach (var id in request.ConfiguracionesIds.Distinct())
         foreach (var source in sources)
         {
             var cloneRequest = clonadoConfiguracionService.BuildClone(source, clonarRequest);
-            await EnsureValidAsync(cloneRequest, null);
+await EnsureValidAsync(cloneRequest, source.Id);
             cloneRequests.Add((source, cloneRequest));
         }
 
