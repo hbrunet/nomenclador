@@ -120,9 +120,7 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         Action<ConfiguracionNomencladorEntity>? afterSave = null,
         bool useTransaction = true)
     {
-        ITransaction? tx = null;
-        if (useTransaction)
-            tx = session.BeginTransaction();
+using var tx = useTransaction ? session.BeginTransaction() : null;
 
         await session.SaveAsync(entity);
         afterSave?.Invoke(entity);
