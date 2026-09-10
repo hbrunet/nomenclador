@@ -329,6 +329,20 @@ export interface ClonarConfiguracionDto {
   copiarValoresCategoria: boolean
 }
 
+export interface ClonacionMasivaConfiguracionesDto {
+  configuracionesIds: number[]
+  fechaInicio: string
+  fechaFin: string | null
+  copiarConceptos: boolean
+  copiarValoresFijos: boolean
+  copiarValoresCategoria: boolean
+}
+
+export interface ClonacionMasivaConfiguracionesResultDto {
+  clones: ConfiguracionNomencladorDetailDto[]
+  configuracionesCerradas: number
+}
+
 export interface PagedResult<T> {
   items: T[]
   total: number

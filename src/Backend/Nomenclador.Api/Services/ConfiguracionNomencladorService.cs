@@ -110,6 +110,77 @@ public sealed class ConfiguracionNomencladorService(
         return await CreateAsync(cloneRequest);
     }
 
+    // Clona en lote N configuraciones activas a un nuevo período y cierra cada una de las
+    // originales (FechaFin = mes anterior al nuevo período), aplicando las mismas reglas de la
+    // clonación individual (overlap, copiarConceptos/ValoresFijos/ValoresCategoria).
+    public async Task<ClonacionMasivaConfiguracionesResultDto> ClonarMasivoAsync(ClonacionMasivaConfiguracionesDto request)
+    {
+        var nuevaFechaInicio = new DateOnly(request.FechaInicio.Year, request.FechaInicio.Month, 1);
+
+        var sources = new List<ConfiguracionNomencladorDetailDto>();
+        var errores = new List<ValidationMessageDto>();
+
+        foreach (var id in request.ConfiguracionesIds)
+        {
+            var source = await GetByIdAsync(id);
+            if (nuevaFechaInicio <= source.FechaInicio)
+            {
+                errores.Add(new ValidationMessageDto
+                {
+                    Codigo = "PERIODO_CLONACION_INVALIDO",
+                    Mensaje = $"El período de clonación ({nuevaFechaInicio:MM/yyyy}) debe ser posterior al de la configuración '{source.NomencladorDescripcion} - {source.EscalaDescripcion}' (vigente desde {source.FechaInicio:MM/yyyy}).",
+                    Campo = "fechaInicio",
+                });
+                continue;
+            }
+
+            sources.Add(source);
+        }
+
+        if (errores.Count > 0)
+        {
+            throw new ConfiguracionValidationException(new ValidacionConfiguracionResponse
+            {
+                Valida = false,
+                Errores = errores,
+            });
+        }
+
+        var fechaFinCierre = nuevaFechaInicio.AddMonths(-1);
+        var clonarRequest = new ClonarConfiguracionDto
+        {
+            FechaInicio = request.FechaInicio,
+            FechaFin = request.FechaFin,
+            CopiarConceptos = request.CopiarConceptos,
+            CopiarValoresFijos = request.CopiarValoresFijos,
+            CopiarValoresCategoria = request.CopiarValoresCategoria,
+        };
+
+        var clones = new List<ConfiguracionNomencladorDetailDto>();
+
+        foreach (var source in sources)
+        {
+            var cierreDto = new ConfiguracionNomencladorCreateUpdateDto
+            {
+                IdNomenclador = source.IdNomenclador,
+                IdEscalaSalarial = source.IdEscalaSalarial,
+                IdZona = source.IdZona,
+                FechaInicio = source.FechaInicio,
+                FechaFin = fechaFinCierre,
+            };
+            await UpdateAsync(source.Id, cierreDto);
+
+            var cloneRequest = clonadoConfiguracionService.BuildClone(source, clonarRequest);
+            clones.Add(await CreateAsync(cloneRequest));
+        }
+
+        return new ClonacionMasivaConfiguracionesResultDto
+        {
+            Clones = clones,
+            ConfiguracionesCerradas = sources.Count,
+        };
+    }
+
     private async Task EnsureValidAsync(ConfiguracionNomencladorCreateUpdateDto request, int? excludedId)
     {
         var validation = await validacionService.ValidateAsync(request, excludedId);
