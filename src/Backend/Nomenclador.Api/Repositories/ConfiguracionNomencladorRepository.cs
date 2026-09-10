@@ -115,13 +115,38 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         }
     }
 
-    public async Task AddAsync(ConfiguracionNomencladorEntity entity, Action<ConfiguracionNomencladorEntity>? afterSave = null)
+    public async Task AddAsync(
+        ConfiguracionNomencladorEntity entity,
+        Action<ConfiguracionNomencladorEntity>? afterSave = null,
+        bool useTransaction = true)
     {
-        using var tx = session.BeginTransaction();
+using var tx = useTransaction ? session.BeginTransaction() : null;
+
         await session.SaveAsync(entity);
         afterSave?.Invoke(entity);
-        await session.FlushAsync();
-        await tx.CommitAsync();
+
+        if (useTransaction && tx is not null)
+        {
+            await session.FlushAsync();
+            await tx.CommitAsync();
+        }
+    }
+
+    public async Task ExecuteInTransactionAsync(Func<Task> action)
+    {
+        using var tx = session.BeginTransaction();
+        try
+        {
+            await action();
+            await session.FlushAsync();
+            await tx.CommitAsync();
+        }
+        catch
+        {
+            if (tx.IsActive)
+                await tx.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task AddConceptoAsync(int configuracionId, Nomenclador.Api.DTOs.ConceptoConfiguradoInputDto request)

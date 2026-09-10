@@ -66,7 +66,7 @@ public sealed class ConfiguracionNomencladorMapper
         {
             Id = entity.Id,
             NomencladorDescripcion = MapCatalogDescription(catalogs.Nomencladores, entity.NomencladorId, "Nomenclador"),
-            EscalaDescripcion = MapCatalogDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId, "Escala"),
+            EscalaDescripcion = MapEscalaDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId),
             ZonaDescripcion = MapZonaDescription(catalogs.Zonas, entity.ZonaId),
             FechaInicio = entity.FechaInicio,
             FechaFin = entity.FechaFin,
@@ -82,7 +82,7 @@ public sealed class ConfiguracionNomencladorMapper
             IdNomenclador = entity.NomencladorId,
             NomencladorDescripcion = MapCatalogDescription(catalogs.Nomencladores, entity.NomencladorId, "Nomenclador"),
             IdEscalaSalarial = entity.EscalaSalarialId,
-            EscalaDescripcion = MapCatalogDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId, "Escala"),
+            EscalaDescripcion = MapEscalaDescription(catalogs.EscalasSalariales, entity.EscalaSalarialId),
             IdZona = entity.ZonaId,
             ZonaDescripcion = MapZonaDescription(catalogs.Zonas, entity.ZonaId),
             FechaInicio = entity.FechaInicio,
@@ -200,6 +200,18 @@ public sealed class ConfiguracionNomencladorMapper
         where TCatalog : CatalogEntityBase
     {
         return id.HasValue ? MapCatalogDescription(catalog, id.Value, "Zona") : "Sin zona";
+    }
+
+    // EscalaSalarialId es un campo obligatorio (no nullable) en el entity, pero hay
+    // configuraciones legacy con el valor 0 — un id "real" que puede coincidir con una
+    // fila del catálogo (ej. "0 - Básica") y mostrarse como si fuera una escala válida
+    // cuando en realidad la configuración nunca tuvo una escala asignada. Se trata 0
+    // como "sin escala" igual que el patrón ya usado para Zona, sin resolver contra el
+    // catálogo.
+    private static string MapEscalaDescription<TCatalog>(IReadOnlyDictionary<int, TCatalog> catalog, int id)
+        where TCatalog : CatalogEntityBase
+    {
+        return id > 0 ? MapCatalogDescription(catalog, id, "Escala") : "Sin escala";
     }
 
     private static string ResolveEstado(DateOnly periodoActivo, DateOnly fechaInicio, DateOnly? fechaFin)

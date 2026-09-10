@@ -37,6 +37,10 @@ const filters = reactive({
 const estadoOptions = ['Activa', 'Futura', 'Vencida']
 
 const PAGE_SIZE = ref(20)
+// Se trackea aparte de `pagination.page` (store) para garantizar que la
+// grilla vuelva a la página 1 apenas se aplica un filtro, sin depender del
+// timing de la respuesta del backend.
+const currentPage = ref(1)
 
 function buildParams(page: number) {
   return {
@@ -51,11 +55,13 @@ function buildParams(page: number) {
 }
 
 async function loadList() {
+  currentPage.value = 1
   await fetchList(buildParams(1))
 }
 
 async function goToPage(page: number, pageSize: number) {
   PAGE_SIZE.value = pageSize
+  currentPage.value = page
   await fetchList(buildParams(page))
 }
 
@@ -141,7 +147,7 @@ onMounted(async () => {
     :items="configuraciones"
     :loading="loadingList"
     :total="pagination.total"
-    :page="pagination.page"
+    :page="currentPage"
     :page-size="pagination.pageSize"
     @create="router.push('/configuraciones/nueva')"
     @edit="router.push(`/configuraciones/${$event}`)"

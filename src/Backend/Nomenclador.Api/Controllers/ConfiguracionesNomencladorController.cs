@@ -103,6 +103,19 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         return CreatedAtAction(nameof(GetConfiguracion), new { id = created.Id }, created);
     }
 
+    [HttpPost("clonacion-masiva")]
+    public async Task<IActionResult> ClonarConfiguracionesMasivo([FromBody] ClonacionMasivaConfiguracionesDto request)
+    {
+        if (request.FechaInicio == default)
+            return BadRequest(new { message = "La fecha de inicio de la clonación es obligatoria." });
+
+        if (request.ConfiguracionesIds.Count == 0)
+            return BadRequest(new { message = "Debe seleccionar al menos una configuración para clonar." });
+
+        var result = await configuracionService.ClonarMasivoAsync(request);
+        return Ok(result);
+    }
+
     [HttpPost("asociacion-masiva-valores-categorias")]
     public async Task<IActionResult> AsociarValoresCategoriasMasivo([FromBody] AsociacionMasivaValoresCategoriasDto request)
     {

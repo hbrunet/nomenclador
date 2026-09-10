@@ -12,6 +12,8 @@ import type {
   CategoriaCatalogItem,
   CategoriaMontoUpdateItem,
   ClonarConfiguracionDto,
+  ClonacionMasivaConfiguracionesDto,
+  ClonacionMasivaConfiguracionesResultDto,
   ConfigurationFilters,
   ConceptoConfiguradoInputDto,
   DesasociacionMasivaResultDto,
@@ -113,6 +115,14 @@ export const configurationService = {
   async clone(id: number, payload: ClonarConfiguracionDto) {
     const { data } = await apiClient.post<ConfiguracionNomencladorDetailDto>(
       `/configuraciones-nomenclador/${id}/clonar`,
+      payload,
+    )
+    return data
+  },
+
+  async cloneMasivo(payload: ClonacionMasivaConfiguracionesDto) {
+    const { data } = await apiClient.post<ClonacionMasivaConfiguracionesResultDto>(
+      '/configuraciones-nomenclador/clonacion-masiva',
       payload,
     )
     return data

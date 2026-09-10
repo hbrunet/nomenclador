@@ -110,6 +110,138 @@ public sealed class ConfiguracionNomencladorService(
         return await CreateAsync(cloneRequest);
     }
 
+    // Clona en lote N configuraciones activas a un nuevo período y cierra cada una de las
+    // originales (FechaFin = mes anterior al nuevo período), aplicando las mismas reglas de la
+    // clonación individual (overlap, copiarConceptos/ValoresFijos/ValoresCategoria).
+    public async Task<ClonacionMasivaConfiguracionesResultDto> ClonarMasivoAsync(ClonacionMasivaConfiguracionesDto request)
+    {
+        var nuevaFechaInicio = new DateOnly(request.FechaInicio.Year, request.FechaInicio.Month, 1);
+
+        var sources = new List<ConfiguracionNomencladorDetailDto>();
+        var errores = new List<ValidationMessageDto>();
+
+foreach (var id in request.ConfiguracionesIds.Distinct())
+        {
+            var source = await GetByIdAsync(id);
+            if (source.Estado != "Activa")
+            {
+                errores.Add(new ValidationMessageDto
+                {
+                    Codigo = "CONFIGURACION_NO_ACTIVA",
+                    Mensaje = $"La configuración '{source.NomencladorDescripcion} - {source.EscalaDescripcion}' no está activa.",
+                    Campo = "configuracionesIds",
+                });
+                continue;
+            }
+
+            if (nuevaFechaInicio <= source.FechaInicio)
+            {
+                errores.Add(new ValidationMessageDto
+                {
+                    Codigo = "PERIODO_CLONACION_INVALIDO",
+                    Mensaje = $"El período de clonación ({nuevaFechaInicio:MM/yyyy}) debe ser posterior al de la configuración '{source.NomencladorDescripcion} - {source.EscalaDescripcion}' (vigente desde {source.FechaInicio:MM/yyyy}).",
+                    Campo = "fechaInicio",
+                });
+                continue;
+            }
+
+            sources.Add(source);
+        }
+
+        if (errores.Count > 0)
+        {
+            throw new ConfiguracionValidationException(new ValidacionConfiguracionResponse
+            {
+                Valida = false,
+                Errores = errores,
+            });
+        }
+
+        var fechaFinCierre = nuevaFechaInicio.AddMonths(-1);
+        var clonarRequest = new ClonarConfiguracionDto
+        {
+            FechaInicio = request.FechaInicio,
+            FechaFin = request.FechaFin,
+            CopiarConceptos = request.CopiarConceptos,
+            CopiarValoresFijos = request.CopiarValoresFijos,
+            CopiarValoresCategoria = request.CopiarValoresCategoria,
+        };
+
+        var cloneRequests = new List<(ConfiguracionNomencladorDetailDto Source, ConfiguracionNomencladorCreateUpdateDto CloneRequest)>();
+
+        foreach (var source in sources)
+        {
+            var cloneRequest = clonadoConfiguracionService.BuildClone(source, clonarRequest);
+await EnsureValidAsync(cloneRequest, source.Id);
+            cloneRequests.Add((source, cloneRequest));
+        }
+
+        for (var i = 0; i < cloneRequests.Count; i++)
+        {
+            var current = cloneRequests[i].CloneRequest;
+            for (var j = i + 1; j < cloneRequests.Count; j++)
+            {
+                var other = cloneRequests[j].CloneRequest;
+                if (current.IdNomenclador != other.IdNomenclador ||
+                    current.IdEscalaSalarial != other.IdEscalaSalarial ||
+                    current.IdZona != other.IdZona)
+                {
+                    continue;
+                }
+
+                if (!RangesOverlap(current.FechaInicio, current.FechaFin, other.FechaInicio, other.FechaFin))
+                {
+                    continue;
+                }
+
+                errores.Add(new ValidationMessageDto
+                {
+                    Codigo = "VIGENCIA_SUPERPUESTA",
+                    Mensaje = "La clonación masiva genera configuraciones superpuestas para el mismo nomenclador, escala y zona.",
+                    Campo = "configuracionesIds",
+                });
+            }
+        }
+
+        if (errores.Count > 0)
+        {
+            throw new ConfiguracionValidationException(new ValidacionConfiguracionResponse
+            {
+                Valida = false,
+                Errores = errores,
+            });
+        }
+
+        var cloneIds = new List<int>();
+        await configuracionRepository.ExecuteInTransactionAsync(async () =>
+        {
+            foreach (var (source, cloneRequest) in cloneRequests)
+            {
+                var sourceEntity = await configuracionRepository.GetByIdAsync(source.Id)
+                    ?? throw new KeyNotFoundException($"No se encontró la configuración {source.Id}.");
+                sourceEntity.FechaFin = fechaFinCierre;
+
+                var cloneEntity = mapper.ToNewEntity(cloneRequest);
+                await configuracionRepository.AddAsync(cloneEntity, e => mapper.ApplyChildren(e, cloneRequest), useTransaction: false);
+                cloneIds.Add(cloneEntity.Id);
+            }
+        });
+
+        var clones = new List<ConfiguracionNomencladorDetailDto>();
+        foreach (var cloneId in cloneIds)
+        {
+            var cloneEntity = await configuracionRepository.GetByIdAsync(cloneId)
+                ?? throw new KeyNotFoundException($"No se encontró la configuración {cloneId}.");
+            clones.Add(await BuildDetailAsync(cloneEntity));
+        }
+
+        return new ClonacionMasivaConfiguracionesResultDto
+        {
+            Clones = clones,
+            ConfiguracionesCerradas = sources.Count,
+        };
+    }
+
     private async Task EnsureValidAsync(ConfiguracionNomencladorCreateUpdateDto request, int? excludedId)
     {
         var validation = await validacionService.ValidateAsync(request, excludedId);
@@ -118,6 +250,13 @@ public sealed class ConfiguracionNomencladorService(
         {
             throw new ConfiguracionValidationException(validation);
         }
+    }
+
+    private static bool RangesOverlap(DateOnly firstStart, DateOnly? firstEnd, DateOnly secondStart, DateOnly? secondEnd)
+    {
+        var normalizedFirstEnd = firstEnd ?? DateOnly.MaxValue;
+        var normalizedSecondEnd = secondEnd ?? DateOnly.MaxValue;
+        return firstStart <= normalizedSecondEnd && secondStart <= normalizedFirstEnd;
     }
 
     private async Task<ConfiguracionNomencladorDetailDto> BuildDetailAsync(ConfiguracionNomencladorEntity entity)
