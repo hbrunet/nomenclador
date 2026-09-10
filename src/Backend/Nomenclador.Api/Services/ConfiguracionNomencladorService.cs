@@ -176,6 +176,42 @@ public sealed class ConfiguracionNomencladorService(
             cloneRequests.Add((source, cloneRequest));
         }
 
+        for (var i = 0; i < cloneRequests.Count; i++)
+        {
+            var current = cloneRequests[i].CloneRequest;
+            for (var j = i + 1; j < cloneRequests.Count; j++)
+            {
+                var other = cloneRequests[j].CloneRequest;
+                if (current.IdNomenclador != other.IdNomenclador ||
+                    current.IdEscalaSalarial != other.IdEscalaSalarial ||
+                    current.IdZona != other.IdZona)
+                {
+                    continue;
+                }
+
+                if (!RangesOverlap(current.FechaInicio, current.FechaFin, other.FechaInicio, other.FechaFin))
+                {
+                    continue;
+                }
+
+                errores.Add(new ValidationMessageDto
+                {
+                    Codigo = "VIGENCIA_SUPERPUESTA",
+                    Mensaje = "La clonación masiva genera configuraciones superpuestas para el mismo nomenclador, escala y zona.",
+                    Campo = "configuracionesIds",
+                });
+            }
+        }
+
+        if (errores.Count > 0)
+        {
+            throw new ConfiguracionValidationException(new ValidacionConfiguracionResponse
+            {
+                Valida = false,
+                Errores = errores,
+            });
+        }
+
         var cloneIds = new List<int>();
         await configuracionRepository.ExecuteInTransactionAsync(async () =>
         {
@@ -214,6 +250,13 @@ public sealed class ConfiguracionNomencladorService(
         {
             throw new ConfiguracionValidationException(validation);
         }
+    }
+
+    private static bool RangesOverlap(DateOnly firstStart, DateOnly? firstEnd, DateOnly secondStart, DateOnly? secondEnd)
+    {
+        var normalizedFirstEnd = firstEnd ?? DateOnly.MaxValue;
+        var normalizedSecondEnd = secondEnd ?? DateOnly.MaxValue;
+        return firstStart <= normalizedSecondEnd && secondStart <= normalizedFirstEnd;
     }
 
     private async Task<ConfiguracionNomencladorDetailDto> BuildDetailAsync(ConfiguracionNomencladorEntity entity)
