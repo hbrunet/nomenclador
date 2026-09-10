@@ -120,7 +120,7 @@ public sealed class ConfiguracionNomencladorService(
         var sources = new List<ConfiguracionNomencladorDetailDto>();
         var errores = new List<ValidationMessageDto>();
 
-        foreach (var id in request.ConfiguracionesIds)
+foreach (var id in request.ConfiguracionesIds.Distinct())
         {
             var source = await GetByIdAsync(id);
             if (source.Estado != "Activa")
