@@ -137,9 +137,18 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     public async Task ExecuteInTransactionAsync(Func<Task> action)
     {
         using var tx = session.BeginTransaction();
-        await action();
-        await session.FlushAsync();
-        await tx.CommitAsync();
+        try
+        {
+            await action();
+            await session.FlushAsync();
+            await tx.CommitAsync();
+        }
+        catch
+        {
+            if (tx.IsActive)
+                await tx.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task AddConceptoAsync(int configuracionId, Nomenclador.Api.DTOs.ConceptoConfiguradoInputDto request)
