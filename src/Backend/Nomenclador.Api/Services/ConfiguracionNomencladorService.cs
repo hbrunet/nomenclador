@@ -167,22 +167,36 @@ public sealed class ConfiguracionNomencladorService(
             CopiarValoresCategoria = request.CopiarValoresCategoria,
         };
 
-        var clones = new List<ConfiguracionNomencladorDetailDto>();
+        var cloneRequests = new List<(ConfiguracionNomencladorDetailDto Source, ConfiguracionNomencladorCreateUpdateDto CloneRequest)>();
 
         foreach (var source in sources)
         {
-            var cierreDto = new ConfiguracionNomencladorCreateUpdateDto
-            {
-                IdNomenclador = source.IdNomenclador,
-                IdEscalaSalarial = source.IdEscalaSalarial,
-                IdZona = source.IdZona,
-                FechaInicio = source.FechaInicio,
-                FechaFin = fechaFinCierre,
-            };
-            await UpdateAsync(source.Id, cierreDto);
-
             var cloneRequest = clonadoConfiguracionService.BuildClone(source, clonarRequest);
-            clones.Add(await CreateAsync(cloneRequest));
+            await EnsureValidAsync(cloneRequest, null);
+            cloneRequests.Add((source, cloneRequest));
+        }
+
+        var cloneIds = new List<int>();
+        await configuracionRepository.ExecuteInTransactionAsync(async () =>
+        {
+            foreach (var (source, cloneRequest) in cloneRequests)
+            {
+                var sourceEntity = await configuracionRepository.GetByIdAsync(source.Id)
+                    ?? throw new KeyNotFoundException($"No se encontró la configuración {source.Id}.");
+                sourceEntity.FechaFin = fechaFinCierre;
+
+                var cloneEntity = mapper.ToNewEntity(cloneRequest);
+                await configuracionRepository.AddAsync(cloneEntity, e => mapper.ApplyChildren(e, cloneRequest), useTransaction: false);
+                cloneIds.Add(cloneEntity.Id);
+            }
+        });
+
+        var clones = new List<ConfiguracionNomencladorDetailDto>();
+        foreach (var cloneId in cloneIds)
+        {
+            var cloneEntity = await configuracionRepository.GetByIdAsync(cloneId)
+                ?? throw new KeyNotFoundException($"No se encontró la configuración {cloneId}.");
+            clones.Add(await BuildDetailAsync(cloneEntity));
         }
 
         return new ClonacionMasivaConfiguracionesResultDto
