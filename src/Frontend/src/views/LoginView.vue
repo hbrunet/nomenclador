@@ -50,7 +50,7 @@ async function handleSubmit() {
           :feedback="false"
           toggle-mask
           required
-          autocomplete="current-password"
+          :input-props="{ autocomplete: 'current-password' }"
         />
       </div>
 
