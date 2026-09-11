@@ -92,24 +92,72 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         return entity;
     }
 
+    public async Task<IReadOnlyCollection<ConfiguracionNomencladorCloneSource>> GetCloneSourcesByIdsAsync(
+        IReadOnlyCollection<int> ids)
+    {
+        var sources = new List<ConfiguracionNomencladorCloneSource>();
+
+        foreach (var chunk in GetChunks(ids))
+        {
+            var entities = await session.QueryOver<ConfiguracionNomencladorEntity>()
+                .WhereRestrictionOn(entity => entity.Id).IsIn(chunk)
+                .ListAsync();
+            var conceptos = await session.QueryOver<ConceptoConfiguradoEntity>()
+                .WhereRestrictionOn(item => item.ConfiguracionNomencladorId).IsIn(chunk)
+                .ListAsync();
+            var valoresFijos = await session.QueryOver<ValorFijoConfiguradoEntity>()
+                .WhereRestrictionOn(item => item.ConfiguracionNomencladorId).IsIn(chunk)
+                .ListAsync();
+            var valoresCategorias = await session.QueryOver<ValorCategoriaConfiguradoEntity>()
+                .WhereRestrictionOn(item => item.ConfiguracionNomencladorId).IsIn(chunk)
+                .ListAsync();
+
+            var conceptosByConfiguracion = conceptos.ToLookup(item => item.ConfiguracionNomencladorId);
+            var valoresFijosByConfiguracion = valoresFijos.ToLookup(item => item.ConfiguracionNomencladorId);
+            var valoresCategoriasByConfiguracion = valoresCategorias.ToLookup(item => item.ConfiguracionNomencladorId);
+
+            sources.AddRange(entities.Select(entity => new ConfiguracionNomencladorCloneSource
+            {
+                Entity = entity,
+                Conceptos = conceptosByConfiguracion[entity.Id].ToList(),
+                ValoresFijos = valoresFijosByConfiguracion[entity.Id].ToList(),
+                ValoresCategorias = valoresCategoriasByConfiguracion[entity.Id].ToList(),
+            }));
+        }
+
+        return sources;
+    }
+
     private async Task LoadValorCategoriaItemsAsync(ConfiguracionNomencladorEntity entity)
     {
-        var ids = entity.ValoresCategorias
+        await LoadValorCategoriaItemsAsync([entity]);
+    }
+
+    public async Task LoadValorCategoriaItemsAsync(
+        IReadOnlyCollection<ConfiguracionNomencladorEntity> entities)
+    {
+        var ids = entities
+            .SelectMany(entity => entity.ValoresCategorias)
             .Select(vc => vc.ValorCategoriaId)
             .Distinct()
             .ToList();
 
         if (ids.Count == 0) return;
 
-        var allItems = await session.Query<ValorCategoriaConfiguradoItemEntity>()
-            .Where(item => ids.Contains(item.ValorCategoriaId))
-            .ToListAsync();
+        var allItems = new List<ValorCategoriaConfiguradoItemEntity>();
+        foreach (var chunk in GetChunks(ids))
+        {
+            var chunkItems = await session.QueryOver<ValorCategoriaConfiguradoItemEntity>()
+                .WhereRestrictionOn(item => item.ValorCategoriaId).IsIn(chunk)
+                .ListAsync();
+            allItems.AddRange(chunkItems);
+        }
 
         var byId = allItems
             .GroupBy(item => item.ValorCategoriaId)
             .ToDictionary(g => g.Key, g => (IList<ValorCategoriaConfiguradoItemEntity>)g.ToList());
 
-        foreach (var vc in entity.ValoresCategorias)
+        foreach (var vc in entities.SelectMany(entity => entity.ValoresCategorias))
         {
             vc.Items = byId.TryGetValue(vc.ValorCategoriaId, out var items) ? items : [];
         }
@@ -514,6 +562,48 @@ using var tx = useTransaction ? session.BeginTransaction() : null;
 
         return candidatos.Any(c =>
             RangesOverlap(c.FechaInicio, c.FechaFin, entity.FechaInicio, entity.FechaFin));
+    }
+
+    public async Task<bool> HasAnyOverlapAsync(
+        IReadOnlyCollection<ConfiguracionNomencladorEntity> entities,
+        IReadOnlyCollection<int> excludedIds)
+    {
+        if (entities.Count == 0) return false;
+
+        var excludedIdsSet = excludedIds.ToHashSet();
+        var entitiesByKey = entities
+            .GroupBy(entity => (entity.NomencladorId, entity.EscalaSalarialId, entity.ZonaId))
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var earliestStart = entities.Min(entity => entity.FechaInicio);
+        var latestEnd = entities.Max(entity => entity.FechaFin);
+
+        foreach (var nomencladorIds in GetChunks(entities.Select(entity => entity.NomencladorId).ToList()))
+        {
+            ConfiguracionNomencladorEntity alias = null!;
+            var query = session.QueryOver(() => alias)
+                .WhereRestrictionOn(() => alias.NomencladorId).IsIn(nomencladorIds)
+                .Where(Restrictions.Le(Projections.Property(() => alias.FechaInicio), latestEnd))
+                .Where(Restrictions.Ge(Projections.Property(() => alias.FechaFin), earliestStart));
+
+            var candidates = await query.ListAsync();
+            foreach (var candidate in candidates)
+            {
+                if (excludedIdsSet.Contains(candidate.Id)) continue;
+
+                var key = (candidate.NomencladorId, candidate.EscalaSalarialId, candidate.ZonaId);
+                if (entitiesByKey.TryGetValue(key, out var matchingEntities) &&
+                    matchingEntities.Any(entity => RangesOverlap(
+                        candidate.FechaInicio,
+                        candidate.FechaFin,
+                        entity.FechaInicio,
+                        entity.FechaFin)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static bool RangesOverlap(DateOnly firstStart, DateOnly? firstEnd,
