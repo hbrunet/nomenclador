@@ -118,53 +118,8 @@ public sealed class ConfiguracionNomencladorService(
     {
         var nuevaFechaInicio = new DateOnly(request.FechaInicio.Year, request.FechaInicio.Month, 1);
         var requestedIds = request.ConfiguracionesIds.Distinct().ToList();
-        var loadedSources = await configuracionRepository.GetCloneSourcesByIdsAsync(requestedIds);
-        var sourcesById = loadedSources.ToDictionary(source => source.Entity.Id);
         var catalogs = await catalogRepository.GetSnapshotForListAsync();
         var periodoActivo = await catalogRepository.GetPeriodoActivoAsync();
-
-        var sources = new List<ConfiguracionNomencladorCloneSource>();
-        var errores = new List<ValidationMessageDto>();
-
-        foreach (var id in requestedIds)
-        {
-            if (!sourcesById.TryGetValue(id, out var source))
-                throw new KeyNotFoundException($"No se encontró la configuración {id}.");
-
-            var sourceListItem = mapper.ToListItemDto(source.Entity, catalogs, periodoActivo);
-            if (sourceListItem.Estado != "Activa")
-            {
-                errores.Add(new ValidationMessageDto
-                {
-                    Codigo = "CONFIGURACION_NO_ACTIVA",
-                    Mensaje = $"La configuración '{sourceListItem.NomencladorDescripcion} - {sourceListItem.EscalaDescripcion}' no está activa.",
-                    Campo = "configuracionesIds",
-                });
-                continue;
-            }
-
-            if (nuevaFechaInicio <= source.Entity.FechaInicio)
-            {
-                errores.Add(new ValidationMessageDto
-                {
-                    Codigo = "PERIODO_CLONACION_INVALIDO",
-                    Mensaje = $"El período de clonación ({nuevaFechaInicio:MM/yyyy}) debe ser posterior al de la configuración '{sourceListItem.NomencladorDescripcion} - {sourceListItem.EscalaDescripcion}' (vigente desde {source.Entity.FechaInicio:MM/yyyy}).",
-                    Campo = "fechaInicio",
-                });
-                continue;
-            }
-
-            sources.Add(source);
-        }
-
-        if (errores.Count > 0)
-        {
-            throw new ConfiguracionValidationException(new ValidacionConfiguracionResponse
-            {
-                Valida = false,
-                Errores = errores,
-            });
-        }
 
         var fechaFinCierre = nuevaFechaInicio.AddMonths(-1);
         var clonarRequest = new ClonarConfiguracionDto
@@ -176,44 +131,87 @@ public sealed class ConfiguracionNomencladorService(
             CopiarValoresCategoria = request.CopiarValoresCategoria,
         };
 
-        var cloneRequests = new List<(ConfiguracionNomencladorCloneSource Source, ConfiguracionNomencladorCreateUpdateDto CloneRequest)>();
-
-        foreach (var source in sources)
-        {
-            var cloneRequest = clonadoConfiguracionService.BuildClone(source, clonarRequest);
-            cloneRequests.Add((source, cloneRequest));
-        }
-
-        var duplicateKeys = cloneRequests
-            .GroupBy(item => (
-                item.CloneRequest.IdNomenclador,
-                item.CloneRequest.IdEscalaSalarial,
-                item.CloneRequest.IdZona))
-            .Where(group => group.Count() > 1)
-            .ToList();
-
-        if (duplicateKeys.Count > 0)
-        {
-            errores.Add(new ValidationMessageDto
-            {
-                Codigo = "VIGENCIA_SUPERPUESTA",
-                Mensaje = "La clonación masiva genera configuraciones superpuestas para el mismo nomenclador, escala y zona.",
-                Campo = "configuracionesIds",
-            });
-        }
-
-        if (errores.Count > 0)
-        {
-            throw new ConfiguracionValidationException(new ValidacionConfiguracionResponse
-            {
-                Valida = false,
-                Errores = errores,
-            });
-        }
-
         var cloneEntities = new List<ConfiguracionNomencladorEntity>();
+        var configuracionesCerradas = 0;
         await configuracionRepository.ExecuteInTransactionAsync(async () =>
         {
+            var loadedSources = await configuracionRepository.GetCloneSourcesByIdsAsync(requestedIds, lockEntities: true);
+            var sourcesById = loadedSources.ToDictionary(source => source.Entity.Id);
+            var sources = new List<ConfiguracionNomencladorCloneSource>();
+            var errores = new List<ValidationMessageDto>();
+
+            foreach (var id in requestedIds)
+            {
+                if (!sourcesById.TryGetValue(id, out var source))
+                    throw new KeyNotFoundException($"No se encontró la configuración {id}.");
+
+                var sourceListItem = mapper.ToListItemDto(source.Entity, catalogs, periodoActivo);
+                if (sourceListItem.Estado != "Activa")
+                {
+                    errores.Add(new ValidationMessageDto
+                    {
+                        Codigo = "CONFIGURACION_NO_ACTIVA",
+                        Mensaje = $"La configuración '{sourceListItem.NomencladorDescripcion} - {sourceListItem.EscalaDescripcion}' no está activa.",
+                        Campo = "configuracionesIds",
+                    });
+                    continue;
+                }
+
+                if (nuevaFechaInicio <= source.Entity.FechaInicio)
+                {
+                    errores.Add(new ValidationMessageDto
+                    {
+                        Codigo = "PERIODO_CLONACION_INVALIDO",
+                        Mensaje = $"El período de clonación ({nuevaFechaInicio:MM/yyyy}) debe ser posterior al de la configuración '{sourceListItem.NomencladorDescripcion} - {sourceListItem.EscalaDescripcion}' (vigente desde {source.Entity.FechaInicio:MM/yyyy}).",
+                        Campo = "fechaInicio",
+                    });
+                    continue;
+                }
+
+                sources.Add(source);
+            }
+
+            if (errores.Count > 0)
+            {
+                throw new ConfiguracionValidationException(new ValidacionConfiguracionResponse
+                {
+                    Valida = false,
+                    Errores = errores,
+                });
+            }
+
+            var cloneRequests = new List<(ConfiguracionNomencladorCloneSource Source, ConfiguracionNomencladorCreateUpdateDto CloneRequest)>();
+            foreach (var source in sources)
+            {
+                var cloneRequest = clonadoConfiguracionService.BuildClone(source, clonarRequest);
+                cloneRequests.Add((source, cloneRequest));
+            }
+
+            var duplicateKeys = cloneRequests
+                .GroupBy(item => (
+                    item.CloneRequest.IdNomenclador,
+                    item.CloneRequest.IdEscalaSalarial,
+                    item.CloneRequest.IdZona))
+                .Where(group => group.Count() > 1)
+                .ToList();
+
+            if (duplicateKeys.Count > 0)
+            {
+                throw new ConfiguracionValidationException(new ValidacionConfiguracionResponse
+                {
+                    Valida = false,
+                    Errores =
+                    [
+                        new ValidationMessageDto
+                        {
+                            Codigo = "VIGENCIA_SUPERPUESTA",
+                            Mensaje = "La clonación masiva genera configuraciones superpuestas para el mismo nomenclador, escala y zona.",
+                            Campo = "configuracionesIds",
+                        },
+                    ],
+                });
+            }
+
             var bulkValidation = await validacionService.ValidateBulkCloneAsync(
                 cloneRequests.Select(item => item.CloneRequest).ToList(),
                 sources.Select(source => source.Entity.Id).ToList());
@@ -230,6 +228,8 @@ public sealed class ConfiguracionNomencladorService(
                 await configuracionRepository.AddAsync(cloneEntity, e => mapper.ApplyChildren(e, cloneRequest), useTransaction: false);
                 cloneEntities.Add(cloneEntity);
             }
+
+            configuracionesCerradas = sources.Count;
         }, IsolationLevel.Serializable);
 
         await configuracionRepository.LoadValorCategoriaItemsAsync(cloneEntities);
@@ -241,7 +241,7 @@ public sealed class ConfiguracionNomencladorService(
         return new ClonacionMasivaConfiguracionesResultDto
         {
             Clones = clones,
-            ConfiguracionesCerradas = sources.Count,
+            ConfiguracionesCerradas = configuracionesCerradas,
         };
     }
 

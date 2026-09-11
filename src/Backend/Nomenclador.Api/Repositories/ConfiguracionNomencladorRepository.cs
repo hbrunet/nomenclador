@@ -94,15 +94,21 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
     }
 
     public async Task<IReadOnlyCollection<ConfiguracionNomencladorCloneSource>> GetCloneSourcesByIdsAsync(
-        IReadOnlyCollection<int> ids)
+        IReadOnlyCollection<int> ids,
+        bool lockEntities = false)
     {
         var sources = new List<ConfiguracionNomencladorCloneSource>();
 
         foreach (var chunk in GetChunks(ids))
         {
-            var entities = await session.QueryOver<ConfiguracionNomencladorEntity>()
-                .WhereRestrictionOn(entity => entity.Id).IsIn(chunk)
-                .ListAsync();
+            var entitiesQuery = session.QueryOver<ConfiguracionNomencladorEntity>()
+                .WhereRestrictionOn(entity => entity.Id).IsIn(chunk);
+            if (lockEntities)
+            {
+                entitiesQuery.UnderlyingCriteria.SetLockMode(LockMode.Upgrade);
+            }
+
+            var entities = await entitiesQuery.ListAsync();
             var conceptos = await session.QueryOver<ConceptoConfiguradoEntity>()
                 .WhereRestrictionOn(item => item.ConfiguracionNomencladorId).IsIn(chunk)
                 .ListAsync();
