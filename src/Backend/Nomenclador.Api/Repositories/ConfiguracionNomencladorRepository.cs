@@ -1,3 +1,4 @@
+using System.Data;
 using NHibernate;
 using NHibernate.Criterion;
 using NHibernate.Linq;
@@ -180,9 +181,11 @@ using var tx = useTransaction ? session.BeginTransaction() : null;
         }
     }
 
-    public async Task ExecuteInTransactionAsync(Func<Task> action)
+    public async Task ExecuteInTransactionAsync(
+        Func<Task> action,
+        IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
     {
-        using var tx = session.BeginTransaction();
+        using var tx = session.BeginTransaction(isolationLevel);
         try
         {
             await action();

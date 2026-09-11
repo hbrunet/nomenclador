@@ -1,3 +1,4 @@
+using System.Data;
 using Nomenclador.Api.DTOs;
 using Nomenclador.Api.Mappers;
 using Nomenclador.Api.Models;
@@ -210,17 +211,17 @@ public sealed class ConfiguracionNomencladorService(
             });
         }
 
-        var bulkValidation = await validacionService.ValidateBulkCloneAsync(
-            cloneRequests.Select(item => item.CloneRequest).ToList(),
-            sources.Select(source => source.Entity.Id).ToList());
-        if (!bulkValidation.Valida)
-        {
-            throw new ConfiguracionValidationException(bulkValidation);
-        }
-
         var cloneEntities = new List<ConfiguracionNomencladorEntity>();
         await configuracionRepository.ExecuteInTransactionAsync(async () =>
         {
+            var bulkValidation = await validacionService.ValidateBulkCloneAsync(
+                cloneRequests.Select(item => item.CloneRequest).ToList(),
+                sources.Select(source => source.Entity.Id).ToList());
+            if (!bulkValidation.Valida)
+            {
+                throw new ConfiguracionValidationException(bulkValidation);
+            }
+
             foreach (var (source, cloneRequest) in cloneRequests)
             {
                 source.Entity.FechaFin = fechaFinCierre;
@@ -229,7 +230,7 @@ public sealed class ConfiguracionNomencladorService(
                 await configuracionRepository.AddAsync(cloneEntity, e => mapper.ApplyChildren(e, cloneRequest), useTransaction: false);
                 cloneEntities.Add(cloneEntity);
             }
-        });
+        }, IsolationLevel.Serializable);
 
         await configuracionRepository.LoadValorCategoriaItemsAsync(cloneEntities);
         var cloneCatalogs = await catalogRepository.GetSnapshotForEntitiesAsync(cloneEntities);
