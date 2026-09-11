@@ -13,6 +13,52 @@ public sealed class ValidacionConfiguracionService(
         var errores = new List<ValidationMessageDto>();
         var warnings = new List<ValidationMessageDto>();
 
+        AddBasicErrors(request, errores);
+
+        var entity = mapper.ToNewEntity(request);
+        if (await configuracionRepository.HasOverlapAsync(entity, excludedId))
+        {
+            errores.Add(CreateOverlapError());
+        }
+
+        return new ValidacionConfiguracionResponse
+        {
+            Valida = errores.Count == 0,
+            Errores = errores,
+            Warnings = warnings
+        };
+    }
+
+    public async Task<ValidacionConfiguracionResponse> ValidateBulkCloneAsync(
+        IReadOnlyCollection<ConfiguracionNomencladorCreateUpdateDto> requests,
+        IReadOnlyCollection<int> sourceIds)
+    {
+        var errores = new List<ValidationMessageDto>();
+
+        foreach (var request in requests)
+        {
+            AddBasicErrors(request, errores);
+        }
+
+        var entities = requests.Select(mapper.ToNewEntity).ToList();
+        if (errores.Count == 0 && await configuracionRepository.HasAnyOverlapAsync(entities, sourceIds))
+        {
+            errores.Add(CreateOverlapError());
+        }
+
+        return new ValidacionConfiguracionResponse
+        {
+            Valida = errores.Count == 0,
+            Errores = errores,
+            Warnings = [],
+        };
+    }
+
+    private static void AddBasicErrors(
+        ConfiguracionNomencladorCreateUpdateDto request,
+        ICollection<ValidationMessageDto> errores)
+    {
+
         if (request.IdNomenclador <= 0)
         {
             errores.Add(new ValidationMessageDto
@@ -42,23 +88,15 @@ public sealed class ValidacionConfiguracionService(
                 Campo = "fechaFin"
             });
         }
+    }
 
-        var entity = mapper.ToNewEntity(request);
-        if (await configuracionRepository.HasOverlapAsync(entity, excludedId))
+    private static ValidationMessageDto CreateOverlapError()
+    {
+        return new ValidationMessageDto
         {
-            errores.Add(new ValidationMessageDto
-            {
-                Codigo = "VIGENCIA_SUPERPUESTA",
-                Mensaje = "Ya existe una configuración para el mismo nomenclador en ese rango de fechas.",
-                Campo = "fechaInicio"
-            });
-        }
-
-        return new ValidacionConfiguracionResponse
-        {
-            Valida = errores.Count == 0,
-            Errores = errores,
-            Warnings = warnings
+            Codigo = "VIGENCIA_SUPERPUESTA",
+            Mensaje = "Ya existe una configuración para el mismo nomenclador en ese rango de fechas.",
+            Campo = "fechaInicio"
         };
     }
 }

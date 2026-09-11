@@ -37,7 +37,7 @@ async function handleSubmit() {
 
       <div class="flex flex-column gap-1">
         <label class="field-label" for="username">Usuario</label>
-        <InputText id="username" v-model="username" class="w-full" autofocus required />
+        <InputText id="username" v-model="username" class="w-full" autofocus required autocomplete="username" />
       </div>
 
       <div class="flex flex-column gap-1">
@@ -50,6 +50,7 @@ async function handleSubmit() {
           :feedback="false"
           toggle-mask
           required
+          autocomplete="current-password"
         />
       </div>
 

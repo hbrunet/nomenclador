@@ -26,6 +26,7 @@ public static class NHibernateSessionFactory
                 config.SetProperty(NhEnvironment.ShowSql, "false");
                 config.SetProperty(NhEnvironment.FormatSql, "false");
                 config.SetProperty(NhEnvironment.Hbm2ddlAuto, "none");
+                config.SetProperty(NhEnvironment.BatchSize, "50");
             })
             .CurrentSessionContext<WebSessionContext>()
             .BuildSessionFactory();

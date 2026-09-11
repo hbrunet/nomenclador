@@ -8,6 +8,8 @@ namespace Nomenclador.Api.Repositories;
 
 public sealed class CatalogRepository(NHibernate.ISession session)
 {
+    private const int OracleInClauseChunkSize = 900;
+
     // HACK legacy: ValorFijoCatalogEntity no tiene columna Periodo (agregarla arriesga
     // romper la app legacy que comparte la tabla), así que el período viaja como texto
     // libre dentro de Descripcion, indistintamente en formato "MM/YYYY" o "YYYY/MM"
@@ -137,6 +139,60 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             ValoresFijos = valoresFijos.ToDictionary(item => item.Id),
             ValoresCategorias = valoresCategorias.ToDictionary(item => item.Id)
         };
+    }
+
+    public async Task<CatalogSnapshot> GetSnapshotForEntitiesAsync(
+        IReadOnlyCollection<ConfiguracionNomencladorEntity> entities)
+    {
+        var nomencladorIds = entities.Select(entity => entity.NomencladorId).Distinct().ToList();
+        var escalaIds = entities.Select(entity => entity.EscalaSalarialId).Distinct().ToList();
+        var zonaIds = entities.Where(entity => entity.ZonaId.HasValue).Select(entity => entity.ZonaId!.Value).Distinct().ToList();
+        var conceptoIds = entities.SelectMany(entity => entity.Conceptos).Select(item => item.ConceptoId).Distinct().ToList();
+        var valorFijoIds = entities.SelectMany(entity => entity.ValoresFijos).Select(item => item.ValorFijoId).Distinct().ToList();
+        var valorCategoriaIds = entities.SelectMany(entity => entity.ValoresCategorias).Select(item => item.ValorCategoriaId).Distinct().ToList();
+
+        var nomencladores = new List<NomencladorCatalogEntity>();
+        var escalas = new List<EscalaSalarialCatalogEntity>();
+        var zonas = new List<ZonaCatalogEntity>();
+        var categorias = new List<CategoriaCatalogEntity>();
+        var conceptos = new List<ConceptoCatalogEntity>();
+        var valoresFijos = new List<ValorFijoCatalogEntity>();
+        var valoresCategorias = new List<ValorCategoriaCatalogEntity>();
+
+        foreach (var chunk in GetChunks(nomencladorIds))
+            nomencladores.AddRange(await session.QueryOver<NomencladorCatalogEntity>().WhereRestrictionOn(item => item.Id).IsIn(chunk).ListAsync());
+        foreach (var chunk in GetChunks(escalaIds))
+        {
+            escalas.AddRange(await session.QueryOver<EscalaSalarialCatalogEntity>().WhereRestrictionOn(item => item.Id).IsIn(chunk).ListAsync());
+            categorias.AddRange(await session.QueryOver<CategoriaCatalogEntity>().WhereRestrictionOn(item => item.EscalaSalarialId).IsIn(chunk).ListAsync());
+        }
+        foreach (var chunk in GetChunks(zonaIds))
+            zonas.AddRange(await session.QueryOver<ZonaCatalogEntity>().WhereRestrictionOn(item => item.Id).IsIn(chunk).ListAsync());
+        foreach (var chunk in GetChunks(conceptoIds))
+            conceptos.AddRange(await session.QueryOver<ConceptoCatalogEntity>().WhereRestrictionOn(item => item.Id).IsIn(chunk).ListAsync());
+        foreach (var chunk in GetChunks(valorFijoIds))
+            valoresFijos.AddRange(await session.QueryOver<ValorFijoCatalogEntity>().Fetch(SelectMode.Fetch, item => item.Tipo).WhereRestrictionOn(item => item.Id).IsIn(chunk).ListAsync());
+        foreach (var chunk in GetChunks(valorCategoriaIds))
+            valoresCategorias.AddRange(await session.QueryOver<ValorCategoriaCatalogEntity>().Fetch(SelectMode.Fetch, item => item.Tipo).WhereRestrictionOn(item => item.Id).IsIn(chunk).ListAsync());
+
+        return new CatalogSnapshot
+        {
+            Nomencladores = nomencladores.ToDictionary(item => item.Id),
+            EscalasSalariales = escalas.ToDictionary(item => item.Id),
+            Zonas = zonas.ToDictionary(item => item.Id),
+            Categorias = categorias.ToDictionary(item => item.Id),
+            Conceptos = conceptos.ToDictionary(item => item.Id),
+            ValoresFijos = valoresFijos.ToDictionary(item => item.Id),
+            ValoresCategorias = valoresCategorias.ToDictionary(item => item.Id),
+        };
+    }
+
+    private static IEnumerable<List<int>> GetChunks(IReadOnlyCollection<int> ids)
+    {
+        for (var i = 0; i < ids.Count; i += OracleInClauseChunkSize)
+        {
+            yield return ids.Skip(i).Take(OracleInClauseChunkSize).ToList();
+        }
     }
 
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetNomencladoresAsync()
