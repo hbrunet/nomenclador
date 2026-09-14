@@ -45,9 +45,9 @@ const filteredValores = computed(() => {
   )
 })
 
-async function loadValores(forceRefresh = false) {
+async function loadValores(forceRefresh = false, showRefreshSpinner = forceRefresh) {
   // Evita el parpadeo del spinner cuando el dato ya está en caché.
-  const showSpinner = forceRefresh || !valoresFijosService.hasCachedValores()
+  const showSpinner = showRefreshSpinner || !valoresFijosService.hasCachedValores()
   if (showSpinner) loadingValores.value = true
   try {
     valores.value = await valoresFijosService.getAll(forceRefresh)
@@ -170,7 +170,9 @@ function confirmDeleteTipo(tipo: CatalogItem) {
 }
 
 onMounted(async () => {
+  const hadCachedValores = valoresFijosService.hasCachedValores()
   await Promise.all([loadValores(), loadTipos()])
+  if (hadCachedValores) await loadValores(true, false)
 })
 </script>
 <template>
