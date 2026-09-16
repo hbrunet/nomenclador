@@ -153,8 +153,13 @@ async function handleCloneConfig(sourceId: number, dto: any) {
       console.error('Error al clonar la configuración:', validation ?? error)
 
       const mensajes = validation?.errores.map(({ mensaje }) => mensaje).join('\n')
-    
-      toast.add({ severity: 'error', summary: 'Error al clonar la configuración', detail: mensajes || `Ocurrió un error al clonar la configuración. ${error.message}`, life: 5000 })
+
+      toast.add({
+        severity: 'error',
+        summary: 'Error al clonar la configuración',
+        detail: mensajes || `Ocurrió un error al clonar la configuración. ${error.message}`,
+        life: 5000,
+      })
     } else {
       toast.add({ severity: 'error', summary: 'Error al clonar la configuración', detail: `Ocurrió un error inesperado al clonar la configuración. ${error}`, life: 5000 })
     }
