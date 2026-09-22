@@ -37,6 +37,35 @@ export const apiClient = axios.create({
   },
 })
 
+function extractRequestId(headers: Record<string, unknown> | undefined): string | null {
+  const value = headers?.['x-request-id'] ?? headers?.['X-Request-Id']
+  return typeof value === 'string' && value.trim().length > 0 ? value : null
+}
+
+export function getRequestIdFromError(error: unknown): string | null {
+  if (!axios.isAxiosError(error)) return null
+
+  const requestId = extractRequestId(error.response?.headers as Record<string, unknown> | undefined)
+  if (requestId) {
+    return requestId
+  }
+
+  return null
+}
+
+export function setCurrentRequestId(value: string | null) {
+  if (value) {
+    sessionStorage.setItem('nomenclador.requestId', value)
+    return
+  }
+
+  sessionStorage.removeItem('nomenclador.requestId')
+}
+
+export function getCurrentRequestId(): string | null {
+  return sessionStorage.getItem('nomenclador.requestId')
+}
+
 // Se consulta desde muchas pantallas (listado, asociaciones/clonaciones masivas)
 // para precargar el filtro "vigente en". Se cachea en memoria por sesión de SPA
 // (se pierde en un reload completo, ej. tras un 401) para evitar refetch en cada
@@ -45,10 +74,36 @@ export const apiClient = axios.create({
 // desactualizado entre recargas.
 let periodoActivoRequest: Promise<string> | null = null
 
-
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const requestId = extractRequestId(response.headers as Record<string, unknown>)
+    if (requestId) {
+      setCurrentRequestId(requestId)
+    }
+    return response
+  },
   (error) => {
+    const requestId = getRequestIdFromError(error)
+    if (requestId && error.response) {
+      setCurrentRequestId(requestId)
+      ;(error as { requestId?: string }).requestId = requestId
+
+      const payload = error.response?.data
+      const message = typeof payload?.mensaje === 'string'
+        ? payload.mensaje
+        : typeof payload?.message === 'string'
+          ? payload.message
+          : error.message
+
+      window.dispatchEvent(new CustomEvent('app:api-error', {
+        detail: {
+          requestId,
+          message,
+          summary: 'Error en la solicitud',
+        },
+      }))
+    }
+
     if (error.response?.status === 401) {
       tokenStorage.clearSession()
       if (window.location.pathname !== '/login') {

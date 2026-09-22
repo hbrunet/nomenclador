@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Menubar from 'primevue/menubar'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import type { MenuItem } from 'primevue/menuitem'
+import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from './stores/authStore'
+
+const toast = useToast()
 
 const route = useRoute()
 const router = useRouter()
@@ -21,9 +24,9 @@ async function handleLogout() {
 
 const menuItems = computed<MenuItem[]>(() => [
   { label: 'Configuraciones', route: '/configuraciones' },
-  { 
-    label: 'Escalas Salariales', 
-    items:[
+  {
+    label: 'Escalas Salariales',
+    items: [
       { label: 'Escalas', route: '/escalas' },
       { label: 'Actualización masiva', route: '/clonacion-masiva/escala-salarial' },
     ],
@@ -37,7 +40,7 @@ const menuItems = computed<MenuItem[]>(() => [
     ],
   },
 
-   {
+  {
     label: 'Valores por categoría',
     items: [
       { label: 'Valores y Tipos', route: '/valores-categoria' },
@@ -63,6 +66,26 @@ const menuItems = computed<MenuItem[]>(() => [
     ],
   },
 ])
+
+function handleApiError(event: Event) {
+  const detail = (event as CustomEvent<{ message?: string; requestId?: string; summary?: string }>).detail
+  if (!detail) return
+
+  toast.add({
+    severity: 'error',
+    summary: detail.summary ?? 'Error en la solicitud',
+    detail: `${detail.message ?? 'Ocurrió un error inesperado.'}${detail.requestId ? `\nRequestId: ${detail.requestId}` : ''}`,
+    life: 8000,
+  })
+}
+
+onMounted(() => {
+  window.addEventListener('app:api-error', handleApiError)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('app:api-error', handleApiError)
+})
 </script>
 
 <template>

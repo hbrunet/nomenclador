@@ -7,8 +7,40 @@ using Nomenclador.Api.Mappers;
 using Nomenclador.Api.Middleware;
 using Nomenclador.Api.Repositories;
 using Nomenclador.Api.Services;
+using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var logDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
+
+var loggerConfiguration = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext();
+
+if (builder.Environment.IsDevelopment())
+{
+    loggerConfiguration = loggerConfiguration.WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [RequestId:{RequestId}] {Message:lj}{NewLine}{Exception}");
+}
+else
+{
+    Directory.CreateDirectory(logDirectory);
+    loggerConfiguration = loggerConfiguration.WriteTo.File(
+        new Serilog.Formatting.Json.JsonFormatter(),
+        path: Path.Combine(logDirectory, "nomenclador-api-.log"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 10,
+        fileSizeLimitBytes: 10 * 1024 * 1024,
+        rollOnFileSizeLimit: true,
+        shared: true);
+
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
+
+builder.Host.UseSerilog();
 
 // No-op cuando se corre con `dotnet run`/consola; activa el hosting como Windows Service
 // (Event Log, content root correcto) cuando el ejecutable se registra con sc.exe/services.msc.
@@ -35,7 +67,8 @@ builder.Services.AddCors(options =>
             .WithOrigins(corsOrigins)
             .AllowCredentials()
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .WithExposedHeaders("X-Request-Id");
     });
 });
 
