@@ -36,14 +36,6 @@ else
         rollOnFileSizeLimit: true,
         shared: true);
 
-    if (OperatingSystem.IsWindows())
-    {
-        loggerConfiguration = loggerConfiguration.WriteTo.EventLog(
-            source: "NomencladorApi",
-            restrictedToMinimumLevel: LogEventLevel.Warning,
-            manageEventSource: true,
-            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] [RequestId:{RequestId}] {Message:lj}{NewLine}{Exception}");
-    }
 }
 
 Log.Logger = loggerConfiguration.CreateLogger();
@@ -75,7 +67,8 @@ builder.Services.AddCors(options =>
             .WithOrigins(corsOrigins)
             .AllowCredentials()
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .WithExposedHeaders("X-Request-Id");
     });
 });
 

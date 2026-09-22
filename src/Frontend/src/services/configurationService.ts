@@ -84,7 +84,7 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     const requestId = getRequestIdFromError(error)
-    if (requestId) {
+    if (requestId && error.response) {
       setCurrentRequestId(requestId)
       ;(error as { requestId?: string }).requestId = requestId
 

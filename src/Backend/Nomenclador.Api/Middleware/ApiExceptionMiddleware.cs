@@ -12,18 +12,29 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
     public async Task InvokeAsync(HttpContext context)
     {
         var requestId = context.TraceIdentifier;
-        var userName = GetUserName(context);
         context.Response.Headers["X-Request-Id"] = requestId;
 
         using (LogContext.PushProperty("RequestId", requestId))
         using (LogContext.PushProperty("RequestMethod", context.Request.Method))
         using (LogContext.PushProperty("RequestPath", context.Request.Path.Value ?? string.Empty))
-        using (LogContext.PushProperty("UserName", userName))
         {
             try
             {
                 await next(context);
-                LogInformation(context, context.Response.StatusCode, "Solicitud finalizada correctamente.");
+
+                var statusCode = context.Response.StatusCode;
+                if (statusCode >= 500)
+                {
+                    LogError(context, null, statusCode, "Solicitud finalizada con error HTTP del servidor.");
+                }
+                else if (statusCode >= 400)
+                {
+                    LogWarning(context, null, statusCode, "Solicitud finalizada con error HTTP del cliente.");
+                }
+                else
+                {
+                    LogInformation(context, statusCode, "Solicitud finalizada correctamente.");
+                }
             }
             catch (ConfiguracionValidationException exception)
             {
@@ -86,40 +97,81 @@ public sealed class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExce
 
     private void LogInformation(HttpContext context, int statusCode, string message)
     {
-        logger.LogInformation(
-            "{Message} Method={Method} Path={Path} StatusCode={StatusCode} RequestId={RequestId} User={UserName}",
-            message,
-            context.Request.Method,
-            context.Request.Path.Value ?? string.Empty,
-            statusCode,
-            context.TraceIdentifier,
-            GetUserName(context));
+        var userName = GetUserName(context);
+
+        using (LogContext.PushProperty("UserName", userName))
+        {
+            logger.LogInformation(
+                "{Message} Method={Method} Path={Path} StatusCode={StatusCode} RequestId={RequestId} User={UserName}",
+                message,
+                context.Request.Method,
+                context.Request.Path.Value ?? string.Empty,
+                statusCode,
+                context.TraceIdentifier,
+                userName);
+        }
     }
 
-    private void LogWarning(HttpContext context, Exception exception, int statusCode, string message)
+    private void LogWarning(HttpContext context, Exception? exception, int statusCode, string message)
     {
-        logger.LogWarning(
-            exception,
-            "{Message} Method={Method} Path={Path} StatusCode={StatusCode} RequestId={RequestId} User={UserName}",
-            message,
-            context.Request.Method,
-            context.Request.Path.Value ?? string.Empty,
-            statusCode,
-            context.TraceIdentifier,
-            GetUserName(context));
+        var userName = GetUserName(context);
+
+        using (LogContext.PushProperty("UserName", userName))
+        {
+            if (exception is null)
+            {
+                logger.LogWarning(
+                    "{Message} Method={Method} Path={Path} StatusCode={StatusCode} RequestId={RequestId} User={UserName}",
+                    message,
+                    context.Request.Method,
+                    context.Request.Path.Value ?? string.Empty,
+                    statusCode,
+                    context.TraceIdentifier,
+                    userName);
+                return;
+            }
+
+            logger.LogWarning(
+                exception,
+                "{Message} Method={Method} Path={Path} StatusCode={StatusCode} RequestId={RequestId} User={UserName}",
+                message,
+                context.Request.Method,
+                context.Request.Path.Value ?? string.Empty,
+                statusCode,
+                context.TraceIdentifier,
+                userName);
+        }
     }
 
-    private void LogError(HttpContext context, Exception exception, int statusCode, string message)
+    private void LogError(HttpContext context, Exception? exception, int statusCode, string message)
     {
-        logger.LogError(
-            exception,
-            "{Message} Method={Method} Path={Path} StatusCode={StatusCode} RequestId={RequestId} User={UserName}",
-            message,
-            context.Request.Method,
-            context.Request.Path.Value ?? string.Empty,
-            statusCode,
-            context.TraceIdentifier,
-            GetUserName(context));
+        var userName = GetUserName(context);
+
+        using (LogContext.PushProperty("UserName", userName))
+        {
+            if (exception is null)
+            {
+                logger.LogError(
+                    "{Message} Method={Method} Path={Path} StatusCode={StatusCode} RequestId={RequestId} User={UserName}",
+                    message,
+                    context.Request.Method,
+                    context.Request.Path.Value ?? string.Empty,
+                    statusCode,
+                    context.TraceIdentifier,
+                    userName);
+                return;
+            }
+
+            logger.LogError(
+                exception,
+                "{Message} Method={Method} Path={Path} StatusCode={StatusCode} RequestId={RequestId} User={UserName}",
+                message,
+                context.Request.Method,
+                context.Request.Path.Value ?? string.Empty,
+                statusCode,
+                context.TraceIdentifier,
+                userName);
+        }
     }
 
     private static string BuildDetailMessage(Exception ex)
