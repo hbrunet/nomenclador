@@ -13,6 +13,7 @@ using Serilog.Events;
 var builder = WebApplication.CreateBuilder(args);
 
 var logDirectory = Path.Combine(AppContext.BaseDirectory, "logs");
+var seqUrl = builder.Configuration["Seq:ServerUrl"] ?? "http://localhost:5341";
 
 var loggerConfiguration = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -21,21 +22,23 @@ var loggerConfiguration = new LoggerConfiguration()
 
 if (builder.Environment.IsDevelopment())
 {
-    loggerConfiguration = loggerConfiguration.WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [RequestId:{RequestId}] {Message:lj}{NewLine}{Exception}");
+    loggerConfiguration = loggerConfiguration
+        .WriteTo.Console(
+            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [RequestId:{RequestId}] {Message:lj}{NewLine}{Exception}");
 }
 else
 {
     Directory.CreateDirectory(logDirectory);
-    loggerConfiguration = loggerConfiguration.WriteTo.File(
-        new Serilog.Formatting.Json.JsonFormatter(),
-        path: Path.Combine(logDirectory, "nomenclador-api-.log"),
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 10,
-        fileSizeLimitBytes: 10 * 1024 * 1024,
-        rollOnFileSizeLimit: true,
-        shared: true);
-
+    loggerConfiguration = loggerConfiguration
+        .WriteTo.File(
+            new Serilog.Formatting.Json.JsonFormatter(),
+            path: Path.Combine(logDirectory, "nomenclador-api-.log"),
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 10,
+            fileSizeLimitBytes: 10 * 1024 * 1024,
+            rollOnFileSizeLimit: true,
+            shared: true)
+        .WriteTo.Seq(seqUrl);
 }
 
 Log.Logger = loggerConfiguration.CreateLogger();
