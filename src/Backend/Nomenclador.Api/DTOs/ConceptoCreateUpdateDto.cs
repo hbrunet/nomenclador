@@ -1,10 +1,8 @@
 namespace Nomenclador.Api.DTOs;
 
-public sealed class ConceptoCatalogDto
+public sealed class ConceptoCreateUpdateDto
 {
-    public int Id { get; init; }
-
-    public int Codigo { get; init; } 
+    public int Codigo { get; init; }
 
     public int Subcodigo { get; init; }
 
@@ -26,7 +24,7 @@ public sealed class ConceptoCatalogDto
 
     public bool CalculaPorPersona { get; init; }
 
-    // Números de mes (1=ene..12=dic) en los que aplica el concepto, parseados desde CALMESES.
+    // Números de mes (1=ene..12=dic) en los que aplica el concepto.
     public IReadOnlyList<int> MesesAplicables { get; init; } = [];
 
     public bool DeduceJubilacion { get; init; }
@@ -41,8 +39,6 @@ public sealed class ConceptoCatalogDto
 
     public int? IdTipoConcepto { get; init; }
 
-    public string? TipoConcepto { get; init; }
-
     public bool ImprimeCantidad { get; init; }
 
     public bool LiquidaSiempre { get; init; }
@@ -53,7 +49,5 @@ public sealed class ConceptoCatalogDto
 
     public bool Reliquidar { get; init; }
 
-    public IReadOnlyList<CatalogItemDto> TiposLiquidacion { get; init; } = [];
-
-    public IReadOnlyList<FormulaDto> Formulas { get; init; } = [];
+    public IReadOnlyList<int> TiposLiquidacionIds { get; init; } = [];
 }

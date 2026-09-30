@@ -215,6 +215,70 @@ export interface ConceptoCatalogItem {
   subcodigo: number
   descripcionBreve: string
   descripcion: string
+  acumulaJubilacion: boolean
+  acumulaObraSocial: boolean
+  acumulaRemunerativo: boolean
+  basico: boolean
+  bonificable: boolean
+  calculaTicket: boolean
+  calculaPorPersona: boolean
+  // Números de mes (1=ene..12=dic) en los que aplica el concepto.
+  mesesAplicables: number[]
+  deduceJubilacion: boolean
+  deducePension: boolean
+  especial: boolean
+  ganancia: boolean
+  idPartidaPresupuestaria: number | null
+  idTipoConcepto: number | null
+  tipoConcepto: string | null
+  imprimeCantidad: boolean
+  liquidaSiempre: boolean
+  participaFondo: boolean
+  ppp: boolean
+  reliquidar: boolean
+  tiposLiquidacion: CatalogItem[]
+  formulas: FormulaItem[]
+}
+
+// USUARIO.FORMULA — solo lectura, se muestran en el detalle del concepto.
+export interface FormulaItem {
+  id: number
+  condicion: string | null
+  accion: string | null
+  detalle: string | null
+  ordenEjec: number | null
+  condicionInput: number | null
+  accionInput: number | null
+  codigo: string | null
+  spName: string | null
+}
+
+// Payload para crear/editar un concepto (POST/PUT /api/conceptos).
+export interface ConceptoCreateUpdateDto {
+  codigo: number
+  subcodigo: number
+  descripcionBreve: string
+  descripcion: string
+  acumulaJubilacion: boolean
+  acumulaObraSocial: boolean
+  acumulaRemunerativo: boolean
+  basico: boolean
+  bonificable: boolean
+  calculaTicket: boolean
+  calculaPorPersona: boolean
+  mesesAplicables: number[]
+  deduceJubilacion: boolean
+  deducePension: boolean
+  especial: boolean
+  ganancia: boolean
+  idPartidaPresupuestaria: number | null
+  idTipoConcepto: number | null
+  imprimeCantidad: boolean
+  liquidaSiempre: boolean
+  participaFondo: boolean
+  ppp: boolean
+  reliquidar: boolean
+  tiposLiquidacionIds: number[]
 }
 
 export interface ConceptoConfiguradoViewModel {
