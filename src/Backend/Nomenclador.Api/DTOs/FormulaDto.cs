@@ -8,8 +8,6 @@ public sealed class FormulaDto
 
     public string? Accion { get; init; }
 
-    public string? Detalle { get; init; }
-
     public int? OrdenEjec { get; init; }
 
     public decimal? CondicionInput { get; init; }

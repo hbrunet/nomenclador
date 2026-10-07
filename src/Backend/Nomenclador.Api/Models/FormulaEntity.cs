@@ -10,8 +10,6 @@ public class FormulaEntity
 
     public virtual string? Accion { get; set; }
 
-    public virtual string? Detalle { get; set; }
-
     public virtual int? OrdenEjec { get; set; }
 
     public virtual int? ConceptoId { get; set; }

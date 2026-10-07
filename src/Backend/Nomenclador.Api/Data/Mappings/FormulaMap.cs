@@ -11,7 +11,6 @@ public sealed class FormulaMap : ClassMap<FormulaEntity>
         Id(x => x.Id).Column("IDFORM").GeneratedBy.Sequence("USUARIO.FORMULA_SEQ");
         Map(x => x.Condicion).Column("CONDICION");
         Map(x => x.Accion).Column("ACCION");
-        Map(x => x.Detalle).Column("DETALLE");
         Map(x => x.OrdenEjec).Column("ORDENEJEC");
         Map(x => x.ConceptoId).Column("IDCONCEPTO");
         Map(x => x.CondicionInput).Column("CONDICION_INPUT");

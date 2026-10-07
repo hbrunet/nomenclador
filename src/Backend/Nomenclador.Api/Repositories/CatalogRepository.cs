@@ -220,6 +220,23 @@ public sealed class CatalogRepository(NHibernate.ISession session)
             .ToListAsync();
     }
 
+    public async Task<IReadOnlyCollection<PrimitivaDto>> GetPrimitivasAsync()
+    {
+        return await session.Query<PrimitivaEntity>()
+            .OrderBy(item => item.Nombre)
+            .Select(item => new PrimitivaDto
+            {
+                Id = item.Id,
+                Nombre = item.Nombre,
+                Descripcion = item.Descripcion,
+                EsResultLogico = item.EsResultLogico,
+                Cabecera = item.Cabecera,
+                Cuerpo = item.Cuerpo,
+                Pie = item.Pie,
+            })
+            .ToListAsync();
+    }
+
     public async Task<IReadOnlyCollection<CategoriaCatalogDto>> GetCategoriasAsync(int? escalaId)
     {
         var query = session.Query<CategoriaCatalogEntity>();

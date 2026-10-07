@@ -110,7 +110,7 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
     {
         var items = await session.Query<FormulaEntity>()
             .Where(x => x.ConceptoId == conceptoId)
-            .OrderBy(x => x.OrdenEjec)
+            .OrderBy(x => x.Id)
             .ToListAsync();
 
         return items.Select(item => new FormulaDto
@@ -118,7 +118,6 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
             Id = item.Id,
             Condicion = item.Condicion,
             Accion = item.Accion,
-            Detalle = item.Detalle,
             OrdenEjec = item.OrdenEjec,
             CondicionInput = item.CondicionInput,
             AccionInput = item.AccionInput,

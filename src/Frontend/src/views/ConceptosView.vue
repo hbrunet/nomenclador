@@ -135,6 +135,7 @@ onMounted(async () => {
           {{ query ? 'Sin resultados para la búsqueda aplicada.' : 'No hay conceptos cargados.' }}
         </span>
       </template>
+      <Column field="id" header="ID" style="width: 4rem; text-align: right;" />
       <Column field="codigo" header="Código" style="width: 6rem; text-align: right;" />
       <Column field="subcodigo" header="Subcódigo" style="width: 7rem; text-align: right;" />
       <Column field="descripcionBreve" header="Desc. breve" style="width: 10rem" />

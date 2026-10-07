@@ -17,6 +17,7 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import { useToast } from 'primevue/usetoast'
 import { conceptosService } from '../services/conceptosService'
+import FormulaDetailDialog from './FormulaDetailDialog.vue'
 import type { CatalogItem, ConceptoCatalogItem, ConceptoCreateUpdateDto, FormulaItem } from '../types/configuration'
 
 const props = defineProps<{
@@ -30,6 +31,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const isVisible = ref(false)
+const formulaDialogRef = ref<InstanceType<typeof FormulaDetailDialog> | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const errorMessage = ref<string | null>(null)
@@ -178,13 +180,19 @@ async function handleSave() {
   }
 }
 
+async function handleFormulaSaved() {
+  if (!editingId.value) return
+  const data = await conceptosService.getById(editingId.value)
+  formulas.value = data.formulas
+}
+
 defineExpose({ open })
 </script>
 
 <template>
   <Dialog
     v-model:visible="isVisible"
-    :header="isNew ? 'Nuevo concepto' : 'Editar concepto ' + editingId"
+    :header="isNew ? 'Nuevo concepto' : 'Editar concepto - ' + editingId"
     :modal="true"
     :style="{ width: '52rem' }"
   >
@@ -231,7 +239,7 @@ defineExpose({ open })
 
             <div class="field">
               <label class="field-label">Descripción</label>
-              <InputText v-model="descripcion" class="w-full" :disabled="loading" maxlength="60" autofocus />
+              <InputText v-model="descripcion" class="w-full" :disabled="loading" maxlength="60" />
               <Message v-if="!isValidDescripcion" severity="error" size="small" variant="simple">La descripción es obligatoria y debe tener como máximo 60 caracteres.</Message>
             </div>
 
@@ -280,16 +288,37 @@ defineExpose({ open })
         </TabPanel>
 
         <!-- ── Fórmulas ─────────────────────────────────────────────────────── -->
-        <!-- Solo lectura por ahora: USUARIO.FORMULA se administra en otro sistema. -->
         <TabPanel value="formulas">
-          <div class="pt-3">
+          <div class="pt-3 flex flex-column gap-3">
+            <div class="flex justify-content-end">
+              <Button
+                label="Nueva fórmula"
+                icon="pi pi-plus"
+                size="small"
+                :disabled="!editingId"
+                @click="formulaDialogRef?.open({ conceptoId: editingId!, conceptoLabel: `${codigo}/${subcodigo} - ${descripcion}` })"
+              />
+            </div>
             <DataTable :value="formulas" data-key="id" striped-rows>
               <template #empty>
                 <span class="muted">Este concepto no tiene fórmulas asociadas.</span>
               </template>
+              <Column field="id" header="ID" />
               <Column field="condicion" header="Condición" />
               <Column field="accion" header="Acción" />
-              <Column field="spName" header="SP" style="width: 10rem" />
+              <Column>
+                <template #body="{ data }">
+                  <div class="flex gap-1 align-items-center">
+                  <Button
+                    icon="pi pi-pencil"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    @click="formulaDialogRef?.open({ formulaId: data.id })"
+                  />
+                  </div>
+                </template>
+              </Column>
             </DataTable>
           </div>
         </TabPanel>
@@ -307,4 +336,6 @@ defineExpose({ open })
       />
     </template>
   </Dialog>
+
+  <FormulaDetailDialog ref="formulaDialogRef" @saved="handleFormulaSaved" />
 </template>

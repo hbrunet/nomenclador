@@ -245,12 +245,46 @@ export interface FormulaItem {
   id: number
   condicion: string | null
   accion: string | null
-  detalle: string | null
   ordenEjec: number | null
   condicionInput: number | null
   accionInput: number | null
   codigo: string | null
   spName: string | null
+}
+
+// Detalle de una fórmula para el editor de alta/edición (GET/POST/PUT /api/formulas).
+export interface FormulaDetailDto {
+  id: number
+  conceptoId: number
+  conceptoCodigo: number
+  conceptoSubcodigo: number
+  conceptoDescripcion: string
+  condicion: string
+  accion: string
+  ordenEjec: number | null
+  spName: string | null
+}
+
+export interface FormulaCreateUpdateDto {
+  conceptoId: number
+  condicion: string
+  accion: string
+}
+
+export interface FormulaVerificarResult {
+  valida: boolean
+  errores: string[]
+}
+
+// Catálogo USUARIO.PRIMITIVA — usadas en Condición/Acción de una fórmula.
+export interface PrimitivaItem {
+  id: number
+  nombre: string | null
+  descripcion: string | null
+  esResultLogico: boolean
+  cabecera: string | null
+  cuerpo: string | null
+  pie: string | null
 }
 
 // Payload para crear/editar un concepto (POST/PUT /api/conceptos).
