@@ -6,19 +6,12 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import Checkbox from 'primevue/checkbox'
 import MultiSelect from 'primevue/multiselect'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
+
 import Button from 'primevue/button'
 import Message from 'primevue/message'
-import Tabs from 'primevue/tabs'
-import TabList from 'primevue/tablist'
-import Tab from 'primevue/tab'
-import TabPanels from 'primevue/tabpanels'
-import TabPanel from 'primevue/tabpanel'
 import { useToast } from 'primevue/usetoast'
 import { conceptosService } from '../services/conceptosService'
-import FormulaDetailDialog from './FormulaDetailDialog.vue'
-import type { CatalogItem, ConceptoCatalogItem, ConceptoCreateUpdateDto, FormulaItem } from '../types/configuration'
+import type { CatalogItem, ConceptoCatalogItem, ConceptoCreateUpdateDto } from '../types/configuration'
 
 const props = defineProps<{
   tipos: CatalogItem[]
@@ -31,7 +24,6 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const isVisible = ref(false)
-const formulaDialogRef = ref<InstanceType<typeof FormulaDetailDialog> | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const errorMessage = ref<string | null>(null)
@@ -46,7 +38,6 @@ const idTipoConcepto = ref<number | null>(null)
 const idPartidaPresupuestaria = ref<number | null>(null)
 const mesesAplicables = ref<Set<number>>(new Set())
 const tiposLiquidacionIds = ref<number[]>([])
-const formulas = ref<FormulaItem[]>([])
 // Sin checkbox propio en este formulario; se preserva el valor existente para no pisarlo al guardar.
 const ppp = ref(false)
 
@@ -113,7 +104,6 @@ function resetForm() {
   idPartidaPresupuestaria.value = null
   mesesAplicables.value = new Set()
   tiposLiquidacionIds.value = []
-  formulas.value = []
   ppp.value = false
   for (const key of flagKeys) flags.value[key] = false
 }
@@ -137,7 +127,6 @@ async function open(id?: number) {
       idPartidaPresupuestaria.value = data.idPartidaPresupuestaria
       mesesAplicables.value = new Set(data.mesesAplicables)
       tiposLiquidacionIds.value = data.tiposLiquidacion.map((t) => t.id)
-      formulas.value = data.formulas
       ppp.value = data.ppp
       for (const key of flagKeys) flags.value[key] = data[key]
     } finally {
@@ -180,162 +169,78 @@ async function handleSave() {
   }
 }
 
-async function handleFormulaSaved() {
-  if (!editingId.value) return
-  const data = await conceptosService.getById(editingId.value)
-  formulas.value = data.formulas
-}
-
 defineExpose({ open })
 </script>
 
 <template>
-  <Dialog
-    v-model:visible="isVisible"
-    :header="isNew ? 'Nuevo concepto' : 'Editar concepto - ' + editingId"
-    :modal="true"
-    :style="{ width: '52rem' }"
-  >
-    <Message v-if="errorMessage" severity="error" size="small" variant="simple" class="mb-3">{{ errorMessage }}</Message>
+  <Dialog v-model:visible="isVisible" :header="isNew ? 'Nuevo concepto' : 'Editar concepto - ' + editingId"
+    :modal="true" :style="{ width: '52rem' }">
+    <Message v-if="errorMessage" severity="error" size="small" variant="simple" class="mb-3">{{ errorMessage }}
+    </Message>
 
-    <Tabs v-model:value="activeTab">
-      <TabList>
-        <Tab value="general">General</Tab>
-        <Tab value="formulas">Fórmulas</Tab>
-      </TabList>
+    <div class="flex flex-column gap-4 pt-3">
+      <div class="grid formgrid">
+        <div class="field col-6 md:col-3">
+          <label class="field-label">Código</label>
+          <InputNumber v-model="codigo" class="w-full" :disabled="loading" :use-grouping="false" fluid />
+        </div>
+        <div class="field col-6 md:col-3">
+          <label class="field-label">Subcódigo</label>
+          <InputNumber v-model="subcodigo" class="w-full" :disabled="loading" :use-grouping="false" fluid />
+        </div>
+        <div class="field col-12 md:col-6">
+          <label class="field-label">Tipo de concepto</label>
+          <Select v-model="idTipoConcepto" :options="props.tipos" option-label="descripcion" option-value="id"
+            placeholder="Seleccionar tipo..." class="w-full" :disabled="loading" show-clear filter
+            filter-placeholder="Buscar..." />
+        </div>
+      </div>
 
-      <TabPanels>
-        <!-- ── General ─────────────────────────────────────────────────────── -->
-        <TabPanel value="general">
-          <div class="flex flex-column gap-4 pt-3">
-            <div class="grid formgrid">
-              <div class="field col-6 md:col-3">
-                <label class="field-label">Código</label>
-                <InputNumber v-model="codigo" class="w-full" :disabled="loading" :use-grouping="false" fluid />
-              </div>
-              <div class="field col-6 md:col-3">
-                <label class="field-label">Subcódigo</label>
-                <InputNumber v-model="subcodigo" class="w-full" :disabled="loading" :use-grouping="false" fluid />
-              </div>
-              <div class="field col-12 md:col-6">
-                <label class="field-label">Tipo de concepto</label>
-                <Select
-                  v-model="idTipoConcepto"
-                  :options="props.tipos"
-                  option-label="descripcion"
-                  option-value="id"
-                  placeholder="Seleccionar tipo..."
-                  class="w-full"
-                  :disabled="loading"
-                  show-clear filter filter-placeholder="Buscar..."
-                />
-              </div>
-            </div>
+      <div class="field">
+        <label class="field-label">Descripción breve</label>
+        <InputText v-model="descripcionBreve" class="w-full" :disabled="loading" maxlength="10" />
+      </div>
 
-            <div class="field">
-              <label class="field-label">Descripción breve</label>
-              <InputText v-model="descripcionBreve" class="w-full" :disabled="loading" maxlength="10" />
-            </div>
+      <div class="field">
+        <label class="field-label">Descripción</label>
+        <InputText v-model="descripcion" class="w-full" :disabled="loading" maxlength="60" />
+        <Message v-if="!isValidDescripcion" severity="error" size="small" variant="simple">La descripción es obligatoria
+          y debe tener como máximo 60 caracteres.</Message>
+      </div>
 
-            <div class="field">
-              <label class="field-label">Descripción</label>
-              <InputText v-model="descripcion" class="w-full" :disabled="loading" maxlength="60" />
-              <Message v-if="!isValidDescripcion" severity="error" size="small" variant="simple">La descripción es obligatoria y debe tener como máximo 60 caracteres.</Message>
-            </div>
 
-            
-            <div class="field">
-              <label class="field-label">Tipos de liquidación</label>
-              <MultiSelect
-                v-model="tiposLiquidacionIds"
-                :options="props.tiposLiquidacion"
-                option-label="descripcion"
-                option-value="id"
-                placeholder="Seleccioná los tipos de liquidación..."
-                filter
-                display="chip"
-                class="w-full"
-                :disabled="loading"
-                :max-selected-labels="3"
-              />
-            </div>
-            <div class="field">
-              <label class="field-label">Comportamiento</label>
-              <div class="grid">
-                <div v-for="key in flagKeys" :key="key" class="col-6 md:col-6 lg:col-4 flex align-items-center gap-2">
-                  <Checkbox :input-id="`flag-${key}`" v-model="flags[key]" binary :disabled="loading" />
-                  <label :for="`flag-${key}`">{{ FLAG_LABELS[key] }}</label>
-                </div>
-              </div>
-            </div>
-
-            <div class="field">
-              <label class="field-label">Meses de aplicación</label>
-              <div class="flex flex-wrap gap-3">
-                <div v-for="mes in MESES" :key="mes.value" class="flex align-items-center gap-2">
-                  <Checkbox
-                    :input-id="`mes-${mes.value}`"
-                    :model-value="mesesAplicables.has(mes.value)"
-                    binary
-                    :disabled="loading"
-                    @update:model-value="toggleMes(mes.value)"
-                  />
-                  <label :for="`mes-${mes.value}`">{{ mes.label }}</label>
-                </div>
-              </div>
-            </div>
+      <div class="field">
+        <label class="field-label">Tipos de liquidación</label>
+        <MultiSelect v-model="tiposLiquidacionIds" :options="props.tiposLiquidacion" option-label="descripcion"
+          option-value="id" placeholder="Seleccioná los tipos de liquidación..." filter display="chip" class="w-full"
+          :disabled="loading" :max-selected-labels="3" />
+      </div>
+      <div class="field">
+        <label class="field-label">Comportamiento</label>
+        <div class="grid">
+          <div v-for="key in flagKeys" :key="key" class="col-6 md:col-6 lg:col-4 flex align-items-center gap-2">
+            <Checkbox :input-id="`flag-${key}`" v-model="flags[key]" binary :disabled="loading" />
+            <label :for="`flag-${key}`">{{ FLAG_LABELS[key] }}</label>
           </div>
-        </TabPanel>
+        </div>
+      </div>
 
-        <!-- ── Fórmulas ─────────────────────────────────────────────────────── -->
-        <TabPanel value="formulas">
-          <div class="pt-3 flex flex-column gap-3">
-            <div class="flex justify-content-end">
-              <Button
-                label="Nueva fórmula"
-                icon="pi pi-plus"
-                size="small"
-                :disabled="!editingId"
-                @click="formulaDialogRef?.open({ conceptoId: editingId!, conceptoLabel: `${codigo}/${subcodigo} - ${descripcion}` })"
-              />
-            </div>
-            <DataTable :value="formulas" data-key="id" striped-rows>
-              <template #empty>
-                <span class="muted">Este concepto no tiene fórmulas asociadas.</span>
-              </template>
-              <Column field="id" header="ID" />
-              <Column field="condicion" header="Condición" />
-              <Column field="accion" header="Acción" />
-              <Column>
-                <template #body="{ data }">
-                  <div class="flex gap-1 align-items-center">
-                  <Button
-                    icon="pi pi-pencil"
-                    size="small"
-                    severity="secondary"
-                    outlined
-                    @click="formulaDialogRef?.open({ formulaId: data.id })"
-                  />
-                  </div>
-                </template>
-              </Column>
-            </DataTable>
+      <div class="field">
+        <label class="field-label">Meses de aplicación</label>
+        <div class="flex flex-wrap gap-3">
+          <div v-for="mes in MESES" :key="mes.value" class="flex align-items-center gap-2">
+            <Checkbox :input-id="`mes-${mes.value}`" :model-value="mesesAplicables.has(mes.value)" binary
+              :disabled="loading" @update:model-value="toggleMes(mes.value)" />
+            <label :for="`mes-${mes.value}`">{{ mes.label }}</label>
           </div>
-        </TabPanel>
-      </TabPanels>
-    </Tabs>
+        </div>
+      </div>
+    </div>
 
     <template #footer>
       <Button label="Cancelar" severity="secondary" @click="isVisible = false" />
-      <Button
-        label="Guardar"
-        icon="pi pi-check"
-        :loading="saving"
-        :disabled="loading || !isValidDescripcion"
-        @click="handleSave"
-      />
+      <Button label="Guardar" icon="pi pi-check" :loading="saving" :disabled="loading || !isValidDescripcion"
+        @click="handleSave" />
     </template>
   </Dialog>
-
-  <FormulaDetailDialog ref="formulaDialogRef" @saved="handleFormulaSaved" />
 </template>

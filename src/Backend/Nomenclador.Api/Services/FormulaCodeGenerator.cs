@@ -20,7 +20,7 @@ public static class FormulaCodeGenerator
 
     private readonly record struct Token(string Name, int Index);
 
-    public static string Generate(string spName, string condicion, string accion, IReadOnlyCollection<string> primitivaNames)
+    public static (string, int) Generate(string spName, string condicion, string accion, IReadOnlyCollection<string> primitivaNames)
     {
         var knownNames = new HashSet<string>(primitivaNames, StringComparer.Ordinal);
         var nextIndex = 1;
@@ -62,7 +62,7 @@ public static class FormulaCodeGenerator
         sb.Append("END IF; \n");
         sb.Append("END ").Append(spName).Append(';');
 
-        return sb.ToString();
+        return (sb.ToString(), todosLosTokens.Count);
     }
 
     private static List<Token> ExtractTokens(string? text, HashSet<string> knownNames, ref int nextIndex)

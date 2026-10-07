@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
 import Listbox from 'primevue/listbox'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
@@ -95,7 +96,7 @@ function analizarTokens(texto: string) {
 const condicionTokens = computed(() => analizarTokens(condicion.value))
 const accionTokens = computed(() => analizarTokens(accion.value))
 
-async function open(options: { conceptoId: number; conceptoLabel: string } | { formulaId: number }) {
+async function open(options: { conceptoId: number} | { formulaId: number }) {
   errorMessage.value = null
   condicion.value = ''
   accion.value = ''
@@ -200,7 +201,7 @@ defineExpose({ open })
 
       <div class="field">
         <label class="field-label">Condición</label>
-        <InputText
+        <Textarea
           ref="condicionInputRef"
           v-model="condicion"
           class="w-full"

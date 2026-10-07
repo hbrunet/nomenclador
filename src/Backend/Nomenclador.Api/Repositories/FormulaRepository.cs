@@ -19,9 +19,7 @@ public sealed class FormulaRepository(NHibernate.ISession session)
         var entity = await session.GetAsync<FormulaEntity>(id);
         if (entity is null) return null;
 
-        var concepto = entity.ConceptoId.HasValue
-            ? await session.GetAsync<ConceptoCatalogEntity>(entity.ConceptoId.Value)
-            : null;
+        var concepto = await session.GetAsync<ConceptoCatalogEntity>(entity.ConceptoId);
 
         return ToDto(entity, concepto);
     }
@@ -51,7 +49,8 @@ public sealed class FormulaRepository(NHibernate.ISession session)
             var primitivaNames = await GetPrimitivaNombresAsync();
             var spName = FormulaCodeGenerator.BuildSpName(concepto.DescripcionBreve, entity.Id);
             entity.SpName = spName;
-            entity.Codigo = FormulaCodeGenerator.Generate(spName, dto.Condicion, dto.Accion, primitivaNames);
+            (entity.Codigo, entity.CondicionInput) = FormulaCodeGenerator.Generate(spName, dto.Condicion, dto.Accion, primitivaNames);
+            entity.AccionInput = entity.CondicionInput;
 
             await session.FlushAsync();
             await tx.CommitAsync();
@@ -68,9 +67,7 @@ public sealed class FormulaRepository(NHibernate.ISession session)
         var entity = await session.GetAsync<FormulaEntity>(id);
         if (entity is null) return null;
 
-        var concepto = entity.ConceptoId.HasValue
-            ? await session.GetAsync<ConceptoCatalogEntity>(entity.ConceptoId.Value)
-            : null;
+        var concepto = await session.GetAsync<ConceptoCatalogEntity>(entity.ConceptoId);
 
         entity.Condicion = dto.Condicion;
         entity.Accion = dto.Accion;
@@ -81,7 +78,8 @@ public sealed class FormulaRepository(NHibernate.ISession session)
             var spName = entity.SpName ?? FormulaCodeGenerator.BuildSpName(concepto?.DescripcionBreve ?? "FORMULA", entity.Id);
             var primitivaNames = await GetPrimitivaNombresAsync();
             entity.SpName = spName;
-            entity.Codigo = FormulaCodeGenerator.Generate(spName, dto.Condicion, dto.Accion, primitivaNames);
+            (entity.Codigo, entity.CondicionInput) = FormulaCodeGenerator.Generate(spName, dto.Condicion, dto.Accion, primitivaNames);
+            entity.AccionInput = entity.CondicionInput;
 
             await session.FlushAsync();
             await tx.CommitAsync();
@@ -158,7 +156,7 @@ public sealed class FormulaRepository(NHibernate.ISession session)
     private static FormulaDetailDto ToDto(FormulaEntity entity, ConceptoCatalogEntity? concepto) => new()
     {
         Id = entity.Id,
-        ConceptoId = entity.ConceptoId ?? 0,
+        ConceptoId = entity.ConceptoId,
         ConceptoCodigo = concepto?.Codigo ?? 0,
         ConceptoSubcodigo = concepto?.Subcodigo ?? 0,
         ConceptoDescripcion = concepto?.Descripcion ?? "No encontrado en el catálogo",

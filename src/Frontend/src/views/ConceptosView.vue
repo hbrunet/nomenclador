@@ -9,6 +9,7 @@ import Tag from 'primevue/tag'
 import ConceptoDetailDialog from '../components/ConceptoDetailDialog.vue'
 import { conceptosService } from '../services/conceptosService'
 import type { CatalogItem, ConceptoCatalogItem } from '../types/configuration'
+import FormulasDialog from '../components/FormulasDialog.vue'
 
 const DEBOUNCE_MS = 300
 
@@ -17,6 +18,7 @@ const loading = ref(false)
 const query = ref('')
 const tipoFilter = ref<number | null>(null)
 const dialogRef = ref<InstanceType<typeof ConceptoDetailDialog> | null>(null)
+const formulasDialogRef = ref<InstanceType<typeof FormulasDialog> | null>(null)
 
 const tipos = ref<CatalogItem[]>([])
 const tiposLiquidacion = ref<CatalogItem[]>([])
@@ -66,6 +68,9 @@ function openCreate() {
 
 function openEdit(id: number) {
   dialogRef.value?.open(id)
+}
+function openFormulas(conceptoId: number) {
+  formulasDialogRef.value?.open({ conceptoId })
 }
 
 function handleSaved(item: ConceptoCatalogItem) {
@@ -146,13 +151,15 @@ onMounted(async () => {
           <span v-else class="muted">Sin tipo</span>
         </template>
       </Column>
-      <Column header="" style="width: 6rem">
+      <Column header="">
         <template #body="{ data }">
           <Button icon="pi pi-pencil" text rounded @click="openEdit(data.id)" />
+          <Button icon="pi pi-calculator" text rounded @click="openFormulas(data.id)" />
         </template>
       </Column>
     </DataTable>
 
     <ConceptoDetailDialog ref="dialogRef" :tipos="tipos" :tipos-liquidacion="tiposLiquidacion" @saved="handleSaved" />
+    <FormulasDialog ref="formulasDialogRef" />
   </section>
 </template>
