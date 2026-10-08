@@ -217,10 +217,17 @@ async function open(tipoReferencia: TipoReferencia, id: number, descripcion = ''
   isVisible.value = true
 
   // Por defecto se muestran las configuraciones vigentes en el período activo.
-  const periodoActivo = await configurationService.getPeriodoActivo()
-  vigenteEn.value = periodoActivo ? parseLocalDate(periodoActivo) : new Date()
+  try {
+    const periodoActivo = await configurationService.getPeriodoActivo()
+    vigenteEn.value = periodoActivo ? parseLocalDate(periodoActivo) : new Date()
+  } catch (e: any) {
+    error.value =
+      e.response?.data?.mensaje ??
+      e.response?.data?.message ??
+      'No se pudo obtener el período activo.'
+    return
+  }
   await load()
-}
 
 function close() {
   isVisible.value = false
