@@ -172,7 +172,7 @@ onMounted(async () => {
           <div class="flex justify-content-between align-items-end gap-3 mt-3 mb-3 flex-wrap">
             <div class="flex gap-2 flex-wrap">
               <InputText v-model="filterTipo" placeholder="Filtrar por ID de tipo..." style="width: 240px" />
-              <InputText v-model="filterValores" placeholder="Filtrar por descripción..." style="width: 340px" />
+              <InputText v-model="filterValores" placeholder="Filtrar por descripción o tipo..." style="width: 340px" />
               
             </div>
             <div class="flex gap-2">
