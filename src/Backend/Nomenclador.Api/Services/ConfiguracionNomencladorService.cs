@@ -20,12 +20,16 @@ public sealed class ConfiguracionNomencladorService(
         DateOnly? vigenteEn,
         string? estado,
         int page = 1,
-        int pageSize = 20)
+        int pageSize = 20,
+        int? conceptoId = null,
+        int? valorFijoId = null,
+        int? valorCategoriaId = null)
     {
         var catalogs = await catalogRepository.GetSnapshotForListAsync();
         var periodoActivo = await catalogRepository.GetPeriodoActivoAsync();
         var (entities, total) = await configuracionRepository.GetAllAsync(
-            nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize, periodoActivo);
+            nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize, periodoActivo,
+            conceptoId, valorFijoId, valorCategoriaId);
 
         var items = entities
             .Select(entity => mapper.ToListItemDto(entity, catalogs, periodoActivo))

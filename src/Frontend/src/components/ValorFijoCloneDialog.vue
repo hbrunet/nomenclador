@@ -4,10 +4,11 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
+import RadioButton from 'primevue/radiobutton'
 import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import { valoresFijosService } from '../services/valoresFijosService'
-import type { ValorFijoCatalogItem } from '../types/configuration'
+import type { ValorFijoCatalogItem, ValorFijoCloneDto } from '../types/configuration'
 
 const emit = defineEmits<{
   (e: 'cloned', item: ValorFijoCatalogItem): void
@@ -21,11 +22,17 @@ const sourceId = ref<number | null>(null)
 const source = ref<ValorFijoCatalogItem | null>(null)
 const descripcion = ref('')
 const coeficienteAjuste = ref<number>(1)
+const valorNuevo = ref<number | null>(null)
+const modo = ref<'coeficiente' | 'importe'>('coeficiente')
 
 const isValidDescripcion = computed(() => descripcion.value.trim().length > 0 && descripcion.value.length <= 40)
+const isValidAjuste = computed(() =>
+  modo.value === 'coeficiente' ? (coeficienteAjuste.value ?? 0) > 0 : (valorNuevo.value ?? -1) >= 0,
+)
 // Solo previsualización: el valor real se calcula y persiste en el backend con decimal.
 // +Number.EPSILON mitiga el error de precisión binaria de JS (ej. 1.005 * 100 = 100.4999...).
 const valorResultante = computed(() => {
+  if (modo.value === 'importe') return valorNuevo.value ?? 0
   if (!source.value) return 0
   return Math.round((source.value.valor * (coeficienteAjuste.value ?? 0) + Number.EPSILON) * 100) / 100
 })
@@ -35,6 +42,8 @@ async function open(id: number) {
   source.value = null
   descripcion.value = ''
   coeficienteAjuste.value = 1
+  valorNuevo.value = null
+  modo.value = 'coeficiente'
   isVisible.value = true
 
   loading.value = true
@@ -50,8 +59,7 @@ async function open(id: number) {
 async function handleClone() {
   if (!sourceId.value) return
 
-  const coef = coeficienteAjuste.value ?? 0
-  if (coef <= 0) {
+  if (modo.value === 'coeficiente' && (coeficienteAjuste.value ?? 0) <= 0) {
     toast.add({
       severity: 'error',
       summary: 'Coeficiente inválido',
@@ -61,9 +69,22 @@ async function handleClone() {
     return
   }
 
+  if (modo.value === 'importe' && (valorNuevo.value ?? -1) < 0) {
+    toast.add({
+      severity: 'error',
+      summary: 'Importe inválido',
+      detail: 'El importe debe ser mayor o igual a cero.',
+      life: 2500,
+    })
+    return
+  }
+
   saving.value = true
   try {
-    const dto = { descripcion: descripcion.value.trim(), coeficienteAjuste: coef }
+    const dto: ValorFijoCloneDto =
+      modo.value === 'coeficiente'
+        ? { descripcion: descripcion.value.trim(), coeficienteAjuste: coeficienteAjuste.value ?? 0 }
+        : { descripcion: descripcion.value.trim(), valorNuevo: valorNuevo.value ?? 0 }
     const cloned = await valoresFijosService.clone(sourceId.value, dto)
     emit('cloned', cloned)
     toast.add({
@@ -108,7 +129,18 @@ defineExpose({ open })
         </Message>
       </div>
 
-      <div class="field">
+      <div class="flex flex-column gap-2">
+        <label class="flex align-items-center gap-2 cursor-pointer">
+          <RadioButton v-model="modo" value="coeficiente" input-id="modo-coeficiente" :disabled="loading" />
+          <span>Aplicar coeficiente de ajuste</span>
+        </label>
+        <label class="flex align-items-center gap-2 cursor-pointer">
+          <RadioButton v-model="modo" value="importe" input-id="modo-importe" :disabled="loading" />
+          <span>Indicar un importe nuevo</span>
+        </label>
+      </div>
+
+      <div v-if="modo === 'coeficiente'" class="field">
         <label class="field-label">Coeficiente de ajuste</label>
         <InputNumber
           v-model="coeficienteAjuste"
@@ -120,6 +152,26 @@ defineExpose({ open })
           :disabled="loading"
           fluid
         />
+        <Message v-if="(coeficienteAjuste ?? 0) <= 0" severity="error" size="small" variant="simple">
+          El coeficiente de ajuste debe ser mayor a cero.
+        </Message>
+      </div>
+
+      <div v-else class="field">
+        <label class="field-label">Importe nuevo</label>
+        <InputNumber
+          v-model="valorNuevo"
+          input-id="valorNuevo"
+          :min-fraction-digits="2"
+          :max-fraction-digits="2"
+          :min="0"
+          :input-style="{ textAlign: 'right' }"
+          :disabled="loading"
+          fluid
+        />
+        <Message v-if="(valorNuevo ?? -1) < 0" severity="error" size="small" variant="simple">
+          El importe es obligatorio y no puede ser negativo.
+        </Message>
       </div>
 
       <div v-if="source" class="muted">
@@ -134,7 +186,7 @@ defineExpose({ open })
         label="Clonar"
         icon="pi pi-clone"
         :loading="saving"
-        :disabled="loading || !isValidDescripcion"
+        :disabled="loading || !isValidDescripcion || !isValidAjuste"
         @click="handleClone"
       />
     </template>

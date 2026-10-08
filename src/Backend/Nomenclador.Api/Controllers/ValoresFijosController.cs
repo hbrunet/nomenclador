@@ -77,8 +77,14 @@ public sealed class ValoresFijosController(CatalogRepository catalogRepository) 
         if (string.IsNullOrWhiteSpace(dto.Descripcion))
             return BadRequest(new { message = "La descripción es obligatoria." });
 
-        if (dto.CoeficienteAjuste <= 0)
+        if (dto.CoeficienteAjuste.HasValue == dto.ValorNuevo.HasValue)
+            return BadRequest(new { message = "Debe indicar un coeficiente de ajuste o un valor nuevo, pero no ambos." });
+
+        if (dto.CoeficienteAjuste.HasValue && dto.CoeficienteAjuste.Value <= 0)
             return BadRequest(new { message = "El coeficiente de ajuste debe ser mayor a cero." });
+
+        if (dto.ValorNuevo.HasValue && dto.ValorNuevo.Value < 0)
+            return BadRequest(new { message = "El valor nuevo no puede ser negativo." });
 
         var result = await catalogRepository.CloneValorFijoAsync(id, dto);
         return result is null ? NotFound() : Ok(result);

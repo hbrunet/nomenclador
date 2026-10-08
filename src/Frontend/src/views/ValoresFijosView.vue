@@ -15,6 +15,7 @@ import { useToast } from 'primevue/usetoast'
 import ValorFijoTipoDialog from '../components/ValorFijoTipoDialog.vue'
 import ValorFijoDetailDialog from '../components/ValorFijoDetailDialog.vue'
 import ValorFijoCloneDialog from '../components/ValorFijoCloneDialog.vue'
+import NomencladoresAsociadosDialog from '../components/NomencladoresAsociadosDialog.vue'
 import { valoresFijosService } from '../services/valoresFijosService'
 import type { CatalogItem, ValorFijoCatalogItem } from '../types/configuration'
 
@@ -40,8 +41,8 @@ const filteredValores = computed(() => {
   const t = filterTipo.value.toLowerCase().trim()
   return valores.value.filter(
     (v) =>
-      (!q || (v.descripcion ?? '').toLowerCase().includes(q) || v.id.toString().includes(q)) &&
-      (!t || (v.tipo ?? '').toLowerCase().includes(t) || (v.idTipo ?? '').toString().includes(t)),
+      (!q || (v.descripcion ?? '').toLowerCase().includes(q) || (v.tipo ?? '').toLowerCase().includes(q)) &&
+      (!t || (v.idTipo ?? '').toString().includes(t)),
   )
 })
 
@@ -99,6 +100,12 @@ function handleValorSaved(item: ValorFijoCatalogItem) {
 
 function openCloneValor(id: number) {
   cloneDialogRef.value?.open(id)
+}
+
+const asociadosDialogRef = ref<InstanceType<typeof NomencladoresAsociadosDialog> | null>(null)
+
+function openAsociadosValor(valor: ValorFijoCatalogItem) {
+  asociadosDialogRef.value?.open('valorFijo', valor.id, valor.descripcion)
 }
 
 function handleValorCloned(item: ValorFijoCatalogItem) {
@@ -193,8 +200,8 @@ onMounted(async () => {
           <div class="flex justify-content-between align-items-end gap-3 mt-3 mb-3 flex-wrap">
             <div class="flex gap-2 flex-wrap">
               
-              <InputText v-model="filterTipo" placeholder="Filtrar por tipo..." style="width: 240px" />
-              <InputText v-model="filterValores" placeholder="Filtrar por ID o descripción..." style="width: 340px" />
+              <InputText v-model="filterTipo" placeholder="Filtrar por ID de tipo..." style="width: 240px" />
+              <InputText v-model="filterValores" placeholder="Filtrar por descripción o tipo..." style="width: 340px" />
             </div>
             <div class="flex gap-2">
               <Button
@@ -251,29 +258,38 @@ onMounted(async () => {
                 {{ data.valor?.toLocaleString('es-AR', { minimumFractionDigits: 2 }) ?? '—' }}
               </template>
             </Column>
-            <Column style="width: 10rem">
+            <Column style="width: 13rem">
               <template #body="{ data }">
                 <div class="flex gap-1 align-items-center">
                   <Button
-                    label="Editar"
                     icon="pi pi-pencil"
                     size="small"
                     severity="secondary"
-                    outlined
+                    rounded
+                    title="Editar"
                     @click="openEditValor(data.id)"
                   />
                   <Button
-                    label="Clonar"
                     icon="pi pi-clone"
                     size="small"
                     severity="secondary"
-                    outlined
+                    rounded
+                    title="Clonar"
                     @click="openCloneValor(data.id)">
                   </Button>
+                  <Button
+                    icon="pi pi-sitemap"
+                    size="small"
+                    severity="secondary"
+                    rounded
+                    title="Configuraciones asociadas"
+                    @click="openAsociadosValor(data)"
+                  />
                   <Button
                     icon="pi pi-trash"
                     size="small"
                     severity="danger"
+                    title="Eliminar"
                     text
                     rounded
                     @click="confirmDeleteValor(data)"
@@ -285,6 +301,7 @@ onMounted(async () => {
 
           <ValorFijoDetailDialog ref="valorDialogRef" :tipos="tipos" @saved="handleValorSaved" />
           <ValorFijoCloneDialog ref="cloneDialogRef" @cloned="handleValorCloned" />
+          <NomencladoresAsociadosDialog ref="asociadosDialogRef" />
         </TabPanel>
 
         <!-- ── Tipos ──────────────────────────────────────────────────────── -->

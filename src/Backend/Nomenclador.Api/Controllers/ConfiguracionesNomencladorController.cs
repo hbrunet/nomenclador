@@ -15,10 +15,15 @@ public sealed class ConfiguracionesNomencladorController(ConfiguracionNomenclado
         [FromQuery] int? zonaId,
         [FromQuery] DateOnly? vigenteEn,
         [FromQuery] string? estado,
+        [FromQuery] int? conceptoId,
+        [FromQuery] int? valorFijoId,
+        [FromQuery] int? valorCategoriaId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await configuracionService.GetAllAsync(nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize);
+        var result = await configuracionService.GetAllAsync(
+            nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize,
+            conceptoId, valorFijoId, valorCategoriaId);
         return Ok(result);
     }
 
