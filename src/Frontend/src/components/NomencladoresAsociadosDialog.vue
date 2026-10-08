@@ -34,6 +34,7 @@ const loading = ref(false)
 const printing = ref(false)
 const error = ref<string | null>(null)
 const pagination = ref({ total: 0, page: 1, pageSize: 10 })
+let latestLoadRequest = 0
 
 const paginatorFirst = computed(() => (pagination.value.page - 1) * pagination.value.pageSize)
 const etiqueta = computed(() => ETIQUETAS[tipo.value])
@@ -64,6 +65,7 @@ function buildFiltroReferencia(id: number): ConfigurationFilters {
 async function load(page = 1) {
   if (referenciaId.value === null) return
 
+  const requestId = ++latestLoadRequest
   loading.value = true
   error.value = null
   try {
@@ -74,9 +76,13 @@ async function load(page = 1) {
       page,
       pageSize: pagination.value.pageSize,
     })
+    if (requestId !== latestLoadRequest) return
+
     items.value = result.items
     pagination.value = { total: result.total, page: result.page, pageSize: result.pageSize }
   } catch (e: any) {
+    if (requestId !== latestLoadRequest) return
+
     items.value = []
     pagination.value = { ...pagination.value, total: 0, page: 1 }
     error.value =
@@ -84,7 +90,7 @@ async function load(page = 1) {
       e.response?.data?.message ??
       'No se pudieron obtener las configuraciones asociadas.'
   } finally {
-    loading.value = false
+    if (requestId === latestLoadRequest) loading.value = false
   }
 }
 
@@ -208,6 +214,8 @@ function onPageChange(event: { page: number; rows: number }) {
 }
 
 async function open(tipoReferencia: TipoReferencia, id: number, descripcion = '') {
+  latestLoadRequest += 1
+  loading.value = false
   tipo.value = tipoReferencia
   referenciaId.value = id
   referenciaDescripcion.value = descripcion
