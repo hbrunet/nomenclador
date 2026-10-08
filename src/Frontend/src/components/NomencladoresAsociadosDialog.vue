@@ -236,6 +236,7 @@ async function open(tipoReferencia: TipoReferencia, id: number, descripcion = ''
     return
   }
   await load()
+}
 
 function close() {
   isVisible.value = false
@@ -260,23 +261,11 @@ defineExpose({ open, close })
       <div class="flex align-items-end gap-2 flex-wrap">
         <div class="flex flex-column gap-1">
           <label class="field-label">Vigente en</label>
-          <DatePicker
-            v-model="vigenteEn"
-            view="month"
-            date-format="mm/yy"
-            show-clear
-            style="width: 12rem"
-            @update:model-value="load(1)"
-          />
+          <DatePicker v-model="vigenteEn" view="month" date-format="mm/yy" show-clear style="width: 12rem"
+            @update:model-value="load(1)" />
         </div>
-        <Button
-          label="Actualizar"
-          icon="pi pi-refresh"
-          severity="secondary"
-          outlined
-          :loading="loading"
-          @click="load(pagination.page)"
-        />
+        <Button label="Actualizar" icon="pi pi-refresh" severity="secondary" outlined :loading="loading"
+          @click="load(pagination.page)" />
         <span class="muted ml-2">{{ pagination.total }} configuración(es)</span>
       </div>
 
@@ -310,39 +299,19 @@ defineExpose({ open, close })
         </Column>
         <Column style="width: 6rem">
           <template #body="{ data }">
-            <Button
-              icon="pi pi-external-link"
-              size="small"
-              severity="secondary"
-              text
-              rounded
-              title="Abrir configuración"
-              @click="abrirConfiguracion(data.id)"
-            />
+            <Button icon="pi pi-external-link" size="small" severity="secondary" text rounded
+              title="Abrir configuración" @click="abrirConfiguracion(data.id)" />
           </template>
         </Column>
       </DataTable>
 
-      <Paginator
-        v-if="pagination.total > pagination.pageSize"
-        :first="paginatorFirst"
-        :rows="pagination.pageSize"
-        :total-records="pagination.total"
-        :rows-per-page-options="[10, 20, 50]"
-        @page="onPageChange"
-      />
+      <Paginator v-if="pagination.total > pagination.pageSize" :first="paginatorFirst" :rows="pagination.pageSize"
+        :total-records="pagination.total" :rows-per-page-options="[10, 20, 50]" @page="onPageChange" />
     </div>
 
     <template #footer>
-      <Button
-        label="Imprimir"
-        icon="pi pi-print"
-        severity="secondary"
-        outlined
-        :loading="printing"
-        :disabled="loading || pagination.total === 0"
-        @click="printListado"
-      />
+      <Button label="Imprimir" icon="pi pi-print" severity="secondary" outlined :loading="printing"
+        :disabled="loading || pagination.total === 0" @click="printListado" />
       <Button label="Cerrar" severity="secondary" outlined @click="close" />
     </template>
   </Dialog>
