@@ -14,6 +14,7 @@ import TabPanel from 'primevue/tabpanel'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import ValorCategoriaTipoDialog from '../components/ValorCategoriaTipoDialog.vue'
+import NomencladoresAsociadosDialog from '../components/NomencladoresAsociadosDialog.vue'
 import { valoresCategoriaService } from '../services/valoresCategoriaService'
 import type { CatalogItem, ValorCategoriaListItemDto, ValorCategoriaTipoCreateUpdateDto } from '../types/configuration'
 
@@ -34,8 +35,8 @@ const filteredValores = computed(() => {
   const t = filterTipo.value.toLowerCase().trim()
   return valores.value.filter(
     (v) =>
-      (!q || v.descripcion.toLowerCase().includes(q) || v.id.toString().includes(q)) &&
-      (!t || v.tipo.toLowerCase().includes(t) || v.idTipo.toString().includes(t)),
+      (!q || v.descripcion.toLowerCase().includes(q) || v.tipo.toLowerCase().includes(q)) &&
+      (!t || v.idTipo.toString().includes(t)),
   )
 })
 
@@ -74,7 +75,15 @@ function confirmDeleteValor(valor: ValorCategoriaListItemDto) {
   })
 }
 
+// ── Configuraciones asociadas ────────────────────────────────────────────────
+const asociadosDialogRef = ref<InstanceType<typeof NomencladoresAsociadosDialog> | null>(null)
+
+function openAsociadosValor(valor: ValorCategoriaListItemDto) {
+  asociadosDialogRef.value?.open('valorCategoria', valor.id, valor.descripcion)
+}
+
 // ── Tipos ────────────────────────────────────────────────────────────────────
+
 const tipos = ref<CatalogItem[]>([])
 const loadingTipos = ref(false)
 const deleteTipoError = ref<string | null>(null)
@@ -162,8 +171,8 @@ onMounted(async () => {
         <TabPanel value="valores">
           <div class="flex justify-content-between align-items-end gap-3 mt-3 mb-3 flex-wrap">
             <div class="flex gap-2 flex-wrap">
-              <InputText v-model="filterTipo" placeholder="Filtrar por tipo..." style="width: 240px" />
-              <InputText v-model="filterValores" placeholder="Filtrar por ID o descripción..." style="width: 340px" />
+              <InputText v-model="filterTipo" placeholder="Filtrar por ID de tipo..." style="width: 240px" />
+              <InputText v-model="filterValores" placeholder="Filtrar por descripción..." style="width: 340px" />
               
             </div>
             <div class="flex gap-2">
@@ -219,7 +228,7 @@ onMounted(async () => {
             <Column header="Items" style="width: 6rem; text-align: right">
               <template #body="{ data }">{{ data.cantidadItems }}</template>
             </Column>
-            <Column style="width: 10rem">
+            <Column style="width: 16rem">
               <template #body="{ data }">
                 <div class="flex gap-1 align-items-center">
                   <Button
@@ -229,6 +238,14 @@ onMounted(async () => {
                     severity="secondary"
                     outlined
                     @click="router.push(`/valores-categoria/${data.id}`)"
+                  />
+                  <Button
+                    icon="pi pi-sitemap"
+                    size="small"
+                    severity="secondary"
+                    outlined
+                    title="Configuraciones asociadas"
+                    @click="openAsociadosValor(data)"
                   />
                   <Button
                     icon="pi pi-trash"
@@ -242,6 +259,8 @@ onMounted(async () => {
               </template>
             </Column>
           </DataTable>
+
+          <NomencladoresAsociadosDialog ref="asociadosDialogRef" />
         </TabPanel>
 
         <!-- ── Tipos ──────────────────────────────────────────────────────── -->

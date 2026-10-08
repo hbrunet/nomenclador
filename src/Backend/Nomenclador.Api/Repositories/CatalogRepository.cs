@@ -1447,7 +1447,10 @@ public sealed class CatalogRepository(NHibernate.ISession session)
         {
             Descripcion = dto.Descripcion.Trim(),
             Tipo = entity.Tipo,
-            Valor = Math.Round(entity.Valor * dto.CoeficienteAjuste, 2, MidpointRounding.AwayFromZero)
+            Valor = Math.Round(
+                dto.ValorNuevo ?? entity.Valor * (dto.CoeficienteAjuste ?? 1m),
+                2,
+                MidpointRounding.AwayFromZero)
         };
 
         using var tx = session.BeginTransaction();

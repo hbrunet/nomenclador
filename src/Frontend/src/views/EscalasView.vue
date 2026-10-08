@@ -11,6 +11,7 @@ import DatePicker from 'primevue/datepicker'
 import InputNumber from 'primevue/inputnumber'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
+import NomencladoresAsociadosDialog from '../components/NomencladoresAsociadosDialog.vue'
 import { escalasService } from '../services/escalasService'
 import { formatLocalDate } from '../utils/date'
 import type { EscalaCloneConflictDto, EscalaListItemDto } from '../types/configuration'
@@ -61,6 +62,13 @@ function confirmDelete(escala: EscalaListItemDto) {
     rejectProps: { severity: 'secondary', outlined: true },
     accept: () => handleDelete(escala.id),
   })
+}
+
+// ── Configuraciones asociadas ──────────────────────────────────────────────
+const asociadosDialogRef = ref<InstanceType<typeof NomencladoresAsociadosDialog> | null>(null)
+
+function openAsociados(escala: EscalaListItemDto) {
+  asociadosDialogRef.value?.open('escala', escala.id, escala.descripcion)
 }
 
 // ── Clonación individual ───────────────────────────────────────────────────
@@ -166,7 +174,7 @@ onMounted(load)
           {{ data.cantidadCategorias }}
         </template>
       </Column>
-      <Column style="width: 18rem">
+      <Column style="width: 26rem">
         <template #body="{ data }">
           <div class="flex gap-1 align-items-center">
             <Button
@@ -186,6 +194,14 @@ onMounted(load)
               @click="openCloneDialog(data)"
             />
             <Button
+              label="Configuraciones"
+              icon="pi pi-sitemap"
+              size="small"
+              severity="secondary"
+              outlined
+              @click="openAsociados(data)"
+            />
+            <Button
               icon="pi pi-trash"
               size="small"
               severity="danger"
@@ -197,6 +213,8 @@ onMounted(load)
         </template>
       </Column>
     </DataTable>
+
+    <NomencladoresAsociadosDialog ref="asociadosDialogRef" />
 
     <Dialog v-model:visible="cloneDialogVisible" header="Clonar escala salarial" modal style="width: 420px">
       <p class="muted mt-0">

@@ -4,5 +4,8 @@ public sealed class ValorFijoCloneDto
 {
     public string Descripcion { get; init; } = string.Empty;
 
-    public decimal CoeficienteAjuste { get; init; }
+    // Se debe informar exactamente uno de los dos: ajuste por coeficiente o importe nuevo.
+    public decimal? CoeficienteAjuste { get; init; }
+
+    public decimal? ValorNuevo { get; init; }
 }

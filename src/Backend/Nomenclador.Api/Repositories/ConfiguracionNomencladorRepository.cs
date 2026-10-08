@@ -18,7 +18,10 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         string? estado,
         int page,
         int pageSize,
-        DateOnly? periodoActivo = null)
+        DateOnly? periodoActivo = null,
+        int? conceptoId = null,
+        int? valorFijoId = null,
+        int? valorCategoriaId = null)
     {
         ConfiguracionNomencladorEntity alias = null!;
         NomencladorCatalogEntity nomencladorAlias = null!;
@@ -33,6 +36,30 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         if (zonaId.HasValue)
             query.Where(() => alias.ZonaId == zonaId.Value);
+
+        if (conceptoId.HasValue)
+        {
+            var subquery = QueryOver.Of<ConceptoConfiguradoEntity>()
+                .Where(item => item.ConceptoId == conceptoId.Value)
+                .Select(item => item.ConfiguracionNomencladorId);
+            query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
+        }
+
+        if (valorFijoId.HasValue)
+        {
+            var subquery = QueryOver.Of<ValorFijoConfiguradoEntity>()
+                .Where(item => item.ValorFijoId == valorFijoId.Value)
+                .Select(item => item.ConfiguracionNomencladorId);
+            query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
+        }
+
+        if (valorCategoriaId.HasValue)
+        {
+            var subquery = QueryOver.Of<ValorCategoriaConfiguradoEntity>()
+                .Where(item => item.ValorCategoriaId == valorCategoriaId.Value)
+                .Select(item => item.ConfiguracionNomencladorId);
+            query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
+        }
 
         if (vigenteEn.HasValue)
         {

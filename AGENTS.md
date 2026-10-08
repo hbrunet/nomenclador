@@ -89,7 +89,7 @@ See [README.md](README.md) for a high-level overview.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/configuraciones-nomenclador` | Paginated list with filters |
+| GET | `/api/configuraciones-nomenclador` | Paginated list with filters (`nomencladorId`, `escalaSalarialId`, `zonaId`, `conceptoId`, `valorFijoId`, `valorCategoriaId`, `vigenteEn`, `estado`) |
 | GET | `/api/configuraciones-nomenclador/{id}` | Detail |
 | POST | `/api/configuraciones-nomenclador` | Create |
 | PUT | `/api/configuraciones-nomenclador/{id}` | Update |
