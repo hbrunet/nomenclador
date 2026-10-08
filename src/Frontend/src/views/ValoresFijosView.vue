@@ -201,7 +201,7 @@ onMounted(async () => {
             <div class="flex gap-2 flex-wrap">
               
               <InputText v-model="filterTipo" placeholder="Filtrar por ID de tipo..." style="width: 240px" />
-              <InputText v-model="filterValores" placeholder="Filtrar por descripción..." style="width: 340px" />
+              <InputText v-model="filterValores" placeholder="Filtrar por descripción o tipo..." style="width: 340px" />
             </div>
             <div class="flex gap-2">
               <Button
