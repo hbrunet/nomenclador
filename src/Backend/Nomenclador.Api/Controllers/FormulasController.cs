@@ -21,9 +21,9 @@ public sealed class FormulasController(FormulaRepository formulaRepository) : Co
         if (string.IsNullOrWhiteSpace(dto.Condicion) || string.IsNullOrWhiteSpace(dto.Accion))
             return BadRequest(new { message = "La condición y la acción son obligatorias." });
 
-        var erroresSintaxis = FormulaRepository.ValidarSintaxis(dto.Condicion, dto.Accion);
-        if (erroresSintaxis.Count > 0)
-            return BadRequest(new { message = string.Join(" ", erroresSintaxis) });
+        var validacion = await formulaRepository.VerificarAsync(new FormulaVerificarDto { Condicion = dto.Condicion, Accion = dto.Accion });
+        if (!validacion.Valida)
+            return BadRequest(new { message = string.Join(" ", validacion.Errores) });
 
         var result = await formulaRepository.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
