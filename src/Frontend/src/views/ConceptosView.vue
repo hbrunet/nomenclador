@@ -155,8 +155,8 @@ onMounted(async () => {
       </Column>
       <Column header="">
         <template #body="{ data }">
-          <Button icon="pi pi-pencil" severity="secondary" size="small" rounded @click="openEdit(data.id)" />
-          <Button icon="pi pi-calculator" severity="secondary" size="small" rounded @click="openFormulas(data.id)" />
+          <Button aria-label="Editar concepto" icon="pi pi-pencil" severity="secondary" size="small" rounded @click="openEdit(data.id)" />
+          <Button aria-label="Administrar fórmulas" icon="pi pi-calculator" severity="secondary" size="small" rounded @click="openFormulas(data.id)" />
         </template>
       </Column>
     </DataTable>
