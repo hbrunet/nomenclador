@@ -137,6 +137,7 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
 
         using var tx = session.BeginTransaction();
         await session.SaveAsync(entity);
+        await session.FlushAsync();
         await tx.CommitAsync();
 
         if (entity.TipoConcepto is not null)
