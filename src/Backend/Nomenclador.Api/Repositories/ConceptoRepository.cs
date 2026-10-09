@@ -108,7 +108,7 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
         }).ToList();
     }
 
-    // USUARIO.FORMULA: solo lectura, se muestran en el tab Fórmulas del detalle del concepto.
+    // USUARIO.FORMULA: fórmulas asociadas al concepto, mostradas en su detalle.
     public async Task<IReadOnlyList<FormulaDto>> GetFormulasAsync(int conceptoId)
     {
         FormulaEntity alias = null!;
