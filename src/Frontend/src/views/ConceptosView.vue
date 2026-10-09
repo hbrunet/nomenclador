@@ -76,14 +76,8 @@ function openFormulas(conceptoId: number) {
   formulasDialogRef.value?.open({ conceptoId })
 }
 
-function handleSaved(item: ConceptoCatalogItem) {
-  const idx = conceptos.value.findIndex((c) => c.id === item.id)
-  if (idx !== -1) {
-    conceptos.value = conceptos.value.map((c) => (c.id === item.id ? item : c))
-  } else {
-    // Concepto nuevo: recargar para reflejar el orden/paginado real del backend.
-    loadConceptos(pagination.page)
-  }
+function handleSaved() {
+  void loadConceptos(pagination.page)
 }
 
 onMounted(async () => {
