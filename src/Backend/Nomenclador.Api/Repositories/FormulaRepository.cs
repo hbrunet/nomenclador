@@ -57,7 +57,36 @@ public sealed class FormulaRepository(NHibernate.ISession session)
         }
 
         // El DDL de Oracle hace commit implícito propio; se ejecuta aparte de la transacción NHibernate.
-        await ExecuteDdlAsync(entity.Codigo!);
+        try
+        {
+            await ExecuteProcedureDdlAsync(entity.SpName!, entity.Codigo!);
+        }
+        catch (Exception ddlException)
+        {
+            Exception? cleanupException = null;
+            try
+            {
+                await DropProcedureAsync(entity.SpName!);
+            }
+            catch (Exception ex)
+            {
+                cleanupException = ex;
+            }
+
+            try
+            {
+                await DeleteFormulaAsync(entity);
+            }
+            catch (Exception ex)
+            {
+                cleanupException = cleanupException is null ? ex : new AggregateException(cleanupException, ex);
+            }
+
+            if (cleanupException is not null)
+                throw new AggregateException("No se pudo crear la fórmula y falló la compensación.", ddlException, cleanupException);
+
+            throw;
+        }
 
         return ToDto(entity, concepto);
     }
@@ -68,6 +97,13 @@ public sealed class FormulaRepository(NHibernate.ISession session)
         if (entity is null) return null;
 
         var concepto = await session.GetAsync<ConceptoCatalogEntity>(entity.ConceptoId);
+        var oldCondicion = entity.Condicion;
+        var oldAccion = entity.Accion;
+        var oldCondicionInput = entity.CondicionInput;
+        var oldAccionInput = entity.AccionInput;
+        var oldCodigo = entity.Codigo;
+        var oldSpName = entity.SpName;
+        var spName = entity.SpName ?? FormulaCodeGenerator.BuildSpName(concepto?.DescripcionBreve ?? "FORMULA", entity.Id);
 
         entity.Condicion = dto.Condicion;
         entity.Accion = dto.Accion;
@@ -75,7 +111,6 @@ public sealed class FormulaRepository(NHibernate.ISession session)
         using (var tx = session.BeginTransaction())
         {
             // El SpName no cambia (incluye el IDFORM, que es inmutable) — se recompila el mismo procedure.
-            var spName = entity.SpName ?? FormulaCodeGenerator.BuildSpName(concepto?.DescripcionBreve ?? "FORMULA", entity.Id);
             var primitivaNames = await GetPrimitivaNombresAsync();
             entity.SpName = spName;
             (entity.Codigo, entity.CondicionInput) = FormulaCodeGenerator.Generate(spName, dto.Condicion, dto.Accion, primitivaNames);
@@ -85,7 +120,48 @@ public sealed class FormulaRepository(NHibernate.ISession session)
             await tx.CommitAsync();
         }
 
-        await ExecuteDdlAsync(entity.Codigo!);
+        try
+        {
+            await ExecuteProcedureDdlAsync(entity.SpName!, entity.Codigo!);
+        }
+        catch (Exception ddlException)
+        {
+            entity.Condicion = oldCondicion;
+            entity.Accion = oldAccion;
+            entity.CondicionInput = oldCondicionInput;
+            entity.AccionInput = oldAccionInput;
+            entity.Codigo = oldCodigo;
+            entity.SpName = oldSpName;
+
+            using (var tx = session.BeginTransaction())
+            {
+                await session.FlushAsync();
+                await tx.CommitAsync();
+            }
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(oldSpName) && !string.IsNullOrWhiteSpace(oldCodigo))
+                    await ExecuteProcedureDdlAsync(oldSpName, oldCodigo);
+                else
+                    await DropProcedureAsync(spName);
+            }
+            catch (Exception restoreException)
+            {
+                try
+                {
+                    await DeleteFormulaAsync(entity);
+                }
+                catch (Exception cleanupException)
+                {
+                    throw new AggregateException("Falló la actualización y no se pudo restaurar la fórmula.", ddlException, restoreException, cleanupException);
+                }
+
+                throw new AggregateException("Falló la actualización y se eliminó la fórmula al no poder restaurar su procedure.", ddlException, restoreException);
+            }
+
+            throw;
+        }
 
         return ToDto(entity, concepto);
     }
@@ -96,24 +172,42 @@ public sealed class FormulaRepository(NHibernate.ISession session)
         if (entity is null) return false;
 
         var spName = entity.SpName;
+        var codigo = entity.Codigo;
 
-        using (var tx = session.BeginTransaction())
+        if (!string.IsNullOrWhiteSpace(spName))
+            await DropProcedureAsync(spName);
+
+        try
         {
+            using var tx = session.BeginTransaction();
             await session.DeleteAsync(entity);
             await session.FlushAsync();
             await tx.CommitAsync();
         }
-
-        if (!string.IsNullOrWhiteSpace(spName))
+        catch (Exception deleteException)
         {
-            // ORA-04043 (procedure inexistente) se ignora: la fórmula ya quedó borrada igual.
-            await ExecuteDdlAsync($"""
-                BEGIN
-                    EXECUTE IMMEDIATE 'DROP PROCEDURE {spName}';
-                EXCEPTION
-                    WHEN OTHERS THEN IF SQLCODE != -4043 THEN RAISE; END IF;
-                END;
-                """);
+            if (!string.IsNullOrWhiteSpace(spName) && !string.IsNullOrWhiteSpace(codigo))
+            {
+                try
+                {
+                    await ExecuteProcedureDdlAsync(spName, codigo);
+                }
+                catch (Exception restoreException)
+                {
+                    try
+                    {
+                        await DeleteFormulaAsync(entity);
+                    }
+                    catch (Exception cleanupException)
+                    {
+                        throw new AggregateException("Falló la eliminación y no se pudo restaurar el procedure ni eliminar la fórmula.", deleteException, restoreException, cleanupException);
+                    }
+
+                    throw new AggregateException("Falló la eliminación y se eliminó la fórmula al no poder restaurar su procedure.", deleteException, restoreException);
+                }
+            }
+
+            throw;
         }
 
         return true;
@@ -171,6 +265,52 @@ public sealed class FormulaRepository(NHibernate.ISession session)
             .ToListAsync();
 
         return new HashSet<string>(nombres.Where(n => !string.IsNullOrEmpty(n))!, StringComparer.Ordinal);
+    }
+
+    private async Task ExecuteProcedureDdlAsync(string spName, string ddl)
+    {
+        await ExecuteDdlAsync(ddl);
+
+        var connection = (DbConnection)session.Connection!;
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT LINE || ': ' || TEXT
+            FROM USER_ERRORS
+            WHERE NAME = :name AND TYPE = 'PROCEDURE' AND ATTRIBUTE = 'ERROR'
+            ORDER BY SEQUENCE
+            """;
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "name";
+        parameter.Value = spName;
+        command.Parameters.Add(parameter);
+
+        var errors = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+            errors.Add(reader.GetString(0));
+
+        if (errors.Count > 0)
+            throw new InvalidOperationException($"No se pudo compilar el procedure {spName}: {string.Join(" ", errors)}");
+    }
+
+    private async Task DropProcedureAsync(string spName)
+    {
+        // ORA-04043 (procedure inexistente) se ignora.
+        await ExecuteDdlAsync($"""
+            BEGIN
+                EXECUTE IMMEDIATE 'DROP PROCEDURE {spName}';
+            EXCEPTION
+                WHEN OTHERS THEN IF SQLCODE != -4043 THEN RAISE; END IF;
+            END;
+            """);
+    }
+
+    private async Task DeleteFormulaAsync(FormulaEntity entity)
+    {
+        using var tx = session.BeginTransaction();
+        await session.DeleteAsync(entity);
+        await session.FlushAsync();
+        await tx.CommitAsync();
     }
 
     private async Task ExecuteDdlAsync(string ddl)
