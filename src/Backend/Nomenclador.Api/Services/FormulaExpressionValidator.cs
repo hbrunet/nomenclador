@@ -61,7 +61,12 @@ public static class FormulaExpressionValidator
             if (char.IsDigit(c))
             {
                 var start = i;
-                while (i < texto.Length && (char.IsDigit(texto[i]) || texto[i] == '.')) i++;
+                while (i < texto.Length && char.IsDigit(texto[i])) i++;
+                if (i < texto.Length && texto[i] == '.')
+                {
+                    i++;
+                    while (i < texto.Length && char.IsDigit(texto[i])) i++;
+                }
                 tokens.Add(new Token(TokenType.Number, texto[start..i]));
                 continue;
             }
