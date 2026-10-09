@@ -94,7 +94,8 @@ export interface ValorFijoCreateUpdateDto {
 
 export interface ValorFijoCloneDto {
   descripcion: string
-  coeficienteAjuste: number
+  coeficienteAjuste?: number
+  valorNuevo?: number
 }
 
 export interface ClonacionMasivaValoresFijosDto {
@@ -452,6 +453,9 @@ export interface ConfigurationFilters {
   nomencladorId?: number
   escalaSalarialId?: number
   zonaId?: number
+  conceptoId?: number
+  valorFijoId?: number
+  valorCategoriaId?: number
   vigenteEn?: string
   estado?: string
   page?: number
