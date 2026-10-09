@@ -1,7 +1,7 @@
 namespace Nomenclador.Api.Services;
 
 /// <summary>
-/// Valida que Condicion/Accion sean una expresión bien formada (no solo que los primitivas
+/// Valida que Condicion/Accion sean una expresión bien formada (no solo que las primitivas
 /// existan): paréntesis balanceados en el orden correcto, operadores en la posición esperada,
 /// ROUND(valor, decimales) con la forma correcta, etc. Gramática (descenso recursivo):
 ///
