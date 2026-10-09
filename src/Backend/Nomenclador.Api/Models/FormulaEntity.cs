@@ -1,7 +1,6 @@
 namespace Nomenclador.Api.Models;
 
-// Fórmulas de liquidación asociadas a un Concepto (USUARIO.FORMULA). Solo lectura por ahora,
-// se usan para mostrarlas en el detalle del concepto.
+// Fórmulas de liquidación asociadas a un Concepto (USUARIO.FORMULA).
 public class FormulaEntity
 {
     public virtual int Id { get; set; }
