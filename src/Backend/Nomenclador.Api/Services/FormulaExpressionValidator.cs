@@ -202,7 +202,13 @@ public static class FormulaExpressionValidator
                 return;
             }
 
-            if (Current.Type == TokenType.Identifier) { Advance(); return; }
+            if (Current.Type == TokenType.Identifier)
+            {
+                if (IsKeyword("AND") || IsKeyword("OR") || IsKeyword("NOT"))
+                    throw new FormulaSyntaxException($"no se esperaba '{Current.Text}' en esa posición.");
+                Advance();
+                return;
+            }
 
             if (Current.Type == TokenType.Eof)
                 throw new FormulaSyntaxException("la expresión terminó de forma inesperada.");
