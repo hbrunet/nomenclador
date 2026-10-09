@@ -26,18 +26,21 @@ const tiposLiquidacion = ref<CatalogItem[]>([])
 const pagination = reactive({ total: 0, page: 1, pageSize: 20 })
 const paginatorFirst = computed(() => (pagination.page - 1) * pagination.pageSize)
 
+let latestRequest = 0
 async function loadConceptos(page = 1) {
+  const requestId = ++latestRequest
   loading.value = true
   try {
     const result = await conceptosService.listPaged(
       query.value.trim(), page, pagination.pageSize, tipoFilter.value,
     )
+    if (requestId !== latestRequest) return
     conceptos.value = result.items
     pagination.total = result.total
     pagination.page = result.page
     pagination.pageSize = result.pageSize
   } finally {
-    loading.value = false
+    if (requestId === latestRequest) loading.value = false
   }
 }
 
