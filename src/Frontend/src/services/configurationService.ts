@@ -21,6 +21,7 @@ import type {
   ConfiguracionNomencladorDetailDto,
   ConfiguracionNomencladorListItemDto,
   PagedResult,
+  PrimitivaItem,
   ValidacionConfiguracionResponse,
   ValorCategoriaCatalogItem,
   ValorCategoriaConfiguradoInputDto,
@@ -264,6 +265,11 @@ export const configurationService = {
 
   async getZonas() {
     const { data } = await apiClient.get<CatalogItem[]>('/catalogs/zonas')
+    return data
+  },
+
+  async getPrimitivas() {
+    const { data } = await apiClient.get<PrimitivaItem[]>('/catalogs/primitivas')
     return data
   },
 

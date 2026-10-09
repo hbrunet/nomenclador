@@ -35,6 +35,11 @@ const router = createRouter({
       component: () => import('../views/EscalaDetailView.vue'),
     },
     {
+      path: '/conceptos',
+      name: 'conceptos',
+      component: () => import('../views/ConceptosView.vue'),
+    },
+    {
       path: '/valores-categoria',
       name: 'valores-categoria',
       component: () => import('../views/ValoresCategoriaView.vue'),

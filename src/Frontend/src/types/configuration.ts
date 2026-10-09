@@ -216,6 +216,104 @@ export interface ConceptoCatalogItem {
   subcodigo: number
   descripcionBreve: string
   descripcion: string
+  acumulaJubilacion: boolean
+  acumulaObraSocial: boolean
+  acumulaRemunerativo: boolean
+  basico: boolean
+  bonificable: boolean
+  calculaTicket: boolean
+  calculaPorPersona: boolean
+  // Números de mes (1=ene..12=dic) en los que aplica el concepto.
+  mesesAplicables: number[]
+  deduceJubilacion: boolean
+  deducePension: boolean
+  especial: boolean
+  ganancia: boolean
+  idPartidaPresupuestaria: number | null
+  idTipoConcepto: number | null
+  tipoConcepto: string | null
+  imprimeCantidad: boolean
+  liquidaSiempre: boolean
+  participaFondo: boolean
+  ppp: boolean
+  reliquidar: boolean
+  tiposLiquidacion: CatalogItem[]
+  formulas: FormulaItem[]
+}
+
+// USUARIO.FORMULA — solo lectura, se muestran en el detalle del concepto.
+export interface FormulaItem {
+  id: number
+  condicion: string | null
+  accion: string | null
+  ordenEjec: number | null
+  condicionInput: number | null
+  accionInput: number | null
+  codigo: string | null
+  spName: string | null
+}
+
+// Detalle de una fórmula para el editor de alta/edición (GET/POST/PUT /api/formulas).
+export interface FormulaDetailDto {
+  id: number
+  conceptoId: number
+  conceptoCodigo: number
+  conceptoSubcodigo: number
+  conceptoDescripcion: string
+  condicion: string
+  accion: string
+  ordenEjec: number | null
+  spName: string | null
+}
+
+export interface FormulaCreateUpdateDto {
+  conceptoId: number
+  condicion: string
+  accion: string
+}
+
+export interface FormulaVerificarResult {
+  valida: boolean
+  errores: string[]
+}
+
+// Catálogo USUARIO.PRIMITIVA — usadas en Condición/Acción de una fórmula.
+export interface PrimitivaItem {
+  id: number
+  nombre: string | null
+  descripcion: string | null
+  esResultLogico: boolean
+  cabecera: string | null
+  cuerpo: string | null
+  pie: string | null
+}
+
+// Payload para crear/editar un concepto (POST/PUT /api/conceptos).
+export interface ConceptoCreateUpdateDto {
+  codigo: number
+  subcodigo: number
+  descripcionBreve: string
+  descripcion: string
+  acumulaJubilacion: boolean
+  acumulaObraSocial: boolean
+  acumulaRemunerativo: boolean
+  basico: boolean
+  bonificable: boolean
+  calculaTicket: boolean
+  calculaPorPersona: boolean
+  mesesAplicables: number[]
+  deduceJubilacion: boolean
+  deducePension: boolean
+  especial: boolean
+  ganancia: boolean
+  idPartidaPresupuestaria: number | null
+  idTipoConcepto: number | null
+  imprimeCantidad: boolean
+  liquidaSiempre: boolean
+  participaFondo: boolean
+  ppp: boolean
+  reliquidar: boolean
+  tiposLiquidacionIds: number[]
 }
 
 export interface ConceptoConfiguradoViewModel {
