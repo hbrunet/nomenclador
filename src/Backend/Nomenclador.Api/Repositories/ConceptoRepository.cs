@@ -1,6 +1,5 @@
 using NHibernate;
 using NHibernate.Criterion;
-using NHibernate.Linq;
 using NHibernate.SqlCommand;
 using NHibernate.Type;
 using Nomenclador.Api.DTOs;
@@ -68,10 +67,12 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
 
     public async Task<ConceptoCatalogDto?> GetByIdAsync(int id)
     {
-        var entity = await session.Query<ConceptoCatalogEntity>()
-            .Fetch(x => x.TipoConcepto)
-            .Fetch(x => x.TiposLiquidacion)
-            .FirstOrDefaultAsync(x => x.Id == id);
+        ConceptoCatalogEntity alias = null!;
+        var entity = await session.QueryOver(() => alias)
+            .Fetch(SelectMode.Fetch, () => alias.TipoConcepto)
+            .Fetch(SelectMode.Fetch, () => alias.TiposLiquidacion)
+            .Where(() => alias.Id == id)
+            .SingleOrDefaultAsync();
 
         if (entity is null) return null;
 
@@ -81,9 +82,10 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
 
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetTiposAsync()
     {
-        var items = await session.Query<TipoConceptoCatalogEntity>()
-            .OrderBy(x => x.Descripcion)
-            .ToListAsync();
+        TipoConceptoCatalogEntity alias = null!;
+        var items = await session.QueryOver(() => alias)
+            .OrderBy(() => alias.Descripcion).Asc
+            .ListAsync();
 
         return items.Select(item => new CatalogItemDto
         {
@@ -94,9 +96,10 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
 
     public async Task<IReadOnlyCollection<CatalogItemDto>> GetTiposLiquidacionAsync()
     {
-        var items = await session.Query<TipoLiquidacionCatalogEntity>()
-            .OrderBy(x => x.Descripcion)
-            .ToListAsync();
+        TipoLiquidacionCatalogEntity alias = null!;
+        var items = await session.QueryOver(() => alias)
+            .OrderBy(() => alias.Descripcion).Asc
+            .ListAsync();
 
         return items.Select(item => new CatalogItemDto
         {
@@ -108,10 +111,11 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
     // USUARIO.FORMULA: solo lectura, se muestran en el tab Fórmulas del detalle del concepto.
     public async Task<IReadOnlyList<FormulaDto>> GetFormulasAsync(int conceptoId)
     {
-        var items = await session.Query<FormulaEntity>()
-            .Where(x => x.ConceptoId == conceptoId)
-            .OrderBy(x => x.Id)
-            .ToListAsync();
+        FormulaEntity alias = null!;
+        var items = await session.QueryOver(() => alias)
+            .Where(() => alias.ConceptoId == conceptoId)
+            .OrderBy(() => alias.Id).Asc
+            .ListAsync();
 
         return items.Select(item => new FormulaDto
         {
@@ -297,5 +301,4 @@ public sealed class ConceptoRepository(NHibernate.ISession session)
             [NHibernateUtil.String]));
     }
 }
-
 
