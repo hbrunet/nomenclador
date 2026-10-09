@@ -43,6 +43,13 @@ public sealed class FormulasController(FormulaRepository formulaRepository) : Co
         return result is null ? NotFound() : Ok(result);
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var deleted = await formulaRepository.DeleteAsync(id);
+        return deleted ? NoContent() : NotFound();
+    }
+
     [HttpPost("verificar")]
     public async Task<IActionResult> Verificar([FromBody] FormulaVerificarDto dto)
     {

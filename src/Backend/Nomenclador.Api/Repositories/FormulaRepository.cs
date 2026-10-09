@@ -90,6 +90,35 @@ public sealed class FormulaRepository(NHibernate.ISession session)
         return ToDto(entity, concepto);
     }
 
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var entity = await session.GetAsync<FormulaEntity>(id);
+        if (entity is null) return false;
+
+        var spName = entity.SpName;
+
+        using (var tx = session.BeginTransaction())
+        {
+            await session.DeleteAsync(entity);
+            await session.FlushAsync();
+            await tx.CommitAsync();
+        }
+
+        if (!string.IsNullOrWhiteSpace(spName))
+        {
+            // ORA-04043 (procedure inexistente) se ignora: la fórmula ya quedó borrada igual.
+            await ExecuteDdlAsync($"""
+                BEGIN
+                    EXECUTE IMMEDIATE 'DROP PROCEDURE {spName}';
+                EXCEPTION
+                    WHEN OTHERS THEN IF SQLCODE != -4043 THEN RAISE; END IF;
+                END;
+                """);
+        }
+
+        return true;
+    }
+
     public async Task<FormulaVerificarResultDto> VerificarAsync(FormulaVerificarDto dto)
     {
         var errores = ValidarSintaxis(dto.Condicion, dto.Accion);

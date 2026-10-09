@@ -17,6 +17,10 @@ export const formulasService = {
     return data
   },
 
+  async remove(id: number): Promise<void> {
+    await apiClient.delete(`/formulas/${id}`)
+  },
+
   async verificar(condicion: string, accion: string): Promise<FormulaVerificarResult> {
     const { data } = await apiClient.post<FormulaVerificarResult>('/formulas/verificar', { condicion, accion })
     return data
