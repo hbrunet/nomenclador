@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using NHibernate;
 using NHibernate.Linq;
+using NHibernate.Transform;
 using Nomenclador.Api.DTOs;
 using Nomenclador.Api.Models;
 
@@ -222,19 +223,19 @@ public sealed class CatalogRepository(NHibernate.ISession session)
 
     public async Task<IReadOnlyCollection<PrimitivaDto>> GetPrimitivasAsync()
     {
-        return await session.Query<PrimitivaEntity>()
-            .OrderBy(item => item.Nombre)
-            .Select(item => new PrimitivaDto
-            {
-                Id = item.Id,
-                Nombre = item.Nombre,
-                Descripcion = item.Descripcion,
-                EsResultLogico = item.EsResultLogico,
-                Cabecera = item.Cabecera,
-                Cuerpo = item.Cuerpo,
-                Pie = item.Pie,
-            })
-            .ToListAsync();
+        PrimitivaDto dto = null!;
+        return (await session.QueryOver<PrimitivaEntity>()
+            .OrderBy(item => item.Nombre).Asc
+            .SelectList(selection => selection
+                .Select(item => item.Id).WithAlias(() => dto.Id)
+                .Select(item => item.Nombre).WithAlias(() => dto.Nombre)
+                .Select(item => item.Descripcion).WithAlias(() => dto.Descripcion)
+                .Select(item => item.EsResultLogico).WithAlias(() => dto.EsResultLogico)
+                .Select(item => item.Cabecera).WithAlias(() => dto.Cabecera)
+                .Select(item => item.Cuerpo).WithAlias(() => dto.Cuerpo)
+                .Select(item => item.Pie).WithAlias(() => dto.Pie))
+            .TransformUsing(Transformers.AliasToBean<PrimitivaDto>())
+            .ListAsync<PrimitivaDto>()).ToList();
     }
 
     public async Task<IReadOnlyCollection<CategoriaCatalogDto>> GetCategoriasAsync(int? escalaId)
