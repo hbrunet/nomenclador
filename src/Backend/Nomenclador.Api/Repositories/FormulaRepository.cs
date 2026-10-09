@@ -2,7 +2,6 @@ using System.Data;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using NHibernate;
-using NHibernate.Linq;
 using Nomenclador.Api.DTOs;
 using Nomenclador.Api.Models;
 using Nomenclador.Api.Services;
@@ -38,10 +37,12 @@ public sealed class FormulaRepository(NHibernate.ISession session)
 
         using (var tx = session.BeginTransaction())
         {
-            var maxOrden = await session.Query<FormulaEntity>()
+            var ultimaFormula = await session.QueryOver<FormulaEntity>()
                 .Where(x => x.ConceptoId == dto.ConceptoId)
-                .Select(x => (int?)x.OrdenEjec)
-                .MaxAsync() ?? 0;
+                .OrderBy(x => x.OrdenEjec).Desc
+                .Take(1)
+                .SingleOrDefaultAsync();
+            var maxOrden = ultimaFormula?.OrdenEjec ?? 0;
             entity.OrdenEjec = maxOrden + 1;
 
             await session.SaveAsync(entity);
@@ -260,9 +261,9 @@ public sealed class FormulaRepository(NHibernate.ISession session)
 
     private async Task<HashSet<string>> GetPrimitivaNombresAsync()
     {
-        var nombres = await session.Query<PrimitivaEntity>()
-            .Select(x => x.Nombre)
-            .ToListAsync();
+        var nombres = await session.QueryOver<PrimitivaEntity>()
+            .Select(item => item.Nombre)
+            .ListAsync<string>();
 
         return new HashSet<string>(nombres.Where(n => !string.IsNullOrEmpty(n))!, StringComparer.Ordinal);
     }
