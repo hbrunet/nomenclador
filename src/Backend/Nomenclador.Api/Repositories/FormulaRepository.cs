@@ -153,11 +153,11 @@ public sealed class FormulaRepository(NHibernate.ISession session)
     {
         var errores = new List<string>();
 
-        var errorCondicion = FormulaExpressionValidator.Validar(condicion);
+        var errorCondicion = FormulaExpressionValidator.ValidarCondicion(condicion);
         if (errorCondicion is not null)
             errores.Add($"La condición tiene un error de sintaxis: {errorCondicion}");
 
-        var errorAccion = FormulaExpressionValidator.Validar(accion);
+        var errorAccion = FormulaExpressionValidator.ValidarAccion(accion);
         if (errorAccion is not null)
             errores.Add($"La acción tiene un error de sintaxis: {errorAccion}");
 
