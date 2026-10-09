@@ -52,7 +52,7 @@ defineExpose({ open })
                 <Column>
                     <template #body="{ data }">
                         <div class="flex gap-1 align-items-center">
-                            <Button icon="pi pi-pencil" size="small" severity="secondary" outlined
+                            <Button icon="pi pi-pencil" size="small" severity="secondary" rounded title="Editar"
                                 @click="formulaDialogRef?.open({ formulaId: data.id })" />
                         </div>
                     </template>

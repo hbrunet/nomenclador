@@ -144,7 +144,12 @@ onMounted(async () => {
       <Column field="codigo" header="Código" style="width: 6rem; text-align: right;" />
       <Column field="subcodigo" header="Subcódigo" style="width: 7rem; text-align: right;" />
       <Column field="descripcionBreve" header="Desc. breve" style="width: 10rem" />
-      <Column field="descripcion" header="Descripción" />
+      <Column header="Descripción">
+        <template #body="{ data }">
+          {{ data.descripcion ? data.descripcion.substring(0, 50) : "" }}
+          <span v-if="data.descripcion && data.descripcion.length > 50">...</span>
+        </template>
+      </Column>
       <Column header="Tipo" style="width: 14rem">
         <template #body="{ data }">
           <Tag v-if="data.tipoConcepto" :value="data.tipoConcepto" severity="secondary" />
@@ -153,8 +158,8 @@ onMounted(async () => {
       </Column>
       <Column header="">
         <template #body="{ data }">
-          <Button icon="pi pi-pencil" text rounded @click="openEdit(data.id)" />
-          <Button icon="pi pi-calculator" text rounded @click="openFormulas(data.id)" />
+          <Button icon="pi pi-pencil" severity="secondary" size="small" rounded @click="openEdit(data.id)" title="Editar" />
+          <Button icon="pi pi-calculator" severity="secondary" size="small" rounded @click="openFormulas(data.id)" title="Fórmulas" />
         </template>
       </Column>
     </DataTable>
