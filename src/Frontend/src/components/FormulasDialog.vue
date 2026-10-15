@@ -22,17 +22,23 @@ const deletingIds = ref<Set<number>>(new Set())
 
 const formulas = ref<FormulaItem[]>([])
 
+let latestOpenRequest = 0
 async function open({ conceptoId }: { conceptoId: number }) {
+    const requestId = ++latestOpenRequest
     editingId.value = conceptoId
-    const data = await fetchConcepto(editingId.value)
+    const data = await fetchConcepto(conceptoId)
+    if (requestId !== latestOpenRequest) return
 
     formulas.value = data.formulas
     isVisible.value = true
 }
 
 async function handleFormulaSaved() {
-    if (!editingId.value) return
-    const data = await fetchConcepto(editingId.value)
+    const conceptoId = editingId.value
+    if (!conceptoId) return
+    const requestId = latestOpenRequest
+    const data = await fetchConcepto(conceptoId)
+    if (requestId !== latestOpenRequest) return
     formulas.value = data.formulas
 }
 
