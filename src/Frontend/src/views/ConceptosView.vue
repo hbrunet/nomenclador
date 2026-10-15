@@ -28,18 +28,21 @@ const tiposLiquidacion = ref<CatalogItem[]>([])
 const pagination = reactive({ total: 0, page: 1, pageSize: 50 })
 const paginatorFirst = computed(() => (pagination.page - 1) * pagination.pageSize)
 
+let latestRequest = 0
 async function loadConceptos(page = 1) {
+  const requestId = ++latestRequest
   loading.value = true
   try {
     const result = await conceptosService.listPaged(
       query.value.trim(), page, pagination.pageSize, tipoFilter.value,
     )
+    if (requestId !== latestRequest) return
     conceptos.value = result.items
     pagination.total = result.total
     pagination.page = result.page
     pagination.pageSize = result.pageSize
   } finally {
-    loading.value = false
+    if (requestId === latestRequest) loading.value = false
   }
 }
 
@@ -75,18 +78,13 @@ function openFormulas(conceptoId: number) {
   formulasDialogRef.value?.open({ conceptoId })
 }
 
+
 function openAsociadosConcepto(concepto: ConceptoCatalogItem) {
   asociadosDialogRef.value?.open('concepto', concepto.id, concepto.descripcion)
 }
 
-function handleSaved(item: ConceptoCatalogItem) {
-  const idx = conceptos.value.findIndex((c) => c.id === item.id)
-  if (idx !== -1) {
-    conceptos.value = conceptos.value.map((c) => (c.id === item.id ? item : c))
-  } else {
-    // Concepto nuevo: recargar para reflejar el orden/paginado real del backend.
-    loadConceptos(pagination.page)
-  }
+function handleSaved() {
+  void loadConceptos(pagination.page)
 }
 
 onMounted(async () => {
@@ -164,8 +162,8 @@ onMounted(async () => {
       </Column>
       <Column header="">
         <template #body="{ data }">
-          <Button icon="pi pi-pencil" severity="secondary" size="small" rounded @click="openEdit(data.id)" />
-          <Button icon="pi pi-calculator" severity="secondary" size="small" rounded @click="openFormulas(data.id)" />
+          <Button aria-label="Editar concepto" icon="pi pi-pencil" severity="secondary" size="small" rounded @click="openEdit(data.id)" />
+          <Button aria-label="Administrar fórmulas" icon="pi pi-calculator" severity="secondary" size="small" rounded @click="openFormulas(data.id)" />
           <Button
                     icon="pi pi-sitemap"
                     size="small"

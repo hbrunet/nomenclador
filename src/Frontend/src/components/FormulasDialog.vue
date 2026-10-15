@@ -92,10 +92,10 @@ defineExpose({ open })
                 <Column>
                     <template #body="{ data }">
                         <div class="flex gap-1 align-items-center">
-                            <Button icon="pi pi-pencil" size="small" severity="secondary" rounded
+                            <Button aria-label="Editar fórmula" icon="pi pi-pencil" size="small" severity="secondary" rounded
                                 :disabled="deletingIds.has(data.id)"
                                 @click="formulaDialogRef?.open({ formulaId: data.id })" />
-                            <Button icon="pi pi-trash" size="small" severity="danger" rounded text
+                            <Button aria-label="Eliminar fórmula" icon="pi pi-trash" size="small" severity="danger" rounded text
                                 :loading="deletingIds.has(data.id)" @click="deleteFormula(data.id)" />
                         </div>
                     </template>

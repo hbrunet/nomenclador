@@ -1,22 +1,21 @@
 namespace Nomenclador.Api.Services;
 
 /// <summary>
-/// Valida que Condicion/Accion sean una expresión bien formada (no solo que los primitivas
+/// Valida que Condicion/Accion sean una expresión bien formada (no solo que las primitivas
 /// existan): paréntesis balanceados en el orden correcto, operadores en la posición esperada,
-/// ROUND(valor, decimales) con la forma correcta, etc. Grammar (recursive descent, LL(1)):
+/// ROUND(valor, decimales) con la forma correcta, etc. Gramática (descenso recursivo):
 ///
-/// expr       := orExpr
-/// orExpr     := andExpr (OR andExpr)*
-/// andExpr    := notExpr (AND notExpr)*
-/// notExpr    := NOT notExpr | comparacion
-/// comparacion:= aditiva ((&lt; | &gt; | = | &lt;&gt; | &lt;= | &gt;=) aditiva)?
-/// aditiva    := multiplicativa ((+|-) multiplicativa)*
+/// condicion := orCondicion
+/// orCondicion := andCondicion (OR andCondicion)*
+/// andCondicion := notCondicion (AND notCondicion)*
+/// notCondicion := NOT notCondicion | predicado
+/// predicado := aritmetica comparador aritmetica | '(' condicion ')'
+/// accion := aritmetica
+/// aritmetica := multiplicativa ((+|-) multiplicativa)*
 /// multiplicativa := factor ((*|/) factor)*
-/// factor     := (+|-) factor | NUMERO | IDENTIFICADOR | ROUND '(' aditiva ',' NUMERO ')' | '(' orExpr ')'
+/// factor := (+|-) factor | NUMERO | IDENTIFICADOR | ROUND '(' aritmetica ',' NUMERO ')' | '(' aritmetica ')'
 ///
-/// Esta misma gramática sirve tanto para Condicion (expresión booleana completa) como para
-/// Accion (en la práctica solo usa el nivel aritmético, pero el nivel booleano es un superset
-/// válido, así que no hace falta una gramática separada).
+/// Las condiciones requieren predicados y las acciones solo aceptan expresiones aritméticas.
 /// </summary>
 public static class FormulaExpressionValidator
 {
@@ -27,14 +26,20 @@ public static class FormulaExpressionValidator
     private sealed class FormulaSyntaxException(string message) : Exception(message);
 
     // Devuelve null si la expresión está bien formada, o un mensaje describiendo el primer error.
-    public static string? Validar(string? expresion)
+    public static string? ValidarCondicion(string? expresion) =>
+        Validar(expresion, parser => parser.ParseCondicion());
+
+    public static string? ValidarAccion(string? expresion) =>
+        Validar(expresion, parser => parser.ParseAccion());
+
+    private static string? Validar(string? expresion, Action<Parser> parse)
     {
         if (string.IsNullOrWhiteSpace(expresion)) return null;
 
         try
         {
             var parser = new Parser(Tokenizar(expresion));
-            parser.ParseExpresion();
+            parse(parser);
             parser.ExpectEof();
             return null;
         }
@@ -56,7 +61,12 @@ public static class FormulaExpressionValidator
             if (char.IsDigit(c))
             {
                 var start = i;
-                while (i < texto.Length && (char.IsDigit(texto[i]) || texto[i] == '.')) i++;
+                while (i < texto.Length && char.IsDigit(texto[i])) i++;
+                if (i < texto.Length && texto[i] == '.')
+                {
+                    i++;
+                    while (i < texto.Length && char.IsDigit(texto[i])) i++;
+                }
                 tokens.Add(new Token(TokenType.Number, texto[start..i]));
                 continue;
             }
@@ -112,33 +122,50 @@ public static class FormulaExpressionValidator
                 throw new FormulaSyntaxException($"sobra texto luego de la expresión, cerca de '{Current.Text}'.");
         }
 
-        public void ParseExpresion() => ParseOr();
+        public void ParseCondicion() => ParseOrCondicion();
 
-        private void ParseOr()
+        public void ParseAccion() => ParseAditiva();
+
+        private void ParseOrCondicion()
         {
-            ParseAnd();
-            while (IsKeyword("OR")) { Advance(); ParseAnd(); }
+            ParseAndCondicion();
+            while (IsKeyword("OR")) { Advance(); ParseAndCondicion(); }
         }
 
-        private void ParseAnd()
+        private void ParseAndCondicion()
         {
-            ParseNot();
-            while (IsKeyword("AND")) { Advance(); ParseNot(); }
+            ParseNotCondicion();
+            while (IsKeyword("AND")) { Advance(); ParseNotCondicion(); }
         }
 
-        private void ParseNot()
+        private void ParseNotCondicion()
         {
-            if (IsKeyword("NOT")) { Advance(); ParseNot(); return; }
-            ParseComparacion();
+            if (IsKeyword("NOT")) { Advance(); ParseNotCondicion(); return; }
+            ParsePredicado();
         }
 
-        private void ParseComparacion()
+        private void ParsePredicado()
         {
-            ParseAditiva();
-            if (Current.Type is TokenType.Lt or TokenType.Gt or TokenType.Eq or TokenType.Ne or TokenType.Le or TokenType.Ge)
+            var inicio = pos;
+            try
             {
+                ParseAditiva();
+                if (Current.Type is not (TokenType.Lt or TokenType.Gt or TokenType.Eq or TokenType.Ne or TokenType.Le or TokenType.Ge))
+                    throw new FormulaSyntaxException("se esperaba una comparación en la condición.");
                 Advance();
                 ParseAditiva();
+                return;
+            }
+            catch (FormulaSyntaxException)
+            {
+                pos = inicio;
+                if (Current.Type != TokenType.LParen) throw;
+
+                Advance();
+                ParseOrCondicion();
+                if (Current.Type != TokenType.RParen)
+                    throw new FormulaSyntaxException("falta un paréntesis de cierre ')'.");
+                Advance();
             }
         }
 
@@ -176,7 +203,7 @@ public static class FormulaExpressionValidator
             if (Current.Type == TokenType.LParen)
             {
                 Advance();
-                ParseOr();
+                ParseAditiva();
                 if (Current.Type != TokenType.RParen)
                     throw new FormulaSyntaxException("falta un paréntesis de cierre ')'.");
                 Advance();
@@ -202,7 +229,13 @@ public static class FormulaExpressionValidator
                 return;
             }
 
-            if (Current.Type == TokenType.Identifier) { Advance(); return; }
+            if (Current.Type == TokenType.Identifier)
+            {
+                if (IsKeyword("AND") || IsKeyword("OR") || IsKeyword("NOT"))
+                    throw new FormulaSyntaxException($"no se esperaba '{Current.Text}' en esa posición.");
+                Advance();
+                return;
+            }
 
             if (Current.Type == TokenType.Eof)
                 throw new FormulaSyntaxException("la expresión terminó de forma inesperada.");
