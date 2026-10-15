@@ -73,7 +73,7 @@ defineExpose({ open })
 </script>
 
 <template>
-    <Dialog v-model:visible="isVisible" :header="'Formulas del concepto - ' + editingId" :modal="true"
+    <Dialog v-model:visible="isVisible" :header="'Fórmulas del concepto - ' + editingId" :modal="true"
         :style="{ width: '52rem' }">
 
 
