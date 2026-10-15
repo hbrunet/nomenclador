@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { conceptosService } from '../services/conceptosService'
+import { formulasService } from '../services/formulasService'
 import type { CatalogItem, ConceptoCatalogItem, ConceptoCreateUpdateDto, PagedResult } from '../types/configuration'
 
 interface ConceptosState {
@@ -65,6 +66,9 @@ export const useConceptosStore = defineStore('conceptos', {
       return id === null
         ? conceptosService.create(dto)
         : conceptosService.update(id, dto)
+    },
+    async deleteFormula(id: number) {
+      return formulasService.remove(id)
     },
   },
 })

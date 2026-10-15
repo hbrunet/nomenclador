@@ -59,5 +59,6 @@ export function useConfiguration() {
     fetchTiposLiquidacion: conceptosStore.fetchTiposLiquidacion,
     fetchConcepto: conceptosStore.fetchConcepto,
     saveConcepto: conceptosStore.saveConcepto,
+    deleteFormula: conceptosStore.deleteFormula,
   }
 }

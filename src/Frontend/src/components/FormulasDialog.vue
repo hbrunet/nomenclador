@@ -6,14 +6,14 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
-import { conceptosService } from '../services/conceptosService'
-import { formulasService } from '../services/formulasService'
+import { useConfiguration } from '../composables/useConfiguration'
 import FormulaDetailDialog from './FormulaDetailDialog.vue'
 import type { FormulaItem } from '../types/configuration'
 
 
 const confirm = useConfirm()
 const toast = useToast()
+const { fetchConcepto, deleteFormula: deleteFormulaAction } = useConfiguration()
 
 const isVisible = ref(false)
 const formulaDialogRef = ref<InstanceType<typeof FormulaDetailDialog> | null>(null)
@@ -24,7 +24,7 @@ const formulas = ref<FormulaItem[]>([])
 
 async function open({ conceptoId }: { conceptoId: number }) {
     editingId.value = conceptoId
-    const data = await conceptosService.getById(editingId.value)
+    const data = await fetchConcepto(editingId.value)
 
     formulas.value = data.formulas
     isVisible.value = true
@@ -32,7 +32,7 @@ async function open({ conceptoId }: { conceptoId: number }) {
 
 async function handleFormulaSaved() {
     if (!editingId.value) return
-    const data = await conceptosService.getById(editingId.value)
+    const data = await fetchConcepto(editingId.value)
     formulas.value = data.formulas
 }
 
@@ -52,7 +52,7 @@ function deleteFormula(formulaId: number) {
 async function removeFormula(formulaId: number) {
     deletingIds.value = new Set(deletingIds.value).add(formulaId)
     try {
-        await formulasService.remove(formulaId)
+        await deleteFormulaAction(formulaId)
         await handleFormulaSaved()
         toast.add({ severity: 'success', summary: 'Fórmula eliminada', detail: `Se eliminó la fórmula #${formulaId}.`, life: 2500 })
     } catch (e: any) {
