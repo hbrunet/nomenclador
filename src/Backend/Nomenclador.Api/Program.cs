@@ -89,6 +89,7 @@ builder.Services.AddScoped(provider =>
 builder.Services.AddScoped<ConfiguracionNomencladorRepository>();
 builder.Services.AddScoped<ConceptoRepository>();
 builder.Services.AddScoped<CatalogRepository>();
+builder.Services.AddScoped<FormulaRepository>();
 builder.Services.AddScoped<ConfiguracionNomencladorMapper>();
 builder.Services.AddScoped<ValidacionConfiguracionService>();
 builder.Services.AddScoped<ClonadoConfiguracionService>();

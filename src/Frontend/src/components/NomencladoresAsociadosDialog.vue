@@ -221,7 +221,7 @@ async function open(tipoReferencia: TipoReferencia, id: number, descripcion = ''
   referenciaDescripcion.value = descripcion
   items.value = []
   error.value = null
-  pagination.value = { total: 0, page: 1, pageSize: 10 }
+  pagination.value = { total: 0, page: 1, pageSize: 50 }
   isVisible.value = true
 
   // Por defecto se muestran las configuraciones vigentes en el período activo.
@@ -306,7 +306,7 @@ defineExpose({ open, close })
       </DataTable>
 
       <Paginator v-if="pagination.total > pagination.pageSize" :first="paginatorFirst" :rows="pagination.pageSize"
-        :total-records="pagination.total" :rows-per-page-options="[10, 20, 50]" @page="onPageChange" />
+        :total-records="pagination.total" :rows-per-page-options="[50, 100]" @page="onPageChange" />
     </div>
 
     <template #footer>

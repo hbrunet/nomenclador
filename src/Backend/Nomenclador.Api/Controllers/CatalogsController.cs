@@ -26,6 +26,12 @@ public sealed class CatalogsController(CatalogRepository catalogRepository) : Co
         return Ok(await catalogRepository.GetZonasAsync());
     }
 
+    [HttpGet("primitivas")]
+    public async Task<IActionResult> GetPrimitivas()
+    {
+        return Ok(await catalogRepository.GetPrimitivasAsync());
+    }
+
     [HttpGet("categorias")]
     public async Task<IActionResult> GetCategorias([FromQuery] int? escalaId)
     {

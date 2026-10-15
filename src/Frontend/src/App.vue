@@ -24,6 +24,7 @@ async function handleLogout() {
 
 const menuItems = computed<MenuItem[]>(() => [
   { label: 'Configuraciones', route: '/configuraciones' },
+      { label: 'Conceptos', route: '/conceptos' },
   {
     label: 'Escalas Salariales',
     items: [

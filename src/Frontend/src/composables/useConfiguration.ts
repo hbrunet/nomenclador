@@ -18,7 +18,15 @@ export function useConfiguration() {
     saving,
   } = storeToRefs(configurationStore)
 
-  const { items: conceptosDisponibles, loading: loadingConceptos } = storeToRefs(conceptosStore)
+  const {
+    items: conceptosDisponibles,
+    loading: loadingConceptos,
+    pagedItems: conceptosPaginados,
+    loadingPaged: loadingConceptosPaginados,
+    pagination: paginacionConceptos,
+    tipos: tiposConcepto,
+    tiposLiquidacion,
+  } = storeToRefs(conceptosStore)
 
   return {
     configuraciones,
@@ -32,6 +40,11 @@ export function useConfiguration() {
     saving,
     conceptosDisponibles,
     loadingConceptos,
+    conceptosPaginados,
+    loadingConceptosPaginados,
+    paginacionConceptos,
+    tiposConcepto,
+    tiposLiquidacion,
     fetchCatalogs: configurationStore.fetchCatalogs,
     fetchCategorias: configurationStore.fetchCategorias,
     fetchList: configurationStore.fetchList,
@@ -41,5 +54,11 @@ export function useConfiguration() {
     validateCurrent: configurationStore.validateCurrent,
     cloneCurrent: configurationStore.cloneCurrent,
     fetchConceptos: conceptosStore.fetchConceptos,
+    fetchConceptosPaginados: conceptosStore.fetchConceptosPaginados,
+    fetchTiposConcepto: conceptosStore.fetchTiposConcepto,
+    fetchTiposLiquidacion: conceptosStore.fetchTiposLiquidacion,
+    fetchConcepto: conceptosStore.fetchConcepto,
+    saveConcepto: conceptosStore.saveConcepto,
+    deleteFormula: conceptosStore.deleteFormula,
   }
 }
