@@ -12,6 +12,7 @@ public sealed class FormulaRepository(NHibernate.ISession session)
 {
     private static readonly Regex TokenRegex = new(@"[A-Za-z_][A-Za-z0-9_]*", RegexOptions.Compiled);
     private static readonly string[] IgnoredKeywords = ["AND", "OR", "NOT", "ROUND"];
+    private const int MaxDbmsLockId = 1_073_741_823;
 
     public async Task<FormulaDetailDto?> GetByIdAsync(int id)
     {
@@ -25,6 +26,7 @@ public sealed class FormulaRepository(NHibernate.ISession session)
 
     public async Task<FormulaDetailDto> CreateAsync(FormulaCreateUpdateDto dto)
     {
+        await using var formulaLock = new FormulaMutationLock(session);
         var concepto = await session.GetAsync<ConceptoCatalogEntity>(dto.ConceptoId)
             ?? throw new KeyNotFoundException($"No se encontró el concepto {dto.ConceptoId}.");
 
@@ -46,6 +48,7 @@ public sealed class FormulaRepository(NHibernate.ISession session)
             entity.OrdenEjec = maxOrden + 1;
 
             await session.SaveAsync(entity);
+            await formulaLock.AcquireAsync(entity.Id);
 
             var primitivaNames = await GetPrimitivaNombresAsync();
             var spName = FormulaCodeGenerator.BuildSpName(concepto.DescripcionBreve, entity.Id);
@@ -94,6 +97,9 @@ public sealed class FormulaRepository(NHibernate.ISession session)
 
     public async Task<FormulaDetailDto?> UpdateAsync(int id, FormulaCreateUpdateDto dto)
     {
+        await using var formulaLock = new FormulaMutationLock(session);
+        await formulaLock.AcquireAsync(id);
+
         var entity = await session.GetAsync<FormulaEntity>(id);
         if (entity is null) return null;
 
@@ -169,6 +175,9 @@ public sealed class FormulaRepository(NHibernate.ISession session)
 
     public async Task<bool> DeleteAsync(int id)
     {
+        await using var formulaLock = new FormulaMutationLock(session);
+        await formulaLock.AcquireAsync(id);
+
         var entity = await session.GetAsync<FormulaEntity>(id);
         if (entity is null) return false;
 
@@ -321,6 +330,68 @@ public sealed class FormulaRepository(NHibernate.ISession session)
         command.CommandText = ddl;
         command.CommandType = CommandType.Text;
         await command.ExecuteNonQueryAsync();
+    }
+
+    private sealed class FormulaMutationLock(NHibernate.ISession session) : IAsyncDisposable
+    {
+        private int? acquiredLockId;
+
+        public async Task AcquireAsync(int formulaId)
+        {
+            var lockId = (int)((uint)formulaId % MaxDbmsLockId) + 1;
+            var connection = (DbConnection)session.Connection!;
+            await using var command = connection.CreateCommand();
+            command.CommandText = "BEGIN :result := DBMS_LOCK.REQUEST(:lockId, 6, 60, FALSE); END;";
+
+            var resultParameter = command.CreateParameter();
+            resultParameter.ParameterName = "result";
+            resultParameter.DbType = DbType.Int32;
+            resultParameter.Direction = ParameterDirection.Output;
+            command.Parameters.Add(resultParameter);
+
+            var lockIdParameter = command.CreateParameter();
+            lockIdParameter.ParameterName = "lockId";
+            lockIdParameter.DbType = DbType.Int32;
+            lockIdParameter.Value = lockId;
+            command.Parameters.Add(lockIdParameter);
+
+            if (session.GetCurrentTransaction() is NHibernate.Transaction.AdoTransaction transaction && transaction.IsActive)
+                transaction.Enlist(command);
+
+            await command.ExecuteNonQueryAsync();
+            var result = Convert.ToInt32(resultParameter.Value);
+            if (result is not (0 or 4))
+                throw new InvalidOperationException($"No se pudo bloquear la fórmula {formulaId} (DBMS_LOCK: {result}).");
+
+            acquiredLockId = lockId;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (acquiredLockId is not int lockId) return;
+
+            var connection = (DbConnection)session.Connection!;
+            await using var command = connection.CreateCommand();
+            command.CommandText = "BEGIN :result := DBMS_LOCK.RELEASE(:lockId); END;";
+
+            var resultParameter = command.CreateParameter();
+            resultParameter.ParameterName = "result";
+            resultParameter.DbType = DbType.Int32;
+            resultParameter.Direction = ParameterDirection.Output;
+            command.Parameters.Add(resultParameter);
+
+            var lockIdParameter = command.CreateParameter();
+            lockIdParameter.ParameterName = "lockId";
+            lockIdParameter.DbType = DbType.Int32;
+            lockIdParameter.Value = lockId;
+            command.Parameters.Add(lockIdParameter);
+
+            await command.ExecuteNonQueryAsync();
+            var result = Convert.ToInt32(resultParameter.Value);
+            acquiredLockId = null;
+            if (result != 0)
+                throw new InvalidOperationException($"No se pudo liberar el bloqueo de fórmula (DBMS_LOCK: {result}).");
+        }
     }
 
     private static FormulaDetailDto ToDto(FormulaEntity entity, ConceptoCatalogEntity? concepto) => new()
