@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -7,47 +7,39 @@ import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import ConceptoDetailDialog from '../components/ConceptoDetailDialog.vue'
-import { conceptosService } from '../services/conceptosService'
-import type { CatalogItem, ConceptoCatalogItem } from '../types/configuration'
+import type { ConceptoCatalogItem } from '../types/configuration'
 import FormulasDialog from '../components/FormulasDialog.vue'
 import NomencladoresAsociadosDialog from '../components/NomencladoresAsociadosDialog.vue'
+import { useConfiguration } from '../composables/useConfiguration'
 
 const DEBOUNCE_MS = 300
 
-const conceptos = ref<ConceptoCatalogItem[]>([])
-const loading = ref(false)
+const {
+  conceptosPaginados: conceptos,
+  loadingConceptosPaginados: loading,
+  paginacionConceptos: pagination,
+  tiposConcepto: tipos,
+  tiposLiquidacion,
+  fetchConceptosPaginados,
+  fetchTiposConcepto,
+  fetchTiposLiquidacion,
+} = useConfiguration()
 const query = ref('')
 const tipoFilter = ref<number | null>(null)
 const dialogRef = ref<InstanceType<typeof ConceptoDetailDialog> | null>(null)
 const formulasDialogRef = ref<InstanceType<typeof FormulasDialog> | null>(null)
 const asociadosDialogRef = ref<InstanceType<typeof NomencladoresAsociadosDialog> | null>(null)
 
-const tipos = ref<CatalogItem[]>([])
-const tiposLiquidacion = ref<CatalogItem[]>([])
+const paginatorFirst = computed(() => (pagination.value.page - 1) * pagination.value.pageSize)
 
-const pagination = reactive({ total: 0, page: 1, pageSize: 50 })
-const paginatorFirst = computed(() => (pagination.page - 1) * pagination.pageSize)
-
-let latestRequest = 0
 async function loadConceptos(page = 1) {
-  const requestId = ++latestRequest
-  loading.value = true
-  try {
-    const result = await conceptosService.listPaged(
-      query.value.trim(), page, pagination.pageSize, tipoFilter.value,
-    )
-    if (requestId !== latestRequest) return
-    conceptos.value = result.items
-    pagination.total = result.total
-    pagination.page = result.page
-    pagination.pageSize = result.pageSize
-  } finally {
-    if (requestId === latestRequest) loading.value = false
-  }
+  await fetchConceptosPaginados(
+    query.value.trim(), page, pagination.value.pageSize, tipoFilter.value,
+  )
 }
 
 function onPageChange(event: { page: number; rows: number }) {
-  pagination.pageSize = event.rows
+  pagination.value.pageSize = event.rows
   loadConceptos(event.page + 1)
 }
 
@@ -84,14 +76,14 @@ function openAsociadosConcepto(concepto: ConceptoCatalogItem) {
 }
 
 function handleSaved() {
-  void loadConceptos(pagination.page)
+  void loadConceptos(pagination.value.page)
 }
 
 onMounted(async () => {
   await Promise.all([
     loadConceptos(),
-    conceptosService.getTipos().then((data) => (tipos.value = data)),
-    conceptosService.getTiposLiquidacion().then((data) => (tiposLiquidacion.value = data)),
+    fetchTiposConcepto(),
+    fetchTiposLiquidacion(),
   ])
 })
 </script>
