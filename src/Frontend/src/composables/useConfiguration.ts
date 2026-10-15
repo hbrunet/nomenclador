@@ -41,5 +41,7 @@ export function useConfiguration() {
     validateCurrent: configurationStore.validateCurrent,
     cloneCurrent: configurationStore.cloneCurrent,
     fetchConceptos: conceptosStore.fetchConceptos,
+    fetchConcepto: conceptosStore.fetchConcepto,
+    saveConcepto: conceptosStore.saveConcepto,
   }
 }

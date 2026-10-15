@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { conceptosService } from '../services/conceptosService'
-import type { ConceptoCatalogItem } from '../types/configuration'
+import type { ConceptoCatalogItem, ConceptoCreateUpdateDto } from '../types/configuration'
 
 interface ConceptosState {
   items: ConceptoCatalogItem[]
@@ -21,6 +21,14 @@ export const useConceptosStore = defineStore('conceptos', {
       } finally {
         this.loading = false
       }
+    },
+    async fetchConcepto(id: number) {
+      return conceptosService.getById(id)
+    },
+    async saveConcepto(id: number | null, dto: ConceptoCreateUpdateDto) {
+      return id === null
+        ? conceptosService.create(dto)
+        : conceptosService.update(id, dto)
     },
   },
 })

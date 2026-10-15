@@ -10,7 +10,7 @@ import MultiSelect from 'primevue/multiselect'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
-import { conceptosService } from '../services/conceptosService'
+import { useConfiguration } from '../composables/useConfiguration'
 import type { CatalogItem, ConceptoCatalogItem, ConceptoCreateUpdateDto } from '../types/configuration'
 
 const props = defineProps<{
@@ -23,6 +23,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { fetchConcepto, saveConcepto } = useConfiguration()
 const isVisible = ref(false)
 const loading = ref(false)
 const saving = ref(false)
@@ -118,7 +119,7 @@ async function open(id?: number) {
   if (id) {
     loading.value = true
     try {
-      const data = await conceptosService.getById(id)
+      const data = await fetchConcepto(id)
       codigo.value = data.codigo
       subcodigo.value = data.subcodigo
       descripcionBreve.value = data.descripcionBreve
@@ -151,9 +152,7 @@ async function handleSave() {
       ppp: ppp.value,
       ...flags.value,
     }
-    const saved = isNew.value
-      ? await conceptosService.create(dto)
-      : await conceptosService.update(editingId.value!, dto)
+    const saved = await saveConcepto(editingId.value, dto)
     emit('saved', saved)
     toast.add({
       severity: 'success',
