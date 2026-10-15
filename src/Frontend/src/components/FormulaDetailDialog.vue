@@ -96,7 +96,11 @@ function analizarTokens(texto: string) {
 const condicionTokens = computed(() => analizarTokens(condicion.value))
 const accionTokens = computed(() => analizarTokens(accion.value))
 
-async function open(options: { conceptoId: number} | { formulaId: number }) {
+let latestOpenRequest = 0
+async function open(options: { conceptoId: number } | { formulaId: number }) {
+  const requestId = ++latestOpenRequest
+  formulaId.value = 'formulaId' in options ? options.formulaId : null
+  conceptoId.value = null
   errorMessage.value = null
   condicion.value = ''
   accion.value = ''
@@ -105,20 +109,23 @@ async function open(options: { conceptoId: number} | { formulaId: number }) {
   isVisible.value = true
   loading.value = true
   try {
-    if (!primitivas.value.length) primitivas.value = await configurationService.getPrimitivas()
+    if (!primitivas.value.length) {
+      const data = await configurationService.getPrimitivas()
+      if (requestId !== latestOpenRequest || !isVisible.value) return
+      primitivas.value = data
+    }
 
     if ('formulaId' in options) {
-      formulaId.value = options.formulaId
       const data = await formulasService.getById(options.formulaId)
+      if (requestId !== latestOpenRequest || !isVisible.value) return
       conceptoId.value = data.conceptoId
       condicion.value = data.condicion
       accion.value = data.accion
     } else {
-      formulaId.value = null
       conceptoId.value = options.conceptoId
     }
   } finally {
-    loading.value = false
+    if (requestId === latestOpenRequest) loading.value = false
   }
 }
 
