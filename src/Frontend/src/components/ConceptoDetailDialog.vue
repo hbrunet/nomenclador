@@ -109,17 +109,20 @@ function resetForm() {
   for (const key of flagKeys) flags.value[key] = false
 }
 
+let latestOpenRequest = 0
 async function open(id?: number) {
+  const requestId = ++latestOpenRequest
   editingId.value = id ?? null
   errorMessage.value = null
   activeTab.value = 'general'
   resetForm()
+  loading.value = Boolean(id)
   isVisible.value = true
 
   if (id) {
-    loading.value = true
     try {
       const data = await fetchConcepto(id)
+      if (requestId !== latestOpenRequest || !isVisible.value) return
       codigo.value = data.codigo
       subcodigo.value = data.subcodigo
       descripcionBreve.value = data.descripcionBreve
@@ -131,7 +134,7 @@ async function open(id?: number) {
       ppp.value = data.ppp
       for (const key of flagKeys) flags.value[key] = data[key]
     } finally {
-      loading.value = false
+      if (requestId === latestOpenRequest) loading.value = false
     }
   }
 }
