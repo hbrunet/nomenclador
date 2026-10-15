@@ -154,8 +154,8 @@ onMounted(async () => {
       </Column>
       <Column header="">
         <template #body="{ data }">
-          <Button aria-label="Editar concepto" icon="pi pi-pencil" severity="secondary" size="small" rounded @click="openEdit(data.id)" />
-          <Button aria-label="Administrar fórmulas" icon="pi pi-calculator" severity="secondary" size="small" rounded @click="openFormulas(data.id)" />
+          <Button title="Editar" icon="pi pi-pencil" severity="secondary" size="small" rounded @click="openEdit(data.id)" />
+          <Button title="Administrar fórmulas" icon="pi pi-calculator" severity="secondary" size="small" rounded @click="openFormulas(data.id)" />
           <Button
                     icon="pi pi-sitemap"
                     size="small"

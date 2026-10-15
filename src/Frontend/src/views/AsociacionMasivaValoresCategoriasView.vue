@@ -83,7 +83,7 @@ const filters = reactive({
   vigenteEn: new Date(),
 })
 
-const pagination = reactive({ total: 0, page: 1, pageSize: 20 })
+const pagination = reactive({ total: 0, page: 1, pageSize: 50 })
 const paginatorFirst = computed(() => (pagination.page - 1) * pagination.pageSize)
 const selectedConfiguraciones = ref<ConfiguracionNomencladorListItemDto[]>([])
 
@@ -366,7 +366,7 @@ onMounted(async () => {
       </DataTable>
 
       <Paginator v-if="pagination.total > 0" :rows="pagination.pageSize" :total-records="pagination.total"
-        :first="paginatorFirst" :rows-per-page-options="[10, 20, 50, 100]" @page="onPageChange" />
+        :first="paginatorFirst" :rows-per-page-options="[50, 100]" @page="onPageChange" />
     </section>
   </div>
  </div>
