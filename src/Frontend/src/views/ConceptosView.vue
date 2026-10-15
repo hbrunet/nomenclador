@@ -10,6 +10,7 @@ import ConceptoDetailDialog from '../components/ConceptoDetailDialog.vue'
 import { conceptosService } from '../services/conceptosService'
 import type { CatalogItem, ConceptoCatalogItem } from '../types/configuration'
 import FormulasDialog from '../components/FormulasDialog.vue'
+import NomencladoresAsociadosDialog from '../components/NomencladoresAsociadosDialog.vue'
 
 const DEBOUNCE_MS = 300
 
@@ -19,11 +20,12 @@ const query = ref('')
 const tipoFilter = ref<number | null>(null)
 const dialogRef = ref<InstanceType<typeof ConceptoDetailDialog> | null>(null)
 const formulasDialogRef = ref<InstanceType<typeof FormulasDialog> | null>(null)
+const asociadosDialogRef = ref<InstanceType<typeof NomencladoresAsociadosDialog> | null>(null)
 
 const tipos = ref<CatalogItem[]>([])
 const tiposLiquidacion = ref<CatalogItem[]>([])
 
-const pagination = reactive({ total: 0, page: 1, pageSize: 20 })
+const pagination = reactive({ total: 0, page: 1, pageSize: 50 })
 const paginatorFirst = computed(() => (pagination.page - 1) * pagination.pageSize)
 
 async function loadConceptos(page = 1) {
@@ -71,6 +73,10 @@ function openEdit(id: number) {
 }
 function openFormulas(conceptoId: number) {
   formulasDialogRef.value?.open({ conceptoId })
+}
+
+function openAsociadosConcepto(concepto: ConceptoCatalogItem) {
+  asociadosDialogRef.value?.open('concepto', concepto.id, concepto.descripcion)
 }
 
 function handleSaved(item: ConceptoCatalogItem) {
@@ -132,7 +138,7 @@ onMounted(async () => {
       :rows="pagination.pageSize"
       :total-records="pagination.total"
       :first="paginatorFirst"
-      :rows-per-page-options="[20, 50, 100]"
+      :rows-per-page-options="[50, 100, 200]"
       @page="onPageChange"
     >
       <template #empty>
@@ -160,11 +166,20 @@ onMounted(async () => {
         <template #body="{ data }">
           <Button icon="pi pi-pencil" severity="secondary" size="small" rounded @click="openEdit(data.id)" />
           <Button icon="pi pi-calculator" severity="secondary" size="small" rounded @click="openFormulas(data.id)" />
+          <Button
+                    icon="pi pi-sitemap"
+                    size="small"
+                    severity="secondary"
+                    rounded
+                    title="Configuraciones asociadas"
+                    @click="openAsociadosConcepto(data)"
+                  />
         </template>
       </Column>
     </DataTable>
 
     <ConceptoDetailDialog ref="dialogRef" :tipos="tipos" :tipos-liquidacion="tiposLiquidacion" @saved="handleSaved" />
     <FormulasDialog ref="formulasDialogRef" />
+    <NomencladoresAsociadosDialog ref="asociadosDialogRef" />
   </section>
 </template>
