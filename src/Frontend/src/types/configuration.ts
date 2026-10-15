@@ -241,7 +241,7 @@ export interface ConceptoCatalogItem {
   formulas: FormulaItem[]
 }
 
-// USUARIO.FORMULA — solo lectura, se muestran en el detalle del concepto.
+// USUARIO.FORMULA — fórmulas de liquidación administradas desde el detalle del concepto.
 export interface FormulaItem {
   id: number
   condicion: string | null
