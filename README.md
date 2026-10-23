@@ -35,6 +35,51 @@ La API expone:
 - `POST /api/configuraciones-nomenclador/{id}/clonar`
 - `GET /api/conceptos`
 - `GET /api/catalogs/*`
+- `GET /api/asistente/estado`
+- `POST /api/asistente/chat` (streaming SSE)
+
+### Asistente IA
+
+La vista **Asistente** (`/asistente`) es un chat que responde consultas sobre los datos del sistema y su uso.
+Usa un modelo local con [Ollama](https://ollama.com) (los datos no salen de la red) a través de su API
+compatible con OpenAI y `Microsoft.Extensions.AI`, con *function calling*: el modelo nunca accede directamente
+a la base de datos y sólo puede invocar las funciones definidas en `Services/AsistenteTools.cs`.
+
+- **Consultas**: configuraciones, conceptos, catálogos, valores fijos y por categoría (sólo lectura).
+- **Acciones**: clonar una configuración y agregar o quitar conceptos y valores fijos. El asistente sólo las
+  *propone*: el usuario debe confirmarlas en pantalla y la ejecución se hace con los endpoints REST habituales,
+  que aplican todas las validaciones.
+
+#### Instalación de Ollama
+
+1. Instalar Ollama para Windows desde https://ollama.com/download (escucha en `http://localhost:11434`).
+2. Definir variables de entorno de sistema y reiniciar Ollama:
+   - `OLLAMA_CONTEXT_LENGTH=16384`: el prompt, las herramientas y los resultados superan el contexto por defecto.
+   - `OLLAMA_KEEP_ALIVE=24h`: mantiene el modelo cargado y evita la demora de la primera consulta.
+   - Sólo si Ollama corre en otro servidor: `OLLAMA_HOST=0.0.0.0:11434`, y restringir el puerto en el firewall
+     para que sólo lo alcance la API (Ollama no tiene autenticación).
+3. Descargar un modelo con soporte de herramientas, por ejemplo `ollama pull qwen2.5:3b` (equipos con 8 GB de RAM)
+   o `ollama pull qwen2.5:7b` (16 GB o más, mejor calidad). Si el proxy bloquea la descarga, se puede copiar la
+   carpeta `%USERPROFILE%\.ollama\models` desde otro equipo.
+
+Configuración (sección `Asistente` de `appsettings.json`):
+
+| Clave | Por defecto | Descripción |
+|-------|-------------|-------------|
+| `Endpoint` | `http://localhost:11434/v1` | URL de la API compatible con OpenAI |
+| `Model` | `qwen2.5:3b` | Nombre del modelo (`ollama list`) |
+| `ApiKey` | — | Opcional; Ollama no la usa. Para proveedores externos usar user-secrets o `Asistente__ApiKey` |
+| `TimeoutSegundos` | `300` | Espera máxima por respuesta (en CPU un modelo local puede tardar) |
+| `MaxMensajesHistorial` | `20` | Mensajes previos que se envían al modelo |
+
+Si el modelo no está disponible, el resto de la aplicación funciona normalmente y el chat muestra el error.
+
+El cliente del asistente respeta el proxy predeterminado de .NET (configuración del sistema o variables
+`HTTPS_PROXY` / `HTTP_PROXY`, con las exclusiones de `NO_PROXY`) y se autentica ante él con las credenciales
+integradas de Windows de la cuenta que ejecuta la API. Las credenciales incluidas en la URL del proxy
+se ignoran: configurá únicamente su dirección y puerto, sin usuario ni contraseña.
+Si Ollama corre en otro servidor interno, agregá ese host a las exclusiones del proxy (`NO_PROXY` o la
+configuración del sistema) para que la API no intente alcanzarlo a través de él.
 
 ### Frontend
 

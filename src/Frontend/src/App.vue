@@ -66,6 +66,7 @@ const menuItems = computed<MenuItem[]>(() => [
       { label: 'Valores por categoría', route: '/clonacion-masiva/valores-categoria' },
     ],
   },
+  { label: 'Asistente', route: '/asistente' },
 ])
 
 function handleApiError(event: Event) {
