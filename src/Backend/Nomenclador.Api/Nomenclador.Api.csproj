@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Update="docs\ayuda\**\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--
       Oracle.ManagedDataAccess.Core 23.4.0: versión mínima disponible sin la
       vulnerabilidad conocida de 2.19.x. Soporte para Oracle 11g a nivel de

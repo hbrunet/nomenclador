@@ -23,13 +23,15 @@ public sealed class ConfiguracionNomencladorService(
         int pageSize = 20,
         int? conceptoId = null,
         int? valorFijoId = null,
-        int? valorCategoriaId = null)
+        int? valorCategoriaId = null,
+        int? valorFijoTipoId = null,
+        int? valorCategoriaTipoId = null)
     {
         var catalogs = await catalogRepository.GetSnapshotForListAsync();
         var periodoActivo = await catalogRepository.GetPeriodoActivoAsync();
         var (entities, total) = await configuracionRepository.GetAllAsync(
             nomencladorId, escalaSalarialId, zonaId, vigenteEn, estado, page, pageSize, periodoActivo,
-            conceptoId, valorFijoId, valorCategoriaId);
+            conceptoId, valorFijoId, valorCategoriaId, valorFijoTipoId, valorCategoriaTipoId);
 
         var items = entities
             .Select(entity => mapper.ToListItemDto(entity, catalogs, periodoActivo))

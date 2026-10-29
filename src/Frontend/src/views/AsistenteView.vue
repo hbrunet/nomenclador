@@ -38,13 +38,12 @@ const listaRef = ref<HTMLElement | null>(null)
 let abortController: AbortController | null = null
 
 const sugerencias = [
-  '¿Qué configuraciones están activas hoy?',
-  '¿En qué configuraciones se usa el concepto 100?',
-  '¿Cómo hago una asociación masiva de valores fijos?',
-  'Mostrame el detalle de la configuración 1',
+  'Buscar configuraciones activas',
+  '¿Qué nomencladores hay?'
 ]
 
 const nombresHerramientas: Record<string, string> = {
+  ConsultarAyuda: 'manual de usuario',
   ObtenerPeriodoActivo: 'período activo',
   BuscarNomencladores: 'nomencladores',
   BuscarEscalasSalariales: 'escalas salariales',

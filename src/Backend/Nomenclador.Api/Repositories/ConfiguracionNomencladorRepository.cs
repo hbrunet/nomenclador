@@ -21,7 +21,9 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         DateOnly? periodoActivo = null,
         int? conceptoId = null,
         int? valorFijoId = null,
-        int? valorCategoriaId = null)
+        int? valorCategoriaId = null,
+        int? valorFijoTipoId = null,
+        int? valorCategoriaTipoId = null)
     {
         ConfiguracionNomencladorEntity alias = null!;
         NomencladorCatalogEntity nomencladorAlias = null!;
@@ -57,6 +59,28 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         {
             var subquery = QueryOver.Of<ValorCategoriaConfiguradoEntity>()
                 .Where(item => item.ValorCategoriaId == valorCategoriaId.Value)
+                .Select(item => item.ConfiguracionNomencladorId);
+            query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
+        }
+
+        if (valorFijoTipoId.HasValue)
+        {
+            ValorFijoConfiguradoEntity valorFijoAlias = null!;
+            ValorFijoCatalogEntity catalogoValorFijoAlias = null!;
+            var subquery = QueryOver.Of(() => valorFijoAlias)
+                .JoinAlias(() => valorFijoAlias.ValorFijoCatalog, () => catalogoValorFijoAlias)
+                .Where(() => catalogoValorFijoAlias.Tipo!.Id == valorFijoTipoId.Value)
+                .Select(item => item.ConfiguracionNomencladorId);
+            query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
+        }
+
+        if (valorCategoriaTipoId.HasValue)
+        {
+            ValorCategoriaConfiguradoEntity valorCategoriaAlias = null!;
+            ValorCategoriaCatalogEntity catalogoValorCategoriaAlias = null!;
+            var subquery = QueryOver.Of(() => valorCategoriaAlias)
+                .JoinAlias(() => valorCategoriaAlias.ValorCategoria, () => catalogoValorCategoriaAlias)
+                .Where(() => catalogoValorCategoriaAlias.Tipo!.Id == valorCategoriaTipoId.Value)
                 .Select(item => item.ConfiguracionNomencladorId);
             query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
         }

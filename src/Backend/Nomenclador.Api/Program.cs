@@ -94,6 +94,7 @@ builder.Services.AddScoped<ConfiguracionNomencladorMapper>();
 builder.Services.AddScoped<ValidacionConfiguracionService>();
 builder.Services.AddScoped<ClonadoConfiguracionService>();
 builder.Services.AddScoped<ConfiguracionNomencladorService>();
+builder.Services.AddScoped<AyudaAplicacionService>();
 
 builder.Services.Configure<AsistenteOptions>(builder.Configuration.GetSection(AsistenteOptions.SectionName));
 builder.Services.AddSingleton<AsistenteChatClientProvider>();

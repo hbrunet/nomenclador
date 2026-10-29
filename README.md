@@ -46,9 +46,15 @@ compatible con OpenAI y `Microsoft.Extensions.AI`, con *function calling*: el mo
 a la base de datos y sólo puede invocar las funciones definidas en `Services/AsistenteTools.cs`.
 
 - **Consultas**: configuraciones, conceptos, catálogos, valores fijos y por categoría (sólo lectura).
-- **Acciones**: clonar una configuración y agregar o quitar conceptos y valores fijos. El asistente sólo las
-  *propone*: el usuario debe confirmarlas en pantalla y la ejecución se hace con los endpoints REST habituales,
-  que aplican todas las validaciones.
+  En el chat, las configuraciones se pueden filtrar por descripción del nomenclador, código/subcódigo del concepto
+  e Id de tipo de valor fijo o por categoría, además de escala y zona por Id, fecha de vigencia y estado.
+  Los filtros por tipo incluyen cualquier valor asociado de ese tipo. Para pedir el detalle no hace falta conocer
+  el Id de la configuración: si los filtros identifican una sola se devuelve su detalle; si hay varias, el asistente
+  muestra opciones para elegir. También pide una elección si la descripción del nomenclador o el código/subcódigo
+  del concepto son ambiguos. Las fechas aceptan `dd/MM/yyyy` o `yyyy-MM-dd`; los filtros inválidos no se omiten.
+- **Ayuda de uso**: para preguntas sobre navegación y procedimientos, el asistente consulta por palabras clave el manual
+  Markdown en `src/Backend/Nomenclador.Api/docs/ayuda/` y responde con la sección más relevante. El contenido se copia
+  al compilar y publicar la API. El asistente es de sólo lectura; las operaciones de escritura se realizan desde las pantallas.
 
 #### Instalación de Ollama
 
