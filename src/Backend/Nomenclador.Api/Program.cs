@@ -94,6 +94,12 @@ builder.Services.AddScoped<ConfiguracionNomencladorMapper>();
 builder.Services.AddScoped<ValidacionConfiguracionService>();
 builder.Services.AddScoped<ClonadoConfiguracionService>();
 builder.Services.AddScoped<ConfiguracionNomencladorService>();
+builder.Services.AddScoped<AyudaAplicacionService>();
+
+builder.Services.Configure<AsistenteOptions>(builder.Configuration.GetSection(AsistenteOptions.SectionName));
+builder.Services.AddSingleton<AsistenteChatClientProvider>();
+builder.Services.AddScoped<AsistenteTools>();
+builder.Services.AddScoped<AsistenteService>();
 builder.Services.AddHttpClient<SeguridadService>(c => c.Timeout = TimeSpan.FromSeconds(30))
     // svr-v-patri es interno; el proxy corporativo por defecto del sistema lo intercepta y lo bloquea (Squid ERR_ACCESS_DENIED).
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { UseProxy = false });

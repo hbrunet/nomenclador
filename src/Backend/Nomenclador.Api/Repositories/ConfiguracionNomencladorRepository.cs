@@ -6,7 +6,9 @@ using Nomenclador.Api.Models;
 
 namespace Nomenclador.Api.Repositories;
 
-public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession session)
+public sealed class ConfiguracionNomencladorRepository(
+    NHibernate.ISession session,
+    ILogger<ConfiguracionNomencladorRepository> logger)
 {
     private const int OracleInClauseChunkSize = 900;
 
@@ -21,7 +23,9 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         DateOnly? periodoActivo = null,
         int? conceptoId = null,
         int? valorFijoId = null,
-        int? valorCategoriaId = null)
+        int? valorCategoriaId = null,
+        int? valorFijoTipoId = null,
+        int? valorCategoriaTipoId = null)
     {
         ConfiguracionNomencladorEntity alias = null!;
         NomencladorCatalogEntity nomencladorAlias = null!;
@@ -61,6 +65,28 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
             query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
         }
 
+        if (valorFijoTipoId.HasValue)
+        {
+            ValorFijoConfiguradoEntity valorFijoAlias = null!;
+            ValorFijoCatalogEntity catalogoValorFijoAlias = null!;
+            var subquery = QueryOver.Of(() => valorFijoAlias)
+                .JoinAlias(() => valorFijoAlias.ValorFijoCatalog, () => catalogoValorFijoAlias)
+                .Where(() => catalogoValorFijoAlias.Tipo!.Id == valorFijoTipoId.Value)
+                .Select(item => item.ConfiguracionNomencladorId);
+            query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
+        }
+
+        if (valorCategoriaTipoId.HasValue)
+        {
+            ValorCategoriaConfiguradoEntity valorCategoriaAlias = null!;
+            ValorCategoriaCatalogEntity catalogoValorCategoriaAlias = null!;
+            var subquery = QueryOver.Of(() => valorCategoriaAlias)
+                .JoinAlias(() => valorCategoriaAlias.ValorCategoria, () => catalogoValorCategoriaAlias)
+                .Where(() => catalogoValorCategoriaAlias.Tipo!.Id == valorCategoriaTipoId.Value)
+                .Select(item => item.ConfiguracionNomencladorId);
+            query.WithSubquery.WhereProperty(() => alias.Id).In(subquery);
+        }
+
         if (vigenteEn.HasValue)
         {
             var fecha = vigenteEn.Value;
@@ -73,6 +99,10 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         if (!string.IsNullOrWhiteSpace(estado))
         {
+            logger.LogInformation(
+                "Consulta de configuraciones con filtro de estado {Estado}, período activo {PeriodoActivo}, valorFijoTipoId {ValorFijoTipoId}.",
+                estado, periodoActivo, valorFijoTipoId);
+
             if (periodoActivo == null || periodoActivo == default(DateOnly))
                 throw new InvalidOperationException("No hay un período activo configurado en el catálogo USUARIO.PERIODO.");
 
@@ -98,6 +128,13 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         }
 
         var total = await query.RowCountAsync();
+
+        if (!string.IsNullOrWhiteSpace(estado))
+        {
+            logger.LogInformation(
+                "Consulta de configuraciones con estado {Estado} y valorFijoTipoId {ValorFijoTipoId}: {Total} resultados.",
+                estado, valorFijoTipoId, total);
+        }
 
         var rawItems = await query
             .OrderBy(() => alias.FechaInicio).Desc

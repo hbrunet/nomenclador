@@ -100,6 +100,11 @@ const router = createRouter({
       name: 'grupos-valor-categoria',
       component: () => import('../views/GruposValorCategoriaView.vue'),
     },
+    {
+      path: '/asistente',
+      name: 'asistente',
+      component: () => import('../views/AsistenteView.vue'),
+    },
   ],
 })
 

@@ -97,6 +97,8 @@ See [README.md](README.md) for a high-level overview.
 | POST | `/api/configuraciones-nomenclador/{id}/clonar` | Clone |
 | GET | `/api/conceptos?q=…` | Search concepts |
 | GET | `/api/catalogs/*` | nomencladores, escalas, zonas, categorias, valores-fijos, valores-categorias |
+| GET | `/api/asistente/estado` | Whether the AI assistant is configured |
+| POST | `/api/asistente/chat` | AI assistant chat (SSE stream of `AsistenteEventoDto`); write tools only *propose* actions, frontend executes them after user confirmation |
 
 ---
 
