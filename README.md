@@ -48,12 +48,18 @@ a la base de datos y sólo puede invocar las funciones definidas en `Services/As
 - **Consultas**: configuraciones, conceptos, catálogos, valores fijos y por categoría (sólo lectura).
   En el chat, las configuraciones se pueden filtrar por descripción del nomenclador, código/subcódigo del concepto
   e Id de tipo de valor fijo o por categoría, además de escala y zona por Id, fecha de vigencia y estado.
-  Los filtros por tipo incluyen cualquier valor asociado de ese tipo. Para pedir el detalle no hace falta conocer
+  Los filtros por tipo incluyen cualquier valor asociado de ese tipo. Las búsquedas devuelven `filtrosAplicados`:
+  un filtro nulo o ausente no se aplicó; `estado=Todos` indica que no se filtró por estado.
+  El total corresponde a todos los resultados que cumplen los filtros, no sólo a la página.
+  Por ejemplo, "activas con valor fijo de tipo 65" combina `estado=Activa` y `valorFijoTipoId=65`.
+  Para pedir el detalle no hace falta conocer
   el Id de la configuración: si los filtros identifican una sola se devuelve su detalle; si hay varias, el asistente
   muestra opciones para elegir. También pide una elección si la descripción del nomenclador o el código/subcódigo
   del concepto son ambiguos. Las fechas aceptan `dd/MM/yyyy` o `yyyy-MM-dd`; los filtros inválidos no se omiten.
-- **Ayuda de uso**: para preguntas sobre navegación y procedimientos, el asistente consulta por palabras clave el manual
-  Markdown en `src/Backend/Nomenclador.Api/docs/ayuda/` y responde con la sección más relevante. El contenido se copia
+- **Ayuda de uso**: para preguntas sobre navegación y procedimientos, el backend consulta automáticamente por palabras clave
+  el manual Markdown en `src/Backend/Nomenclador.Api/docs/ayuda/` y proporciona la sección más relevante al modelo antes de
+  generar la respuesta. Esta consulta no depende de que el modelo elija una herramienta. Las herramientas de datos siguen
+  disponibles para preguntas que combinan instrucciones de uso y datos reales. El contenido se copia
   al compilar y publicar la API. El asistente es de sólo lectura; las operaciones de escritura se realizan desde las pantallas.
 
 #### Instalación de Ollama

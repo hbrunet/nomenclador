@@ -6,7 +6,9 @@ using Nomenclador.Api.Models;
 
 namespace Nomenclador.Api.Repositories;
 
-public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession session)
+public sealed class ConfiguracionNomencladorRepository(
+    NHibernate.ISession session,
+    ILogger<ConfiguracionNomencladorRepository> logger)
 {
     private const int OracleInClauseChunkSize = 900;
 
@@ -97,6 +99,10 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
 
         if (!string.IsNullOrWhiteSpace(estado))
         {
+            logger.LogInformation(
+                "Consulta de configuraciones con filtro de estado {Estado}, período activo {PeriodoActivo}, valorFijoTipoId {ValorFijoTipoId}.",
+                estado, periodoActivo, valorFijoTipoId);
+
             if (periodoActivo == null || periodoActivo == default(DateOnly))
                 throw new InvalidOperationException("No hay un período activo configurado en el catálogo USUARIO.PERIODO.");
 
@@ -122,6 +128,13 @@ public sealed class ConfiguracionNomencladorRepository(NHibernate.ISession sessi
         }
 
         var total = await query.RowCountAsync();
+
+        if (!string.IsNullOrWhiteSpace(estado))
+        {
+            logger.LogInformation(
+                "Consulta de configuraciones con estado {Estado} y valorFijoTipoId {ValorFijoTipoId}: {Total} resultados.",
+                estado, valorFijoTipoId, total);
+        }
 
         var rawItems = await query
             .OrderBy(() => alias.FechaInicio).Desc

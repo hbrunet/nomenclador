@@ -14,7 +14,8 @@ public sealed class AsistenteTools(
     ConfiguracionNomencladorService configuracionService,
     CatalogRepository catalogRepository,
     ConceptoRepository conceptoRepository,
-    AyudaAplicacionService ayudaAplicacionService)
+    AyudaAplicacionService ayudaAplicacionService,
+    ILogger<AsistenteTools> logger)
 {
     private const int MaxResultados = 25;
     // Acepta "25/100", "25 / 100", "25-100", "25 100", "25.100" o "código 25 subcódigo 100".
@@ -25,6 +26,7 @@ public sealed class AsistenteTools(
     private static readonly Regex SoloCodigoRegex = new(
         @"^\s*(?:c[oó]d(?:igo)?\.?\s*:?\s*)?(?<codigo>\d+)\s*$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private string? estadoSolicitadoPorUsuario;
 
     public IList<AITool> CrearTools() =>
         typeof(AsistenteTools)
@@ -32,6 +34,11 @@ public sealed class AsistenteTools(
             .Where(method => method.GetCustomAttribute<DescriptionAttribute>() is not null)
             .Select(method => (AITool)AIFunctionFactory.Create(method, this))
             .ToList();
+
+    internal void ConfigurarEstadoSolicitado(string? consultaUsuario)
+    {
+        estadoSolicitadoPorUsuario = InferirEstadoSolicitado(consultaUsuario);
+    }
 
     // ---------- Lectura ----------
 
@@ -228,13 +235,16 @@ public sealed class AsistenteTools(
     }
 
     [Description("Lista configuraciones con filtros combinables. Resuelve nomenclador por descripción y concepto por código/subcódigo " +
-    "sin búsquedas previas. Los filtros de valores son IDs de tipo, no IDs de valores individuales. Devuelve hasta 10 resultados por página.")]
+    "sin búsquedas previas. Combiná todos los filtros pedidos: por ejemplo, 'activas con valor fijo de tipo 65' requiere " +
+    "estado='Activa' y valorFijoTipoId=65. Los filtros de valores son IDs de tipo, no IDs de valores individuales. " +
+    "Devuelve el total filtrado, los filtrosAplicados y hasta 10 resultados por página.")]
     public async Task<object> BuscarConfiguraciones(
         [Description("Parte de la descripción del nomenclador.")] string? nomenclador = null,
         [Description("Id de escala salarial.")] int? escalaSalarialId = null,
         [Description("Id de zona.")] int? zonaId = null,
         [Description("Fecha MM/yyyy sólo configuraciones vigentes en esa fecha.")] string? vigenteEn = null,
-        [Description("Estado: Futura, Activa o Vencida.")] string? estado = null,
+        [Description("Usá 'Activa' si pide activas o vigentes sin una fecha, 'Futura' para futuras y 'Vencida' para vencidas. " +
+                     "Omitir sólo si no pidió filtrar por estado. Sin este parámetro se incluyen todos los estados.")] string? estado = null,
         [Description("Código/subcódigo del concepto asociado tal como lo escribió el usuario, completo (ej. '25/100', no solo '25'). No es el Id interno.")] string? concepto = null,
         [Description("Id del tipo de valor fijo que debe tener asociado. Incluye cualquier valor de ese tipo.")] int? valorFijoTipoId = null,
         [Description("Id del tipo de valor por categoría que debe tener asociado. Incluye cualquier valor de ese tipo.")] int? valorCategoriaTipoId = null,
@@ -242,10 +252,14 @@ public sealed class AsistenteTools(
         [Description("Id interno del nomenclador si ya se conoce o el usuario eligió una opción.")] int? nomencladorId = null,
         [Description("Id interno del concepto si ya se conoce o el usuario eligió una opción.")] int? conceptoId = null)
     {
-        var (resultado, respuesta) = await ConsultarConfiguracionesAsync(
+        var estadoDelModelo = estado;
+        estado = AplicarEstadoSolicitado(estado);
+        RegistrarEstadoAplicado(nameof(BuscarConfiguraciones), estadoDelModelo, estado);
+
+        var (_, respuesta) = await ConsultarConfiguracionesAsync(
             nomenclador, escalaSalarialId, zonaId, vigenteEn, estado, concepto,
             valorFijoTipoId, valorCategoriaTipoId, pagina, nomencladorId, conceptoId);
-        return resultado is null ? respuesta! : ResumirConfiguraciones(resultado);
+        return respuesta!;
     }
 
     [Description("Obtiene una configuración con sus conceptos y valores. Acepta su Id o los mismos filtros que BuscarConfiguraciones, " +
@@ -256,13 +270,18 @@ public sealed class AsistenteTools(
         [Description("Id de escala salarial.")] int? escalaSalarialId = null,
         [Description("Id de zona.")] int? zonaId = null,
         [Description("Fecha MM/yyyy de vigencia.")] string? vigenteEn = null,
-        [Description("Estado: Futura, Activa o Vencida.")] string? estado = null,
+        [Description("Usá 'Activa' si pide activas o vigentes sin una fecha, 'Futura' para futuras y 'Vencida' para vencidas. " +
+                     "Omitir sólo si no pidió filtrar por estado. Sin este parámetro se incluyen todos los estados.")] string? estado = null,
         [Description("Código/subcódigo del concepto asociado tal como lo escribió el usuario, completo (ej. '25/100', no solo '25'). No es el Id interno.")] string? concepto = null,
         [Description("Id del tipo de valor fijo asociado, no el Id de un valor individual.")] int? valorFijoTipoId = null,
         [Description("Id del tipo de valor por categoría asociado, no el Id de un valor individual.")] int? valorCategoriaTipoId = null,
         [Description("Id interno del nomenclador si ya se conoce o el usuario eligió una opción.")] int? nomencladorId = null,
         [Description("Id interno del concepto si ya se conoce o el usuario eligió una opción.")] int? conceptoId = null)
     {
+        var estadoDelModelo = estado;
+        estado = AplicarEstadoSolicitado(estado);
+        RegistrarEstadoAplicado(nameof(ObtenerConfiguracion), estadoDelModelo, estado);
+
         if (configuracionId is null)
         {
             if (string.IsNullOrWhiteSpace(nomenclador) && nomencladorId is null
@@ -288,7 +307,7 @@ public sealed class AsistenteTools(
                     mensaje = "Hay varias configuraciones. Mostrale estas opciones al usuario y preguntale cuál quiere. " +
                               "Cuando elija, llamá a ObtenerConfiguracion con configuracionId. " +
                               "Para más opciones, usá BuscarConfiguraciones con los mismos filtros y otra página.",
-                    coincidencias = ResumirConfiguraciones(resultado),
+                    coincidencias = respuesta,
                 };
             }
 
@@ -434,14 +453,26 @@ public sealed class AsistenteTools(
         var resultado = await configuracionService.GetAllAsync(
             nomencladorId, escalaSalarialId, zonaId, fecha, estado, Math.Max(1, pagina), 10,
             conceptoId: conceptoId, valorFijoTipoId: valorFijoTipoId, valorCategoriaTipoId: valorCategoriaTipoId);
-        return (resultado, null);
+        return (resultado, ResumirConfiguraciones(resultado, new
+        {
+            nomencladorId,
+            escalaSalarialId,
+            zonaId,
+            vigenteEn = fecha?.ToString("MM/yyyy", CultureInfo.InvariantCulture),
+            estado = string.IsNullOrWhiteSpace(estado) ? "Todos" : estado.Trim(),
+            conceptoId,
+            valorFijoTipoId,
+            valorCategoriaTipoId,
+        }));
     }
 
-    private static object ResumirConfiguraciones(PagedResult<ConfiguracionNomencladorListItemDto> resultado) => new
+    private static object ResumirConfiguraciones(
+        PagedResult<ConfiguracionNomencladorListItemDto> resultado, object filtrosAplicados) => new
     {
         resultado.Total,
         resultado.Page,
         resultado.PageSize,
+        filtrosAplicados,
         items = resultado.Items.Select(i => new
         {
             i.Id,
@@ -453,6 +484,48 @@ public sealed class AsistenteTools(
             i.Estado,
         }).ToList(),
     };
+
+    private string? AplicarEstadoSolicitado(string? estadoDelModelo) =>
+        estadoSolicitadoPorUsuario ?? estadoDelModelo;
+
+    private void RegistrarEstadoAplicado(string herramienta, string? estadoDelModelo, string? estadoAplicado)
+    {
+        if (estadoSolicitadoPorUsuario is not null)
+        {
+            logger.LogInformation(
+                "{Herramienta}: estado enviado por el modelo={EstadoModelo}; estado explícito del usuario aplicado={EstadoAplicado}.",
+                herramienta, estadoDelModelo ?? "(omitido)", estadoAplicado);
+        }
+    }
+
+    private static string? InferirEstadoSolicitado(string? consulta)
+    {
+        if (string.IsNullOrWhiteSpace(consulta))
+            return null;
+
+        var consultaNormalizada = consulta.ToLowerInvariant();
+        var solicitaVigenciaEnPeriodo = Regex.IsMatch(
+            consultaNormalizada,
+            @"\bvigentes?\s+(?:en|para)\b",
+            RegexOptions.CultureInvariant);
+
+        var estados = new List<string>(3);
+        if (Regex.IsMatch(consultaNormalizada, @"\bactiv[oa]s?\b", RegexOptions.CultureInvariant))
+            estados.Add("Activa");
+        if (Regex.IsMatch(consultaNormalizada, @"\bfutur[oa]s?\b", RegexOptions.CultureInvariant))
+            estados.Add("Futura");
+        if (Regex.IsMatch(consultaNormalizada, @"\bvencid[oa]s?\b", RegexOptions.CultureInvariant))
+            estados.Add("Vencida");
+        if (!solicitaVigenciaEnPeriodo
+            && Regex.IsMatch(consultaNormalizada, @"\bvigentes?\b", RegexOptions.CultureInvariant))
+        {
+            estados.Add("Activa");
+        }
+
+        return estados.Distinct(StringComparer.Ordinal).Take(2).Count() == 1
+            ? estados[0]
+            : null;
+    }
 
     private static object Filtrar(IReadOnlyCollection<CatalogItemDto> items, string? texto)
     {
