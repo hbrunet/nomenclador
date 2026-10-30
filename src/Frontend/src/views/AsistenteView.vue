@@ -279,7 +279,7 @@ function renderMarkdown(markdown: string) {
       El asistente no está configurado en el servidor. Revisá la sección <code>Asistente</code> (Endpoint y Model).
     </Message>
 
-    <div ref="listaRef" class="asistente-mensajes">
+    <div ref="listaRef" class="asistente-mensajes" role="log" aria-live="polite" aria-label="Conversación con el asistente">
       <div v-if="mensajes.length === 0" class="asistente-vacio">
         <p class="mb-3">Preguntame sobre configuraciones, conceptos, valores o cómo usar el sistema.</p>
         <div class="flex flex-wrap gap-2 justify-content-center">
