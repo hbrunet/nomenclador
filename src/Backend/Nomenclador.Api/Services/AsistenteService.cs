@@ -1,7 +1,5 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Nomenclador.Api.DTOs;
@@ -15,12 +13,6 @@ public sealed class AsistenteService(
     ILogger<AsistenteService> logger)
 {
     private const int MaxLargoMensaje = 4000;
-    private static readonly Regex IndicadoresConsultaAyudaRegex = new(
-        @"\b(como|donde|para que|que significa|que es|ayuda|ayudame|pantalla|opcion|boton|campo|formulario|" +
-        @"paso a paso|crear|creacion|alta|editar|modificar|cambiar|eliminar|borrar|asociar|asocio|asociacion|" +
-        @"desasociar|clonar|clonacion|copiar|actualizar|actualizacion|funciona|funcionamiento|error|no puedo|" +
-        @"explicar|explicame|ensenar|ensename)\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     public bool Habilitado => options.Value.Habilitado;
 
@@ -28,33 +20,6 @@ public sealed class AsistenteService(
         IReadOnlyCollection<AsistenteMensajeDto> mensajes,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var mensajeActual = mensajes.LastOrDefault(m => m.Rol != "assistant")?.Contenido;
-        if (EsConsultaDeUso(mensajeActual))
-        {
-            yield return new AsistenteEventoDto { Tipo = "herramienta", Texto = nameof(AsistenteTools.ConsultarAyuda) };
-            string? respuestaAyuda = null;
-            AsistenteEventoDto? errorAyuda = null;
-            try
-            {
-                respuestaAyuda = await tools.ConsultarAyuda(mensajeActual!);
-            }
-            catch (Exception ex) when (
-                ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException)
-            {
-                logger.LogError(ex, "No se pudo consultar el manual de usuario.");
-                errorAyuda = new AsistenteEventoDto
-                {
-                    Tipo = "error",
-                    Texto = "No se pudo consultar el manual de usuario. Intentá nuevamente o consultá al administrador.",
-                };
-            }
-
-            yield return errorAyuda
-                ?? new AsistenteEventoDto { Tipo = "texto", Texto = respuestaAyuda };
-            yield return new AsistenteEventoDto { Tipo = "fin" };
-            yield break;
-        }
-
         var innerClient = clientProvider.Client
             ?? throw new InvalidOperationException("El asistente no está configurado (falta Asistente:ApiKey).");
 
@@ -178,9 +143,9 @@ public sealed class AsistenteService(
             - Usá las herramientas para obtener datos reales; nunca inventes ids, montos, fechas ni descripciones.
             - Obligatorio: para preguntas sobre cómo usar las pantallas, dónde encontrar una opción o cómo completar un
               procedimiento, llamá ConsultarAyuda antes de responder y basá la respuesta en las secciones devueltas.
-              En esas consultas no hay otras herramientas disponibles. Si el manual no alcanza, decilo y pedí una
-              aclaración; no inventes pasos ni nombres de opciones.
+              Si el manual no alcanza, decilo y pedí una aclaración; no inventes pasos ni nombres de opciones.
             - Para preguntas sobre datos actuales del sistema, usá las herramientas de consulta, no ConsultarAyuda.
+              Si la consulta combina ambos propósitos, usá también las herramientas de consulta.
             - Para obtener el detalle de un concepto usá ObtenerConcepto pasando directamente el código/subcódigo o una parte de la descripción.
               Pasá conceptoId sólo si el usuario indicó el Id interno o eligió una opción. Si devuelve requiereEleccion, mostrá las opciones
               y preguntá cuál quiere antes de volver a llamar la herramienta con ese Id.
@@ -202,17 +167,5 @@ public sealed class AsistenteService(
               si una herramienta no devuelve el Id de una entidad, indicá que no está disponible, sin inventarlo.
             - Si la consulta no tiene relación con el sistema de nomenclador, indicá amablemente que sólo podés ayudar con este sistema.
             """;
-    }
-
-    private static bool EsConsultaDeUso(string? mensaje)
-    {
-        if (string.IsNullOrWhiteSpace(mensaje))
-            return false;
-
-        var normalizado = mensaje.Normalize(NormalizationForm.FormD);
-        var sinAcentos = string.Concat(normalizado
-            .Where(caracter => CharUnicodeInfo.GetUnicodeCategory(caracter) != UnicodeCategory.NonSpacingMark))
-            .Normalize(NormalizationForm.FormC);
-        return IndicadoresConsultaAyudaRegex.IsMatch(sinAcentos);
     }
 }
