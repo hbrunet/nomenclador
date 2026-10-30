@@ -94,7 +94,7 @@ public sealed class AyudaAplicacionService(IWebHostEnvironment environment)
         if (secciones.Count == 0)
             throw new InvalidDataException("Los archivos del manual no contienen secciones Markdown con encabezados ##.");
 
-        var resultados = secciones
+        var coincidencias = secciones
             .Select(seccion => new
             {
                 Seccion = seccion,
@@ -111,12 +111,21 @@ public sealed class AyudaAplicacionService(IWebHostEnvironment environment)
             .Where(item => item.Puntaje > 0)
             .OrderByDescending(item => item.Puntaje)
             .ThenBy(item => item.Seccion.Titulo, StringComparer.OrdinalIgnoreCase)
-            .Take(MaxSecciones)
             .ToList();
 
-        if (resultados.Count == 0)
+        if (coincidencias.Count == 0)
             return "No encontré una sección del manual que responda claramente. ¿Podés decirme en qué pantalla estás o qué tarea querés realizar?";
 
+        var mejoresCoincidencias = coincidencias
+            .Where(item => item.Puntaje == coincidencias[0].Puntaje)
+            .ToList();
+        if (mejoresCoincidencias.Count > 1)
+        {
+            var titulos = string.Join(", ", mejoresCoincidencias.Select(item => $"“{item.Seccion.Titulo}”"));
+            return $"Encontré varias secciones relevantes: {titulos}. ¿Cuál de estas operaciones querés consultar?";
+        }
+
+        var resultados = mejoresCoincidencias.Take(MaxSecciones).ToList();
         var respuesta = new StringBuilder("Secciones relevantes del manual de usuario:");
         foreach (var resultado in resultados)
         {
