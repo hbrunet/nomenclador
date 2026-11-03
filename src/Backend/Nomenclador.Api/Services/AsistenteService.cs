@@ -15,19 +15,26 @@ public sealed class AsistenteService(
     ILogger<AsistenteService> logger)
 {
     private const int MaxLargoMensaje = 4000;
+    private const string VerbosAccionAyuda =
+        @"(?:us\w*|utiliz\w*|busc\w*|filtr\w*|cre\w*|edit\w*|cambi\w*|modific\w*|configur\w*|" +
+        @"seleccion\w*|complet\w*|agreg\w*|quit\w*|asoci\w*|clon\w*|acced\w*|ingres\w*|naveg\w*|" +
+        @"consult\w*|muestr\w*|mostr\w*|abr\w*|encuentr\w*|ve\w*|hac\w*|hago|elimin\w*|borr\w*|actualiz\w*)";
     private static readonly Regex IndicadoresConsultaAyudaRegex = new(
         @"\b(?:" +
-        @"como\s+(?:(?:se\s+)?(?:usa|usar|utiliza|utilizar|busca|buscar|filtra|filtrar|creo|crear|edito|editar|" +
-        @"asocio|asociar|clono|clonar|accedo|acceder|ingreso|ingresar|navego|navegar)|puedo|hago)|" +
-        @"donde\s+(?:esta|encuentro|queda|accedo|ingreso|aparece)|" +
-        @"(?:manual|guia|tutorial)\s+(?:de|para|sobre)|" +
-        @"(?:instrucciones|pasos|paso a paso|procedimiento)\s+(?:de|para|sobre)|" +
+        @"como\s+(?:(?:se\s+puede|se|puede)\s+)?" + VerbosAccionAyuda + @"\b|como\s+(?:puedo|hago)\b|" +
+        @"donde\s+(?:(?:esta|encuentro|queda|accedo|ingreso|aparece)|" +
+        @"(?:(?:puedo|debo|se\s+puede|se)\s+)?" + VerbosAccionAyuda + @")|" +
+        @"en\s+que\s+(?:pantalla|menu|pestana|boton|campo|seccion)\b|" +
+        @"(?:que|cual)\s+(?:boton|menu|pantalla|pestana|campo)\b|" +
+        @"(?:manual|guia|tutorial)\s*(?:de|para|sobre)?|" +
+        @"(?:instrucciones|pasos|paso a paso|procedimiento)\s*(?:de|para|sobre)?|" +
         @"(?:necesito|quiero|busco)\s+(?:saber\s+)?(?:como|donde|ayuda)|" +
         @"(?:necesito|quiero|busco)\s+ayuda(?:\s+(?:para|con|a))?|" +
         @"ayudame\s+(?:a|con|para)|" +
         @"que\s+(?:hago\s+(?:para|si|cuando)|pasos\s+(?:sigo\s+)?(?:para|de|sobre))|" +
         @"(?:puedo|debo|tengo que)\s+(?:crear|editar|modificar|asociar|desasociar|clonar|actualizar|eliminar)|" +
-        @"no\s+puedo\s+\w+|" +
+        @"no\s+(?:puedo|logro|consigo)\s+\w+|" +
+        @"no\s+(?:encuentro|veo|aparece|me deja)\b|" +
         @"(?:uso|utilizo)\s+(?:del|de la|de|el|la)\s+(?:sistema|aplicacion|pantalla|menu|asistente)|" +
         @"explicame\s+(?:como|el uso|la pantalla|el menu|el procedimiento|los pasos|el login)|" +
         @"(?:instrucciones|pasos|procedimiento)\s+de\s+uso)\b",
@@ -219,6 +226,15 @@ public sealed class AsistenteService(
             - Regla de superposición: no puede haber dos configuraciones con el mismo Nomenclador + Escala + Zona y vigencias superpuestas.
             - Clonar una configuración copia su combinación y (opcionalmente) conceptos, valores fijos y valores por categoría a un nuevo rango.
 
+            ## Enrutamiento de consultas
+            - **Ayuda de uso**: preguntas sobre cómo realizar una operación, dónde está una opción, qué pantalla/campo/botón usar
+              o por qué no se puede completar una tarea. Consultá el manual y respondé basándote en él.
+            - **Datos del sistema**: pedidos de listas, registros, detalles, IDs, estados, períodos o montos actuales. Consultá
+              las herramientas de datos; no respondas con el manual ni deduzcas datos a partir de él.
+            - **Consulta mixta**: si pide instrucciones y datos concretos, consultá el manual y también las herramientas de datos.
+              No consideres que recuperar una sección del manual satisface el pedido de datos.
+            - **Intención ambigua**: no elijas una operación ni un registro por el usuario; pedí la aclaración necesaria.
+
             ## Reglas
             - Usá las herramientas para obtener datos reales; nunca inventes ids, montos, fechas ni descripciones.
             - Obligatorio: para preguntas sobre cómo usar las pantallas, dónde encontrar una opción o cómo completar un
@@ -231,6 +247,10 @@ public sealed class AsistenteService(
               Pasá conceptoId sólo si el usuario indicó el Id interno o eligió una opción. Si devuelve requiereEleccion, mostrá las opciones
               y preguntá cuál quiere antes de volver a llamar la herramienta con ese Id.
             - Para listar conceptos usá BuscarConceptos.
+            - Para encontrar por descripción un tipo de valor fijo o por categoría, usá BuscarTiposValoresFijos
+              o BuscarTiposValoresPorCategoria, respectivamente. Pasá el Id de tipo devuelto a los filtros
+              valorFijoTipoId o valorCategoriaTipoId de BuscarConfiguraciones u ObtenerConfiguracion cuando corresponda.
+              No confundas esos tipos con valores individuales.
             - Para listar configuraciones usá BuscarConfiguraciones; para ver el detalle de una, ObtenerConfiguracion.
               Ambas aceptan nomenclador por descripción, concepto por código/subcódigo y valores fijos o por categoría por Id de tipo,
               sin búsquedas previas. No confundas el Id de tipo con el Id de un valor individual. Escala y zona siguen usando sus IDs.

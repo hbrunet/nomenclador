@@ -56,6 +56,8 @@ const nombresHerramientas: Record<string, string> = {
   BuscarValoresPorCategoria: 'valores por categoría',
   BuscarConfiguraciones: 'configuraciones',
   ObtenerConfiguracion: 'detalle de configuración',
+  BuscarTiposValoresFijos: 'tipos de valores fijos',
+  BuscarTiposValoresPorCategoria: 'tipos de valores por categoría'
 }
 
 function etiquetaHerramienta(nombre: string) {

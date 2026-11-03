@@ -46,6 +46,8 @@ compatible con OpenAI y `Microsoft.Extensions.AI`, con *function calling*: el mo
 a la base de datos y sólo puede invocar las funciones definidas en `Services/AsistenteTools.cs`.
 
 - **Consultas**: configuraciones, conceptos, catálogos, valores fijos y por categoría (sólo lectura).
+  Para resolver un Id de tipo a partir de su descripción, el asistente ofrece búsquedas separadas para tipos de valores
+  fijos y tipos de valores por categoría; después puede usar ese Id como filtro de configuraciones.
   En el chat, las configuraciones se pueden filtrar por descripción del nomenclador, código/subcódigo del concepto
   e Id de tipo de valor fijo o por categoría, además de escala y zona por Id, fecha de vigencia y estado.
   Los filtros por tipo incluyen cualquier valor asociado de ese tipo. Las búsquedas devuelven `filtrosAplicados`:
