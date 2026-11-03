@@ -38,8 +38,8 @@ const listaRef = ref<HTMLElement | null>(null)
 let abortController: AbortController | null = null
 
 const sugerencias = [
-  'Buscar configuraciones activas',
-  '¿Qué nomencladores hay?'
+  '¿Cómo creo o edito una configuración?',
+  'Buscá configuraciones activas',
 ]
 
 const nombresHerramientas: Record<string, string> = {
@@ -380,7 +380,7 @@ function renderMarkdown(markdown: string) {
       <Button v-else icon="pi pi-send" aria-label="Enviar" :disabled="!habilitado || !entrada.trim()" @click="enviar()" />
     </div>
     <small class="text-color-secondary block mt-2">
-      Las respuestas son generadas por IA y pueden contener errores. Las modificaciones sólo se aplican si las confirmás.
+      Las respuestas son generadas por IA y pueden contener errores. El asistente es de consulta y no modifica datos.
     </small>
   </section>
 </template>
