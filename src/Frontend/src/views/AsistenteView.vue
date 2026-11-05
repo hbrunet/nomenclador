@@ -526,8 +526,8 @@ function renderMarkdown(markdown: string) {
                     />
                     <Button label="Cancelar" size="small" text severity="secondary" @click="cancelarFeedback(mensaje)" />
                   </div>
-                  <small v-if="mensaje.feedback.error" class="text-red-600 block mt-1">{{ mensaje.feedback.error }}</small>
                 </div>
+                <small v-if="mensaje.feedback.error" class="text-red-600 block mt-1">{{ mensaje.feedback.error }}</small>
               </template>
             </div>
           </div>
