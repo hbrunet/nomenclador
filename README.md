@@ -37,6 +37,8 @@ La API expone:
 - `GET /api/catalogs/*`
 - `GET /api/asistente/estado`
 - `POST /api/asistente/chat` (streaming SSE)
+- `POST /api/asistente/feedback` — registra 👍/👎 sobre una respuesta puntual del asistente
+- `GET /api/asistente/feedback/resumen` — totales y motivos de los votos negativos
 
 ### Asistente IA
 
@@ -67,6 +69,14 @@ a la base de datos y sólo puede invocar las funciones definidas en `Services/As
   generar la respuesta. Esta consulta no depende de que el modelo elija una herramienta. Las herramientas de datos siguen
   disponibles para preguntas que combinan instrucciones de uso y datos reales. El contenido se copia
   al compilar y publicar la API. El asistente es de sólo lectura; las operaciones de escritura se realizan desde las pantallas.
+- **Feedback**: cada respuesta del asistente tiene botones 👍/👎. Un voto negativo pide un motivo
+  (dato incorrecto, respuesta incompleta, no entendió la consulta u otro) y permite agregar un comentario; un
+  checkbox desmarcado por defecto permite compartir la pregunta y la respuesta completas para ayudar a diagnosticar
+  el caso. El historial de conversación no se persiste en el servidor, así que el feedback no incluye la conversación
+  salvo que el usuario la comparta explícitamente. Los votos se guardan en `USUARIO.ASISTENTE_FEEDBACK`
+  (script `db/2026-11-05_asistente_feedback.sql`, aplicar manualmente) junto con las herramientas invocadas y el
+  modelo vigente, para poder correlacionar los votos negativos con ajustes al prompt o al manual de ayuda. La vista
+  **Feedback del asistente** (`/asistente/feedback`) muestra el resumen de totales y motivos.
 
 #### Instalación de Ollama
 

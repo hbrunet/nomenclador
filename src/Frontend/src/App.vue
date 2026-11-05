@@ -67,6 +67,7 @@ const menuItems = computed<MenuItem[]>(() => [
     ],
   },
   { label: 'Asistente', route: '/asistente' },
+  { label: 'Feedback del asistente', route: '/asistente/feedback' },
 ])
 
 function handleApiError(event: Event) {

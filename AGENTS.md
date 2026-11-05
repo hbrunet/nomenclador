@@ -99,6 +99,8 @@ See [README.md](README.md) for a high-level overview.
 | GET | `/api/catalogs/*` | nomencladores, escalas, zonas, categorias, valores-fijos, valores-categorias |
 | GET | `/api/asistente/estado` | Whether the AI assistant is configured |
 | POST | `/api/asistente/chat` | AI assistant chat (SSE stream of `AsistenteEventoDto`); write tools only *propose* actions, frontend executes them after user confirmation |
+| POST | `/api/asistente/feedback` | Record a 👍/👎 vote (with optional reason/comment) for one assistant response |
+| GET | `/api/asistente/feedback/resumen` | Totals and negative-vote reason counts, for prompt/manual tuning |
 
 ---
 

@@ -3,12 +3,14 @@ import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
+import Checkbox from 'primevue/checkbox'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 import { asistenteService } from '../services/asistenteService'
+import { asistenteFeedbackService } from '../services/asistenteFeedbackService'
 import { configurationService } from '../services/configurationService'
-import type { AsistenteAccionPropuestaDto, AsistenteMensajeDto } from '../types/asistente'
+import type { AsistenteAccionPropuestaDto, AsistenteFeedbackMotivo, AsistenteMensajeDto } from '../types/asistente'
 
 type EstadoAccion = 'pendiente' | 'ejecutando' | 'confirmada' | 'descartada' | 'error'
 
@@ -19,13 +21,37 @@ interface AccionUi {
   error?: string
 }
 
+// 'ninguno': sin votar. 'detalle': 👎 clickeado, eligiendo motivo antes de enviar.
+// 'enviando'/'enviado'/'error': resultado del POST a /asistente/feedback.
+type EstadoFeedback = 'ninguno' | 'detalle' | 'enviando' | 'enviado' | 'error'
+
+interface FeedbackUi {
+  estado: EstadoFeedback
+  util: boolean | null
+  motivo: AsistenteFeedbackMotivo | null
+  comentario: string
+  compartir: boolean
+  error?: string
+}
+
 interface MensajeUi {
+  id: string
   rol: 'user' | 'assistant'
   contenido: string
   herramientas: string[]
   acciones: AccionUi[]
   error?: string
+  // Sólo se completa en mensajes del asistente: pregunta que la originó (para feedback con opt-in).
+  pregunta?: string
+  feedback?: FeedbackUi
 }
+
+const motivosFeedback: { valor: AsistenteFeedbackMotivo; etiqueta: string }[] = [
+  { valor: 'dato_incorrecto', etiqueta: 'Dato incorrecto' },
+  { valor: 'respuesta_incompleta', etiqueta: 'Respuesta incompleta' },
+  { valor: 'no_entendio', etiqueta: 'No entendió mi consulta' },
+  { valor: 'otro', etiqueta: 'Otro' },
+]
 
 const router = useRouter()
 const toast = useToast()
@@ -90,11 +116,19 @@ async function enviar(texto?: string) {
   const contenido = (texto ?? entrada.value).trim()
   if (!contenido || enviando.value) return
 
-  mensajes.value.push({ rol: 'user', contenido, herramientas: [], acciones: [] })
+  mensajes.value.push({ id: crypto.randomUUID(), rol: 'user', contenido, herramientas: [], acciones: [] })
   entrada.value = ''
   const historial = historialParaApi()
 
-  mensajes.value.push({ rol: 'assistant', contenido: '', herramientas: [], acciones: [] })
+  mensajes.value.push({
+    id: crypto.randomUUID(),
+    rol: 'assistant',
+    contenido: '',
+    herramientas: [],
+    acciones: [],
+    pregunta: contenido,
+    feedback: { estado: 'ninguno', util: null, motivo: null, comentario: '', compartir: false },
+  })
   // Se toma la referencia reactiva (proxy) para que las mutaciones actualicen la vista.
   const respuesta = mensajes.value[mensajes.value.length - 1]
 
@@ -142,6 +176,64 @@ function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault()
     enviar()
+  }
+}
+
+// Helper en vez de comparar mensaje.feedback.estado directamente en el v-if: evita que
+// vue-tsc, al ver ese mismo acceso de propiedad comparado contra otro literal más abajo
+// (p. ej. 'enviando' dentro del bloque 'detalle'), lo marque como una comparación imposible.
+function esFeedbackDetalle(mensaje: MensajeUi) {
+  return mensaje.feedback?.estado === 'detalle'
+}
+
+function votar(mensaje: MensajeUi, util: boolean) {
+  const feedback = mensaje.feedback
+  if (!feedback || feedback.estado === 'enviando') return
+
+  feedback.util = util
+  feedback.error = undefined
+  if (util) {
+    feedback.motivo = null
+    feedback.comentario = ''
+    feedback.compartir = false
+    enviarFeedback(mensaje)
+  } else {
+    feedback.estado = 'detalle'
+  }
+}
+
+function cancelarFeedback(mensaje: MensajeUi) {
+  const feedback = mensaje.feedback
+  if (!feedback) return
+
+  feedback.estado = 'ninguno'
+  feedback.util = null
+  feedback.motivo = null
+  feedback.comentario = ''
+  feedback.compartir = false
+  feedback.error = undefined
+}
+
+async function enviarFeedback(mensaje: MensajeUi) {
+  const feedback = mensaje.feedback
+  if (!feedback || feedback.util === null) return
+  if (feedback.util === false && !feedback.motivo) return
+
+  feedback.estado = 'enviando'
+  try {
+    await asistenteFeedbackService.enviar({
+      respuestaId: mensaje.id,
+      util: feedback.util,
+      motivo: feedback.util ? null : feedback.motivo,
+      comentario: feedback.comentario.trim() || null,
+      herramientas: mensaje.herramientas,
+      consultaUsuario: feedback.compartir ? mensaje.pregunta ?? null : null,
+      respuestaAsistente: feedback.compartir ? mensaje.contenido : null,
+    })
+    feedback.estado = 'enviado'
+  } catch {
+    feedback.estado = 'error'
+    feedback.error = 'No se pudo enviar el feedback. Probá nuevamente.'
   }
 }
 
@@ -298,7 +390,7 @@ function renderMarkdown(markdown: string) {
         </div>
       </div>
 
-      <div v-for="(mensaje, index) in mensajes" :key="index" :class="['asistente-mensaje', `rol-${mensaje.rol}`]">
+      <div v-for="(mensaje, index) in mensajes" :key="mensaje.id" :class="['asistente-mensaje', `rol-${mensaje.rol}`]">
         <template v-if="mensaje.rol === 'user'">
           <div class="burbuja">{{ mensaje.contenido }}</div>
         </template>
@@ -363,6 +455,81 @@ function renderMarkdown(markdown: string) {
             </div>
 
             <Message v-if="mensaje.error" severity="error" :closable="false" class="mt-2">{{ mensaje.error }}</Message>
+
+            <div
+              v-if="mensaje.feedback && mensaje.contenido && !(enviando && index === mensajes.length - 1)"
+              class="asistente-feedback"
+            >
+              <div v-if="mensaje.feedback.estado === 'enviado'" class="flex align-items-center gap-2">
+                <small class="text-color-secondary">
+                  <i :class="mensaje.feedback.util ? 'pi pi-thumbs-up-fill' : 'pi pi-thumbs-down-fill'" aria-hidden="true"></i>
+                  Gracias por tu feedback.
+                </small>
+                <Button label="Cambiar" text size="small" @click="cancelarFeedback(mensaje)" />
+              </div>
+              <template v-else>
+                <div class="flex align-items-center gap-2">
+                  <small class="text-color-secondary">¿Te sirvió esta respuesta?</small>
+                  <Button
+                    icon="pi pi-thumbs-up"
+                    text
+                    rounded
+                    size="small"
+                    :severity="mensaje.feedback.util === true ? 'success' : 'secondary'"
+                    :disabled="mensaje.feedback.estado === 'enviando'"
+                    aria-label="Sí, me sirvió"
+                    @click="votar(mensaje, true)"
+                  />
+                  <Button
+                    icon="pi pi-thumbs-down"
+                    text
+                    rounded
+                    size="small"
+                    :severity="mensaje.feedback.util === false ? 'danger' : 'secondary'"
+                    :disabled="mensaje.feedback.estado === 'enviando'"
+                    aria-label="No me sirvió"
+                    @click="votar(mensaje, false)"
+                  />
+                </div>
+
+                <div v-if="esFeedbackDetalle(mensaje)" class="asistente-feedback-detalle mt-2">
+                  <div class="flex flex-wrap gap-2 mb-2">
+                    <Button
+                      v-for="opcion in motivosFeedback"
+                      :key="opcion.valor"
+                      :label="opcion.etiqueta"
+                      size="small"
+                      :outlined="mensaje.feedback.motivo !== opcion.valor"
+                      @click="mensaje.feedback.motivo = opcion.valor"
+                    />
+                  </div>
+                  <Textarea
+                    v-model="mensaje.feedback.comentario"
+                    auto-resize
+                    rows="2"
+                    class="w-full"
+                    placeholder="Contanos qué faltó o qué estuvo mal (opcional)"
+                  />
+                  <div class="flex align-items-center gap-2 mt-2">
+                    <Checkbox v-model="mensaje.feedback.compartir" binary :input-id="`compartir-${mensaje.id}`" />
+                    <label :for="`compartir-${mensaje.id}`" class="text-sm">
+                      Compartir mi pregunta y esta respuesta para ayudar a mejorar el asistente
+                    </label>
+                  </div>
+                  <div class="flex gap-2 mt-2">
+                    <Button
+                      label="Enviar"
+                      size="small"
+                      :disabled="!mensaje.feedback.motivo"
+                      :loading="mensaje.feedback.estado === 'enviando'"
+                      @click="enviarFeedback(mensaje)"
+                    />
+                    <Button label="Cancelar" size="small" text severity="secondary" @click="cancelarFeedback(mensaje)" />
+                  </div>
+                  <small v-if="mensaje.feedback.error" class="text-red-600 block mt-1">{{ mensaje.feedback.error }}</small>
+                </div>
+              </template>
+            </div>
           </div>
         </template>
       </div>
@@ -443,6 +610,16 @@ function renderMarkdown(markdown: string) {
   border: 1px dashed var(--p-primary-color);
   border-radius: 8px;
   background: var(--p-content-background, #fff);
+}
+
+.asistente-feedback {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--p-content-border-color, #e4e4e7);
+}
+
+.asistente-feedback-detalle {
+  max-width: 28rem;
 }
 
 .asistente-entrada {
