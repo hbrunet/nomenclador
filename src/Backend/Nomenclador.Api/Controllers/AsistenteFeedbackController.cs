@@ -37,7 +37,7 @@ public sealed class AsistenteFeedbackController(
             Util = dto.Util,
             Motivo = dto.Util ? null : dto.Motivo!.ToLowerInvariant(),
             Comentario = Truncar(dto.Comentario, MaxLargoComentario),
-            Herramientas = dto.Herramientas.Count > 0 ? string.Join(", ", dto.Herramientas) : null,
+            Herramientas = Truncar(string.Join(", ", dto.Herramientas), 500),
             ConsultaUsuario = Truncar(dto.ConsultaUsuario, MaxLargoConsulta),
             RespuestaAsistente = Truncar(dto.RespuestaAsistente, MaxLargoRespuesta),
             Modelo = asistenteOptions.Value.Model,
