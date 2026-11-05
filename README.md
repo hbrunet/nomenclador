@@ -46,8 +46,12 @@ compatible con OpenAI y `Microsoft.Extensions.AI`, con *function calling*: el mo
 a la base de datos y sólo puede invocar las funciones definidas en `Services/AsistenteTools.cs`.
 
 - **Consultas**: configuraciones, conceptos, catálogos, valores fijos y por categoría (sólo lectura).
+  Para conceptos, las búsquedas y consultas de existencia por código o descripción devuelven un resumen; el detalle
+  incluye propiedades y fórmulas y puede pedirse por código, descripción o Id. Si no puede identificar un único concepto,
+  el asistente pide elegir uno. Las búsquedas pueden hacerse sin filtro y muestran hasta 25 resultados; por código solo
+  admiten coincidencias parciales, mientras que código/subcódigo busca ambos números exactos.
   Para resolver un Id de tipo a partir de su descripción, el asistente ofrece búsquedas separadas para tipos de valores
-  fijos y tipos de valores por categoría; después puede usar ese Id como filtro de configuraciones.
+  fijos y tipos de valores por categoría; después puede usar ese Id como filtro de valores o configuraciones.
   En el chat, las configuraciones se pueden filtrar por descripción del nomenclador, código/subcódigo del concepto
   e Id de tipo de valor fijo o por categoría, además de escala y zona por Id, fecha de vigencia y estado.
   Los filtros por tipo incluyen cualquier valor asociado de ese tipo. Las búsquedas devuelven `filtrosAplicados`:
@@ -57,7 +61,7 @@ a la base de datos y sólo puede invocar las funciones definidas en `Services/As
   Para pedir el detalle no hace falta conocer
   el Id de la configuración: si los filtros identifican una sola se devuelve su detalle; si hay varias, el asistente
   muestra opciones para elegir. También pide una elección si la descripción del nomenclador o el código/subcódigo
-  del concepto son ambiguos. Las fechas aceptan `dd/MM/yyyy` o `yyyy-MM-dd`; los filtros inválidos no se omiten.
+  del concepto son ambiguos. El filtro de vigencia acepta `MM/yyyy` o `yyyy-MM`; los filtros inválidos no se omiten.
 - **Ayuda de uso**: para preguntas sobre navegación y procedimientos, el backend consulta automáticamente por palabras clave
   el manual Markdown en `src/Backend/Nomenclador.Api/docs/ayuda/` y proporciona la sección más relevante al modelo antes de
   generar la respuesta. Esta consulta no depende de que el modelo elija una herramienta. Las herramientas de datos siguen

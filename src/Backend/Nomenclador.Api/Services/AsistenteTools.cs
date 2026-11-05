@@ -58,32 +58,32 @@ public sealed class AsistenteTools(
         return new { hoy = Formatear(DateOnly.FromDateTime(DateTime.Today)), periodoActivo = Formatear(periodo) };
     }
 
-    [Description("Consulta el catálogo actual de nomencladores y devuelve sus IDs y descripciones. " +
-    "Usar para preguntas como '¿qué nomencladores hay?' o 'buscá el nomenclador docente'. " +
-    "No devuelve configuraciones ni sus vigencias; para estas usá BuscarConfiguraciones.")]
+    [Description("Lista nomencladores del catálogo, con sus IDs y descripciones. " +
+    "Devuelve el total y hasta 50 coincidencias. Para buscar configuraciones o sus vigencias, usá BuscarConfiguraciones.")]
     public async Task<object> BuscarNomencladores(
-        [Description("Parte de la descripción del nomenclador, por ejemplo 'docente'. " +
-    "Omitir si el usuario no indicó un nombre. " +
-    "No incluir la pregunta completa.")] string? texto = null)
+        [Description("Fragmento del nombre o del Id del nomenclador, por ejemplo 'docente'. " +
+        "Busca coincidencias parciales; omití el parámetro para listar sin filtro. No incluyas la pregunta completa.")] string? texto = null)
         => Filtrar(await catalogRepository.GetNomencladoresAsync(), texto);
 
-    [Description("Consulta el catálogo actual de escalas salariales y devuelve sus IDs y descripciones. " +
-    "Usar para listar o buscar escalas por nombre; no devuelve sus categorías ni configuraciones asociadas.")]
-    public async Task<object> BuscarEscalasSalariales([Description("Parte de la descripción de la escala salarial, por ejemplo 'docente'. " +
-    "No incluir la pregunta completa.")] string? texto = null)
+    [Description("Lista escalas salariales del catálogo, con sus IDs y descripciones. Devuelve el total y hasta 50 coincidencias. " +
+    "No devuelve categorías: para verlas usá ListarCategoriasDeEscala; para configuraciones usá BuscarConfiguraciones.")]
+    public async Task<object> BuscarEscalasSalariales(
+        [Description("Fragmento del nombre o del Id de la escala, por ejemplo 'docente'. " +
+        "Busca coincidencias parciales; omití el parámetro para listar sin filtro. No incluyas la pregunta completa.")] string? texto = null)
         => Filtrar(await catalogRepository.GetEscalasAsync(), texto);
 
-    [Description("Consulta el catálogo actual de zonas y devuelve sus IDs y descripciones. " +
-    "Usar para listar o buscar zonas; no devuelve configuraciones de esas zonas.")]
-    public async Task<object> BuscarZonas([Description("Parte de la descripción de la zona, por ejemplo '15'. " +
-    "Omitir si el usuario no indicó un nombre. " +
-    "No incluir la pregunta completa.")] string? texto = null)
+    [Description("Lista zonas del catálogo, con sus IDs y descripciones. Devuelve el total y hasta 50 coincidencias. " +
+    "No devuelve configuraciones de esas zonas; para eso usá BuscarConfiguraciones.")]
+    public async Task<object> BuscarZonas(
+        [Description("Fragmento del nombre o del Id de la zona, por ejemplo '15'. " +
+        "Busca coincidencias parciales; omití el parámetro para listar sin filtro. No incluyas la pregunta completa.")] string? texto = null)
         => Filtrar(await catalogRepository.GetZonasAsync(), texto);
 
-    [Description("Busca tipos de valores fijos cuya descripción contenga el texto indicado. " +
-                 "Usar para encontrar el Id de tipo por su descripción; no busca valores fijos individuales.")]
+    [Description("Busca tipos de valores fijos por descripción y devuelve el total y hasta 25 IDs y nombres, no valores individuales. " +
+                 "Usá el Id de tipo para filtrar BuscarValoresFijos, BuscarConfiguraciones u ObtenerConfiguracion. " +
+                 "Si hay varios tipos posibles, pedí una elección antes de filtrar.")]
     public async Task<object> BuscarTiposValoresFijos(
-        [Description("Fragmento de la descripción del tipo de valor fijo.")] string descripcion)
+        [Description("Fragmento de la descripción del tipo de valor fijo, no la descripción de un valor individual.")] string descripcion)
     {
         if (string.IsNullOrWhiteSpace(descripcion))
             return "Indicá una parte de la descripción del tipo de valor fijo.";
@@ -91,10 +91,11 @@ public sealed class AsistenteTools(
         return FiltrarPorDescripcion(await catalogRepository.GetValorFijoTiposAsync(), descripcion);
     }
 
-    [Description("Busca tipos de valores por categoría cuya descripción contenga el texto indicado. " +
-                 "Usar para encontrar el Id de tipo por su descripción; no busca valores por categoría individuales.")]
+    [Description("Busca tipos de valores por categoría por descripción y devuelve el total y hasta 25 IDs y nombres, no valores individuales. " +
+                 "Usá el Id de tipo para filtrar BuscarValoresPorCategoria, BuscarConfiguraciones u ObtenerConfiguracion. " +
+                 "Si hay varios tipos posibles, pedí una elección antes de filtrar.")]
     public async Task<object> BuscarTiposValoresPorCategoria(
-        [Description("Fragmento de la descripción del tipo de valor por categoría.")] string descripcion)
+        [Description("Fragmento de la descripción del tipo de valor por categoría, no la descripción de un valor individual.")] string descripcion)
     {
         if (string.IsNullOrWhiteSpace(descripcion))
             return "Indicá una parte de la descripción del tipo de valor por categoría.";
@@ -102,13 +103,13 @@ public sealed class AsistenteTools(
         return FiltrarPorDescripcion(await catalogRepository.GetValorCategoriaTiposAsync(), descripcion);
     }
 
-    [Description("Consulta los datos actuales de las categorías de una escala salarial y devuelve su número y monto. " +
-    "Usar para preguntas como '¿qué categorías tiene la escala docente?'. No usar para explicar cómo editar la escala; para eso usá ConsultarAyuda. " +
-    "Acepta la descripción de la escala directamente. Si devuelve requiereEleccion, preguntale al usuario cuál escala quiere.")]
+    [Description("Lista las categorías propias de una escala salarial y devuelve sus IDs, números, descripciones y montos. " +
+    "Acepta directamente el nombre o Id de la escala. Si devuelve requiereEleccion, preguntá cuál quiere y repetí con el Id elegido. " +
+    "No lista valores por categoría: usá BuscarValoresPorCategoria para el catálogo u ObtenerConfiguracion para los asociados a una configuración.")]
     public async Task<object> ListarCategoriasDeEscala(
         [Description("Parte de la descripción de la escala salarial, por ejemplo 'SEG. Y DEFENSA 09/2026'. " +
         "Usar cuando el usuario identifica la escala por su nombre.")] string? escalaSalarial = null,
-        [Description("Id interno de una escala que el usuario ya eligió en una lista de opciones.")] int? escalaSalarialId = null)
+        [Description("Id interno de la escala indicado o elegido por el usuario. Si se proporciona, se ignora escalaSalarial.")] int? escalaSalarialId = null)
     {
         var escalas = await catalogRepository.GetEscalasAsync();
         CatalogItemDto? seleccionada;
@@ -154,10 +155,14 @@ public sealed class AsistenteTools(
         };
     }
 
-    [Description("Busca y lista conceptos actuales por código/subcódigo o por parte de la descripción. " +
-    "Usar cuando pidan una lista o quieran identificar coincidencias; para el detalle completo de un concepto, usar ObtenerConcepto. " +
-    "No usar para explicar cómo asociar conceptos a una configuración; para eso usar ConsultarAyuda.")]
-    public async Task<object> BuscarConceptos([Description("Parte de la descripción o código/subcódigo de los conceptos.")] string texto)
+    [Description("Busca o lista conceptos del catálogo por código o descripción, incluso para comprobar si existe uno concreto. " +
+    "Devuelve el total y hasta 25 resultados resumidos: Id, código, subcódigo, descripciones y tipo. " +
+    "No devuelve fórmulas ni otras propiedades del detalle; para esas consultas o para buscar por Id interno, usá ObtenerConcepto directamente.")]
+    public async Task<object> BuscarConceptos(
+        [Description("Código, código/subcódigo (por ejemplo '25/100') o fragmento de la descripción; omitilo para listar sin filtro. " +
+        "No es el Id interno ni la pregunta completa. " +
+        "Un código solo busca coincidencias parciales: verificá el código exacto antes de afirmar que existe. " +
+        "Código/subcódigo busca ambos números exactos. Para una descripción solo numérica, usá el prefijo 'desc:', por ejemplo 'desc:25'.")] string? texto = null)
     {
         var (conceptos, total) = await conceptoRepository.GetPagedAsync(PrepararBusquedaConcepto(texto), 1, MaxResultados);
         return new
@@ -175,12 +180,14 @@ public sealed class AsistenteTools(
         };
     }
 
-    [Description("Obtiene datos actuales y el detalle completo de un concepto, incluidas sus fórmulas (excepto el campo procedimiento). " +
-    "Acepta directamente un código/subcódigo o parte de la descripción. Si encuentra varias coincidencias, devuelve opciones para que el usuario elija. " +
-    "No usar para explicar cómo usar o asociar conceptos en las pantallas; para eso usar ConsultarAyuda.")]
+    [Description("Obtiene el detalle de un solo concepto: propiedades, meses aplicables, tipos de liquidación y fórmulas, " +
+    "sin el contenido del procedimiento almacenado. Usá esta herramienta para esos datos o para consultar por Id interno; " +
+    "para listar coincidencias o comprobar existencia por código o descripción usá BuscarConceptos. " +
+    "Acepta código, código/subcódigo, descripción o Id directamente, sin búsqueda previa. Si devuelve requiereEleccion, pedí al usuario que elija.")]
     public async Task<object> ObtenerConcepto(
-        [Description("Código/subcódigo, por ejemplo '25/100', o parte de la descripción. Usar cuando el usuario identificó el concepto por esos datos.")] string? concepto = null,
-        [Description("Id interno del concepto. Usar solo si el usuario lo indicó explícitamente o eligió un concepto de las opciones devueltas.")] int? conceptoId = null)
+        [Description("Código, código/subcódigo (por ejemplo '25/100') o fragmento de la descripción. " +
+        "Para una descripción solo numérica usá 'desc:', por ejemplo 'desc:25'. No es el Id interno.")] string? concepto = null,
+        [Description("Id interno indicado o elegido por el usuario. Si se proporciona, se ignora concepto.")] int? conceptoId = null)
     {
         if (conceptoId is { } id)
         {
@@ -230,11 +237,12 @@ public sealed class AsistenteTools(
         };
     }
 
-    [Description("Busca valores fijos individuales actuales por Id de tipo y/o descripción; no busca tipos de valores fijos. " +
-    "Para resolver el Id de un tipo por su descripción, usar BuscarTiposValoresFijos. " +
-    "Usar para preguntas como '¿existe este valor fijo ...?' o '¿hay un valor fijo con ...?' o '¿cuáles son los valores fijos que coinciden con ...?'")]
-    public async Task<object> BuscarValoresFijos([Description("Id de tipo a buscar (opcional).")] int? idTipo, 
-    [Description("Texto a buscar (opcional).")] string? texto = null)
+    [Description("Lista valores fijos individuales del catálogo por Id de tipo y/o descripción del valor. " +
+    "Devuelve el total y hasta 25 valores con Id, descripción, tipo e importe. " +
+    "Si se indicó el tipo por nombre, resolvé su Id con BuscarTiposValoresFijos antes de filtrar.")]
+    public async Task<object> BuscarValoresFijos(
+        [Description("Id del tipo de valor fijo, no Id de un valor individual. Omitilo solo si no se pidió filtrar por tipo.")] int? idTipo = null,
+        [Description("Fragmento de la descripción del valor fijo individual. Omitilo si no se indicó.")] string? texto = null)
     {
         var valores = (await catalogRepository.GetValoresFijosAsync())
             .Where(v => (idTipo == null || v.IdTipo == idTipo) && Contiene(v.Descripcion, texto))
@@ -246,11 +254,12 @@ public sealed class AsistenteTools(
         };
     }
 
-    [Description("Busca valores individuales actuales por categoría por Id de tipo y/o descripción; no busca tipos de valores por categoría. " +
-    "Para resolver el Id de un tipo por su descripción, usar BuscarTiposValoresPorCategoria. " +
-    "Usar para preguntas como '¿existe este valor por categoría ...?' o '¿hay un valor por categoría con ...?' o '¿cuáles son los valores por categoría que coinciden con ...?'")]
-    public async Task<object> BuscarValoresPorCategoria([Description("ID de tipo a buscar (opcional).")] int? IdTipo, 
-    [Description("Descripción a buscar (opcional).")] string? descripcion = null)
+    [Description("Lista valores individuales por categoría del catálogo por Id de tipo y/o descripción del valor. " +
+    "Devuelve el total y hasta 25 valores con Id, descripción y tipo; no devuelve los montos por categoría. " +
+    "Si se indicó el tipo por nombre, resolvé su Id con BuscarTiposValoresPorCategoria antes de filtrar.")]
+    public async Task<object> BuscarValoresPorCategoria(
+        [Description("Id del tipo de valor por categoría, no Id de un valor individual. Omitilo solo si no se pidió filtrar por tipo.")] int? IdTipo = null,
+        [Description("Fragmento de la descripción del valor por categoría individual. Omitilo si no se indicó.")] string? descripcion = null)
     {
         var valores = (await catalogRepository.GetValoresCategoriasAsync())
             .Where(v => (IdTipo == null || v.IdTipo == IdTipo) && Contiene(v.Descripcion, descripcion))
@@ -262,18 +271,19 @@ public sealed class AsistenteTools(
         };
     }
 
-    [Description("Consulta datos actuales y lista configuraciones con filtros combinables. Resuelve nomenclador por descripción y concepto por código/subcódigo " +
-    "sin búsquedas previas. Combiná todos los filtros pedidos: por ejemplo, 'activas con valor fijo de tipo 65' requiere " +
-    "estado='Activa' y valorFijoTipoId=65. Los filtros de valores son IDs de tipo, no IDs de valores individuales. " +
-    "Devuelve el total filtrado, los filtrosAplicados y hasta 10 resultados por página.")]
+    [Description("Busca, cuenta o lista configuraciones con filtros combinables. Devuelve el total, filtrosAplicados y hasta 10 resúmenes por página, " +
+    "sin conceptos ni valores asociados. Para el detalle de una configuración o consultarla por su Id usá ObtenerConfiguracion. " +
+    "Acepta nomenclador por descripción y concepto por código sin búsquedas previas. Combiná todos los filtros pedidos: " +
+    "'activas con valor fijo de tipo 65' requiere estado='Activa' y valorFijoTipoId=65. Los filtros de valores son IDs de tipo. " +
+    "Si devuelve requiereEleccion, preguntá cuál opción quiere y repetí conservando los demás filtros.")]
     public async Task<object> BuscarConfiguraciones(
         [Description("Parte de la descripción del nomenclador.")] string? nomenclador = null,
         [Description("Id de escala salarial.")] int? escalaSalarialId = null,
         [Description("Id de zona.")] int? zonaId = null,
-        [Description("Fecha MM/yyyy sólo configuraciones vigentes en esa fecha.")] string? vigenteEn = null,
+        [Description("Período MM/yyyy o yyyy-MM para filtrar configuraciones vigentes en ese mes.")] string? vigenteEn = null,
         [Description("Usá 'Activa' si pide activas o vigentes sin una fecha, 'Futura' para futuras y 'Vencida' para vencidas. " +
-                     "Omitir sólo si no pidió filtrar por estado. Sin este parámetro se incluyen todos los estados.")] string? estado = null,
-        [Description("Código/subcódigo del concepto asociado tal como lo escribió el usuario, completo (ej. '25/100', no solo '25'). No es el Id interno.")] string? concepto = null,
+                     "Para vigencia en un mes no agregues 'Activa' salvo que también lo solicite. Sin este parámetro se incluyen todos los estados.")] string? estado = null,
+        [Description("Código o código/subcódigo del concepto asociado. Si indicó subcódigo, incluí ambos (ej. '25/100'). No es el Id interno ni la descripción.")] string? concepto = null,
         [Description("Id del tipo de valor fijo que debe tener asociado. Incluye cualquier valor de ese tipo.")] int? valorFijoTipoId = null,
         [Description("Id del tipo de valor por categoría que debe tener asociado. Incluye cualquier valor de ese tipo.")] int? valorCategoriaTipoId = null,
         [Description("Número de página (desde 1).")] int pagina = 1,
@@ -290,17 +300,19 @@ public sealed class AsistenteTools(
         return respuesta!;
     }
 
-    [Description("Consulta datos actuales y obtiene una configuración con sus conceptos y valores. Acepta su Id o los mismos filtros que BuscarConfiguraciones, " +
-    "sin búsquedas previas. Si encuentra varias, devuelve opciones para que el usuario elija; no elijas una por tu cuenta.")]
+    [Description("Obtiene el detalle de una configuración, incluidos sus conceptos y valores asociados. " +
+    "Los valores por categoría incluyen la cantidad de ítems, no sus montos por categoría. " +
+    "Acepta su Id o los mismos filtros que BuscarConfiguraciones; si devuelve requiereEleccion, pedí al usuario que elija. " +
+    "Para buscar, contar o listar configuraciones usá BuscarConfiguraciones.")]
     public async Task<object> ObtenerConfiguracion(
-        [Description("Id de la configuración si ya se conoce o el usuario eligió una opción. Si se indica, no hacen falta filtros.")] int? configuracionId = null,
+        [Description("Id de la configuración indicado o elegido por el usuario. Si se proporciona, se ignoran los demás filtros.")] int? configuracionId = null,
         [Description("Parte de la descripción del nomenclador.")] string? nomenclador = null,
         [Description("Id de escala salarial.")] int? escalaSalarialId = null,
         [Description("Id de zona.")] int? zonaId = null,
-        [Description("Fecha MM/yyyy de vigencia.")] string? vigenteEn = null,
+        [Description("Período MM/yyyy o yyyy-MM para filtrar configuraciones vigentes en ese mes.")] string? vigenteEn = null,
         [Description("Usá 'Activa' si pide activas o vigentes sin una fecha, 'Futura' para futuras y 'Vencida' para vencidas. " +
-                     "Omitir sólo si no pidió filtrar por estado. Sin este parámetro se incluyen todos los estados.")] string? estado = null,
-        [Description("Código/subcódigo del concepto asociado tal como lo escribió el usuario, completo (ej. '25/100', no solo '25'). No es el Id interno.")] string? concepto = null,
+                     "Para vigencia en un mes no agregues 'Activa' salvo que también lo solicite. Sin este parámetro se incluyen todos los estados.")] string? estado = null,
+        [Description("Código o código/subcódigo del concepto asociado. Si indicó subcódigo, incluí ambos (ej. '25/100'). No es el Id interno ni la descripción.")] string? concepto = null,
         [Description("Id del tipo de valor fijo asociado, no el Id de un valor individual.")] int? valorFijoTipoId = null,
         [Description("Id del tipo de valor por categoría asociado, no el Id de un valor individual.")] int? valorCategoriaTipoId = null,
         [Description("Id interno del nomenclador si ya se conoce o el usuario eligió una opción.")] int? nomencladorId = null,
@@ -586,9 +598,12 @@ public sealed class AsistenteTools(
         && CultureInfo.InvariantCulture.CompareInfo.Compare(
             valor.Trim(), texto.Trim(), CompareOptions.IgnoreNonSpace | CompareOptions.IgnoreCase) == 0;
 
-    private static string PrepararBusquedaConcepto(string texto)
+    private static string PrepararBusquedaConcepto(string? texto)
     {
-        var busqueda = texto.Trim();
+        var busqueda = texto?.Trim() ?? string.Empty;
+        if (busqueda.Length == 0)
+            return string.Empty;
+
         if (busqueda.StartsWith("desc:", StringComparison.OrdinalIgnoreCase)
             || busqueda.StartsWith("d:", StringComparison.OrdinalIgnoreCase))
         {
