@@ -105,6 +105,11 @@ const router = createRouter({
       name: 'asistente',
       component: () => import('../views/AsistenteView.vue'),
     },
+    {
+      path: '/asistente/feedback',
+      name: 'asistente-feedback',
+      component: () => import('../views/AsistenteFeedbackResumenView.vue'),
+    },
   ],
 })
 
