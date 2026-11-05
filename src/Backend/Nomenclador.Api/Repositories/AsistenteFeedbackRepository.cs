@@ -19,7 +19,8 @@ public sealed class AsistenteFeedbackRepository(NHibernate.ISession session)
         }
         else
         {
-            existente.Usuario = feedback.Usuario;
+            if (!string.Equals(existente.Usuario, feedback.Usuario, StringComparison.Ordinal))
+                throw new Nomenclador.Api.Services.ForbiddenException("No podés modificar el feedback de otro usuario.");
             existente.Util = feedback.Util;
             existente.Motivo = feedback.Motivo;
             existente.Comentario = feedback.Comentario;
