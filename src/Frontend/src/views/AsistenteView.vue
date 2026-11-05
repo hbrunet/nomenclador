@@ -10,6 +10,7 @@ import { useToast } from 'primevue/usetoast'
 import { asistenteService } from '../services/asistenteService'
 import { asistenteFeedbackService } from '../services/asistenteFeedbackService'
 import { configurationService } from '../services/configurationService'
+import { generarId } from '../utils/id'
 import type { AsistenteAccionPropuestaDto, AsistenteFeedbackMotivo, AsistenteMensajeDto } from '../types/asistente'
 
 type EstadoAccion = 'pendiente' | 'ejecutando' | 'confirmada' | 'descartada' | 'error'
@@ -116,12 +117,12 @@ async function enviar(texto?: string) {
   const contenido = (texto ?? entrada.value).trim()
   if (!contenido || enviando.value) return
 
-  mensajes.value.push({ id: crypto.randomUUID(), rol: 'user', contenido, herramientas: [], acciones: [] })
+  mensajes.value.push({ id: generarId(), rol: 'user', contenido, herramientas: [], acciones: [] })
   entrada.value = ''
   const historial = historialParaApi()
 
   mensajes.value.push({
-    id: crypto.randomUUID(),
+    id: generarId(),
     rol: 'assistant',
     contenido: '',
     herramientas: [],
