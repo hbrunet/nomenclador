@@ -16,7 +16,7 @@ public sealed class AsistenteFeedbackMap : ClassMap<AsistenteFeedbackEntity>
         Map(x => x.Comentario).Column("COMENTARIO");
         Map(x => x.Herramientas).Column("HERRAMIENTAS");
         Map(x => x.ConsultaUsuario).Column("CONSULTA_USUARIO");
-        Map(x => x.RespuestaAsistente).Column("RESPUESTA_ASISTENTE");
+        Map(x => x.RespuestaAsistente).Column("RESPUESTA_ASISTENTE").CustomType("StringClob");
         Map(x => x.Modelo).Column("MODELO").Not.Nullable();
         Map(x => x.Fecha).Column("FECHA").Not.Nullable();
     }
