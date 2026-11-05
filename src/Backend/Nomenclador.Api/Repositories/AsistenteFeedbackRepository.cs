@@ -40,16 +40,19 @@ public sealed class AsistenteFeedbackRepository(NHibernate.ISession session)
         var positivos = await session.QueryOver<AsistenteFeedbackEntity>().Where(x => x.Util).RowCountAsync();
         var negativos = await session.QueryOver<AsistenteFeedbackEntity>().Where(x => !x.Util).RowCountAsync();
 
-        // El agrupado por motivo se hace en memoria: son pocas filas (sólo votos negativos
-        // con motivo) y QueryOver no tiene una forma simple de expresar un GROUP BY + COUNT
-        // tipado sobre una propiedad nullable.
-        var negativosConMotivo = await session.QueryOver<AsistenteFeedbackEntity>()
+        var motivos = await session.QueryOver<AsistenteFeedbackEntity>()
             .Where(x => !x.Util && x.Motivo != null)
-            .ListAsync();
+            .SelectList(list => list
+                .SelectGroup(x => x.Motivo)
+                .SelectCount(x => x.Id))
+            .ListAsync<object[]>();
 
-        var motivosAgrupados = negativosConMotivo
-            .GroupBy(x => x.Motivo!)
-            .Select(g => new AsistenteFeedbackMotivoResumenDto { Motivo = g.Key, Cantidad = g.Count() })
+        var motivosAgrupados = motivos
+            .Select(row => new AsistenteFeedbackMotivoResumenDto
+            {
+                Motivo = (string)row[0],
+                Cantidad = Convert.ToInt32(row[1]),
+            })
             .OrderByDescending(x => x.Cantidad)
             .ToList();
 
